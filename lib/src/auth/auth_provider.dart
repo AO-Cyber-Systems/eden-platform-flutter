@@ -146,6 +146,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Inject a fake session for testing (no real JWT needed).
+  void injectTestSession({
+    required String userId,
+    required String companyId,
+    required String role,
+  }) {
+    state = AuthState(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      userId: userId,
+      companyId: companyId,
+      role: role,
+      isAuthenticated: true,
+    );
+  }
+
   String? _extractCompanyId(String? token) => _extractClaim(token, 'cid');
   String? _extractRole(String? token) => _extractClaim(token, 'role');
   String? _extractUserId(String? token) => _extractClaim(token, 'uid');
