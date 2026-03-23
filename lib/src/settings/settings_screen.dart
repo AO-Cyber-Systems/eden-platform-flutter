@@ -87,8 +87,8 @@ class PlatformSettingsScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.person_outline),
-                  title: const Text('User ID'),
-                  subtitle: Text(auth.userId ?? 'Unknown'),
+                  title: const Text('User'),
+                  subtitle: Text(auth.user?.displayName ?? auth.user?.email ?? 'Unknown'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.business_outlined),

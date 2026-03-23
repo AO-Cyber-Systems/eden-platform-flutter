@@ -2,6 +2,7 @@ name: eden_platform_flutter
 description: "Shared auth, navigation, and platform shell for all Eden apps."
 version: 0.0.1
 homepage:
+publish_to: none
 
 environment:
   sdk: ^3.11.1
@@ -10,9 +11,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  connectrpc: ^1.0.0
   flutter_riverpod: ^2.6.1
   shared_preferences: ^2.3.0
-  http: ^1.2.0
+  eden_platform_api_dart:
+    path: ../eden-platform-api-dart
   eden_ui_flutter:
     path: ../eden-ui-flutter
 
@@ -22,3 +25,4 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  uses-material-design: true

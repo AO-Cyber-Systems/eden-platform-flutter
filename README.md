@@ -1,39 +1,35 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# eden_platform_flutter
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Frontend shell package for Eden apps.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+It owns:
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+- auth/session orchestration
+- company loading and selection
+- server-driven navigation loading
+- shared platform shell widgets
 
-## Features
+It depends on:
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- `eden_platform_api_dart` for generated Connect-Dart clients and protobuf models
+- `eden_ui_flutter` for UI primitives and theme
 
-## Getting started
+## Example
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Run the local Go dev server:
 
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
+```bash
+just dev-go
 ```
 
-## Additional information
+Then run the package example:
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+```bash
+cd example
+flutter run --dart-define=API_BASE_URL=http://localhost:8080
+```
+
+## Notes
+
+- Do not hand-edit generated API code in the sibling `eden-platform-api-dart` package.
+- If APIs change, update the protobuf files in `eden-platform-go` and run `just generate`.

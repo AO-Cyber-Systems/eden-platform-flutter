@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_provider.dart';
 import '../company/company_switcher.dart';
+import '../models/platform_models.dart';
 import 'nav_provider.dart';
 
 /// Maps string icon names from [NavItem] to Material [IconData].
@@ -38,8 +39,9 @@ class PlatformSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final navItems = ref.watch(navItemsProvider);
-    final selectedId = ref.watch(selectedNavProvider);
+    final navState = ref.watch(navStateProvider);
+    final navItems = navState.items;
+    final selectedId = navState.selectedId;
     final auth = ref.watch(authProvider);
 
     return Container(
@@ -73,7 +75,7 @@ class PlatformSidebar extends ConsumerWidget {
                   item: item,
                   isSelected: isSelected,
                   onTap: () {
-                    ref.read(selectedNavProvider.notifier).state = item.id;
+                    ref.read(navStateProvider.notifier).select(item.id);
                   },
                 );
               },
@@ -91,7 +93,10 @@ class PlatformSidebar extends ConsumerWidget {
                       backgroundColor:
                           Theme.of(context).colorScheme.primaryContainer,
                       child: Text(
-                        (auth.userId ?? '?')[0].toUpperCase(),
+                        (auth.user?.displayName.isNotEmpty == true
+                                ? auth.user!.displayName
+                                : auth.userId ?? '?')[0]
+                            .toUpperCase(),
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context)
@@ -101,7 +106,12 @@ class PlatformSidebar extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(child: Text('Account')),
+                    Expanded(
+                      child: Text(
+                        auth.user?.displayName ?? auth.user?.email ?? 'Account',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.logout, size: 18),
                       onPressed: () {
@@ -119,7 +129,7 @@ class PlatformSidebar extends ConsumerWidget {
 }
 
 class _NavItemTile extends StatelessWidget {
-  final NavItem item;
+  final PlatformNavItem item;
   final bool isSelected;
   final VoidCallback onTap;
 

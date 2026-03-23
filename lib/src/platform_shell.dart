@@ -13,6 +13,12 @@ class PlatformShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
 
+    if (auth.status == AuthStatus.unknown || auth.status == AuthStatus.refreshing) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (!auth.isAuthenticated) {
       return child; // Auth screens handle themselves
     }

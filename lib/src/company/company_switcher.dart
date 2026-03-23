@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'company_provider.dart';
+import '../models/platform_models.dart';
 
 /// A dropdown widget for switching between companies the user belongs to.
 class CompanySwitcher extends ConsumerWidget {
@@ -15,14 +16,14 @@ class CompanySwitcher extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return PopupMenuButton<Company>(
+    return PopupMenuButton<PlatformCompany>(
       offset: const Offset(0, 40),
       onSelected: (company) {
-        ref.read(currentCompanyProvider.notifier).setCompany(company);
+        ref.read(companyStateProvider.notifier).setCompany(company);
       },
       itemBuilder: (context) => companies.map((company) {
         final isSelected = current?.id == company.id;
-        return PopupMenuItem<Company>(
+        return PopupMenuItem<PlatformCompany>(
           value: company,
           child: Row(
             children: [
