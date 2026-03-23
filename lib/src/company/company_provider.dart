@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../auth/auth_provider.dart';
+import '../constants/storage_keys.dart';
 import '../models/platform_models.dart';
 
 class CompanyState {
@@ -50,7 +51,7 @@ class CompanyNotifier extends StateNotifier<CompanyState> {
       final companies =
           await ref.read(platformRepositoryProvider).listCompanies(accessToken);
       final prefs = await SharedPreferences.getInstance();
-      final storedCompanyId = prefs.getString('current_company_id');
+      final storedCompanyId = prefs.getString(StorageKeys.kCurrentCompanyId);
       final selected = _selectCompany(
         companies,
         preferredCompanyId: preferredCompanyId,
@@ -58,7 +59,7 @@ class CompanyNotifier extends StateNotifier<CompanyState> {
       );
 
       if (selected != null) {
-        await prefs.setString('current_company_id', selected.id);
+        await prefs.setString(StorageKeys.kCurrentCompanyId, selected.id);
       }
 
       state = CompanyState(
@@ -76,7 +77,7 @@ class CompanyNotifier extends StateNotifier<CompanyState> {
 
   Future<void> setCompany(PlatformCompany company) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('current_company_id', company.id);
+    await prefs.setString(StorageKeys.kCurrentCompanyId, company.id);
     state = state.copyWith(current: company, clearError: true);
   }
 

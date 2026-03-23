@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/platform_repository.dart';
+import '../constants/storage_keys.dart';
 import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
 
@@ -86,7 +87,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final refreshToken = prefs.getString('refresh_token');
+    final refreshToken = prefs.getString(StorageKeys.kRefreshToken);
     if (refreshToken == null || refreshToken.isEmpty) {
       state = const AuthState.unauthenticated();
       return;
@@ -128,14 +129,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _persistTokens(PlatformSession session) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('access_token', session.accessToken);
-    await prefs.setString('refresh_token', session.refreshToken);
+    await prefs.setString(StorageKeys.kAccessToken, session.accessToken);
+    await prefs.setString(StorageKeys.kRefreshToken, session.refreshToken);
   }
 
   Future<void> _clearPersistedTokens() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
+    await prefs.remove(StorageKeys.kAccessToken);
+    await prefs.remove(StorageKeys.kRefreshToken);
   }
 }
 
