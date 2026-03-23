@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/platform_repository.dart';
+import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
 
 enum AuthStatus { unknown, refreshing, authenticated, unauthenticated, error }
@@ -62,6 +64,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final session = await _repository.login(email, password);
       await _persistTokens(session);
       state = AuthState.authenticated(session);
+    } on PlatformError catch (error) {
+      state = AuthState.error(error.message, session: state.session);
     } catch (error) {
       state = AuthState.error(error.toString(), session: state.session);
     }
@@ -73,6 +77,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final session = await _repository.signUp(email, password, displayName);
       await _persistTokens(session);
       state = AuthState.authenticated(session);
+    } on PlatformError catch (error) {
+      state = AuthState.error(error.message, session: state.session);
     } catch (error) {
       state = AuthState.error(error.toString(), session: state.session);
     }
@@ -91,7 +97,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final session = await _repository.refreshToken(refreshToken);
       await _persistTokens(session);
       state = AuthState.authenticated(session);
-    } catch (_) {
+    } on AuthError {
+      await _clearPersistedTokens();
+      state = const AuthState.unauthenticated();
+    } on NetworkError catch (e) {
+      log('Session restore failed (network): $e', name: 'AuthNotifier');
+      state = AuthState.error(
+        'Network unavailable. Please check your connection.',
+        session: state.session,
+      );
+    } catch (e) {
+      log('Session restore failed: $e', name: 'AuthNotifier');
       await _clearPersistedTokens();
       state = const AuthState.unauthenticated();
     }
@@ -102,7 +118,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
         await _repository.logout(refreshToken);
-      } catch (_) {}
+      } catch (e) {
+        log('Logout API call failed (non-blocking): $e', name: 'AuthNotifier');
+      }
     }
     await _clearPersistedTokens();
     state = const AuthState.unauthenticated();
