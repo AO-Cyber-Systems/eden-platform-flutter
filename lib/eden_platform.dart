@@ -1,3 +1,4 @@
+export 'src/analytics/analytics_provider.dart';
 export 'src/auth/auth_provider.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/signup_screen.dart';
