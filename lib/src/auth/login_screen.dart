@@ -24,6 +24,18 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
   bool _loading = false;
   String? _error;
 
+  Future<void> _loginWithSSO(String provider) async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      await ref.read(authProvider.notifier).loginWithSSO(provider);
+      widget.onLoginSuccess?.call();
+    } catch (e) {
+      setState(() { _error = e.toString(); });
+    } finally {
+      setState(() { _loading = false; });
+    }
+  }
+
   Future<void> _login() async {
     setState(() {
       _loading = true;
@@ -99,6 +111,35 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                 EdenButton(
                   onPressed: _loading ? null : _login,
                   label: _loading ? 'Signing in...' : 'Sign in',
+                ),
+                const SizedBox(height: 24),
+                Row(children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('OR', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ),
+                  const Expanded(child: Divider()),
+                ]),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : () => _loginWithSSO('microsoft'),
+                  icon: const Icon(Icons.window, size: 20),
+                  label: const Text('Sign in with Microsoft'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : () => _loginWithSSO('google'),
+                  icon: const Icon(Icons.g_mobiledata, size: 24),
+                  label: const Text('Sign in with Google'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextButton(

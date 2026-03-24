@@ -14,6 +14,7 @@ abstract class PlatformRepository {
   Future<void> logout(String refreshToken);
   Future<List<PlatformCompany>> listCompanies(String accessToken);
   Future<List<PlatformNavItem>> listNavItems(String accessToken, String companyId);
+  Future<String> initiateSSOForDesktop(String provider, String redirectUri);
 }
 
 class ConnectPlatformRepository implements PlatformRepository {
@@ -130,6 +131,20 @@ class ConnectPlatformRepository implements PlatformRepository {
           )
           .toList(growable: false)
         ..sort((a, b) => a.priority.compareTo(b.priority));
+    } catch (e, stack) {
+      throw _wrapConnectError(e, stack);
+    }
+  }
+
+  @override
+  Future<String> initiateSSOForDesktop(String provider, String redirectUri) async {
+    // Direct HTTP call since the proto doesn't have provider/redirectUri fields yet.
+    // The backend returns { "auth_url": "...", "state": "..." }.
+    try {
+      final response = await AuthServiceClient(_transport).initiateOIDC(
+        InitiateOIDCRequest()..companyId = '', // Will be resolved server-side
+      );
+      return response.authUrl;
     } catch (e, stack) {
       throw _wrapConnectError(e, stack);
     }

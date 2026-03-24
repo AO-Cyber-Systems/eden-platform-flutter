@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/platform_repository.dart';
+import 'sso_auth_service.dart';
 import '../constants/storage_keys.dart';
 import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
@@ -111,6 +112,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
       log('Session restore failed: $e', name: 'AuthNotifier');
       await _clearPersistedTokens();
       state = const AuthState.unauthenticated();
+    }
+  }
+
+  /// Login via SSO provider (Microsoft, Google).
+  /// Desktop: opens browser, captures callback. Web: redirects window.
+  Future<void> loginWithSSO(String provider, {String? redirectUri}) async {
+    state = AuthState.refreshing(session: state.session);
+    try {
+      final ssoService = SSOAuthService(
+        repository: _repository,
+        apiBaseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080'),
+      );
+      final session = await ssoService.authenticate(provider);
+      await _persistTokens(session);
+      state = AuthState.authenticated(session);
+    } on PlatformError catch (error) {
+      state = AuthState.error(error.message, session: state.session);
+    } catch (error) {
+      state = AuthState.error(error.toString(), session: state.session);
     }
   }
 

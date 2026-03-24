@@ -2,6 +2,7 @@ export 'src/analytics/analytics_provider.dart';
 export 'src/auth/auth_provider.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/signup_screen.dart';
+export 'src/auth/sso_auth_service.dart';
 export 'src/api/platform_repository.dart';
 export 'src/company/company_provider.dart';
 export 'src/company/company_switcher.dart';
