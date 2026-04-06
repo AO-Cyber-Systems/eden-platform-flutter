@@ -2,6 +2,7 @@ class PlatformUser {
   final String id;
   final String email;
   final String displayName;
+  final String avatarUrl;
   final bool isActive;
   final DateTime? createdAt;
 
@@ -9,6 +10,7 @@ class PlatformUser {
     required this.id,
     required this.email,
     required this.displayName,
+    this.avatarUrl = '',
     required this.isActive,
     this.createdAt,
   });
@@ -35,6 +37,7 @@ class PlatformNavItem {
   final String path;
   final String feature;
   final int priority;
+  final String section;
   final int badgeCount;
 
   const PlatformNavItem({
@@ -44,6 +47,7 @@ class PlatformNavItem {
     required this.path,
     required this.feature,
     required this.priority,
+    this.section = '',
     this.badgeCount = 0,
   });
 
@@ -54,6 +58,7 @@ class PlatformNavItem {
     String? path,
     String? feature,
     int? priority,
+    String? section,
     int? badgeCount,
   }) {
     return PlatformNavItem(
@@ -63,6 +68,7 @@ class PlatformNavItem {
       path: path ?? this.path,
       feature: feature ?? this.feature,
       priority: priority ?? this.priority,
+      section: section ?? this.section,
       badgeCount: badgeCount ?? this.badgeCount,
     );
   }

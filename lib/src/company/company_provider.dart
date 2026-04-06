@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/auth_provider.dart';
 import '../constants/storage_keys.dart';
 import '../models/platform_models.dart';
+import '../platform_config.dart';
 
 class CompanyState {
   final bool isLoading;
@@ -40,9 +41,26 @@ class CompanyNotifier extends StateNotifier<CompanyState> {
   final Ref ref;
 
   Future<void> loadCompanies({String? preferredCompanyId}) async {
-    final accessToken = ref.read(authProvider).accessToken;
+    final auth = ref.read(authProvider);
+    final accessToken = auth.accessToken;
     if (accessToken == null || accessToken.isEmpty) {
       state = const CompanyState();
+      return;
+    }
+
+    // In B2C mode, use the personal workspace from JWT silently —
+    // no API call, empty companies list so CompanySwitcher is hidden.
+    final config = ref.read(platformConfigProvider);
+    if (config.isB2C && auth.companyId != null) {
+      state = CompanyState(
+        companies: const [], // empty = CompanySwitcher hidden
+        current: PlatformCompany(
+          id: auth.companyId!,
+          name: auth.user?.displayName ?? '',
+          slug: 'personal',
+          companyType: 'personal',
+        ),
+      );
       return;
     }
 

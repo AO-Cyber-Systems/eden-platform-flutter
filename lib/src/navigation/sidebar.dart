@@ -1,6 +1,7 @@
 import 'package:eden_ui_flutter/eden_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../auth/auth_provider.dart';
 import '../company/company_switcher.dart';
 import '../models/platform_models.dart';
@@ -25,6 +26,21 @@ IconData _resolveIcon(String iconName) {
     'notifications': Icons.notifications_outlined,
     'help': Icons.help_outline,
     'star': Icons.star_outline,
+    // App-specific icons
+    'school': Icons.school_outlined,
+    'book': Icons.menu_book_outlined,
+    'library': Icons.local_library_outlined,
+    'article': Icons.article_outlined,
+    'tag': Icons.tag,
+    'award': Icons.workspace_premium_outlined,
+    'mail': Icons.mail_outlined,
+    'download': Icons.download_outlined,
+    'send': Icons.send_outlined,
+    'quote': Icons.format_quote_outlined,
+    'news': Icons.newspaper_outlined,
+    'mic': Icons.mic_outlined,
+    'link': Icons.link,
+    'layout': Icons.view_column_outlined,
   };
   return iconMap[iconName] ?? Icons.circle_outlined;
 }
@@ -63,22 +79,11 @@ class PlatformSidebar extends ConsumerWidget {
             child: header ?? const CompanySwitcher(),
           ),
           const Divider(height: 1),
-          // Nav items
+          // Nav items grouped by section
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              itemCount: navItems.length,
-              itemBuilder: (context, index) {
-                final item = navItems[index];
-                final isSelected = item.id == selectedId;
-                return _NavItemTile(
-                  item: item,
-                  isSelected: isSelected,
-                  onTap: () {
-                    ref.read(navStateProvider.notifier).select(item.id);
-                  },
-                );
-              },
+              children: _buildGroupedNavItems(context, ref, navItems, selectedId),
             ),
           ),
           const Divider(height: 1),
@@ -125,6 +130,83 @@ class PlatformSidebar extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildGroupedNavItems(
+    BuildContext context,
+    WidgetRef ref,
+    List<PlatformNavItem> navItems,
+    String? selectedId,
+  ) {
+    // Group items by section
+    final grouped = <String, List<PlatformNavItem>>{};
+    for (final item in navItems) {
+      grouped.putIfAbsent(item.section, () => []).add(item);
+    }
+
+    // Build ordered section list: empty section first, then others by priority
+    final sections = grouped.keys.toList();
+    sections.sort((a, b) {
+      if (a.isEmpty) return -1;
+      if (b.isEmpty) return 1;
+      return (grouped[a]!.first.priority).compareTo(grouped[b]!.first.priority);
+    });
+
+    final widgets = <Widget>[];
+    for (int i = 0; i < sections.length; i++) {
+      final section = sections[i];
+      final items = grouped[section]!;
+
+      if (section.isEmpty) {
+        // Top-level items without a header
+        for (final item in items) {
+          widgets.add(_NavItemTile(
+            item: item,
+            isSelected: item.id == selectedId,
+            onTap: () {
+              ref.read(navStateProvider.notifier).select(item.id);
+              context.go(item.path);
+            },
+          ));
+        }
+        // Add divider after top-level group if there are more sections
+        if (sections.length > 1) {
+          widgets.add(const Divider(height: 16));
+        }
+      } else {
+        // Section header
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              section.toUpperCase(),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+        );
+        // Section items
+        for (final item in items) {
+          widgets.add(_NavItemTile(
+            item: item,
+            isSelected: item.id == selectedId,
+            onTap: () {
+              ref.read(navStateProvider.notifier).select(item.id);
+              context.go(item.path);
+            },
+          ));
+        }
+      }
+    }
+
+    return widgets;
   }
 }
 

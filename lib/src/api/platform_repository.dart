@@ -15,6 +15,7 @@ abstract class PlatformRepository {
   Future<List<PlatformCompany>> listCompanies(String accessToken);
   Future<List<PlatformNavItem>> listNavItems(String accessToken, String companyId);
   Future<String> initiateSSOForDesktop(String provider, String redirectUri);
+  Future<PlatformUser> updateProfile(String accessToken, String displayName, String avatarUrl);
 }
 
 class ConnectPlatformRepository implements PlatformRepository {
@@ -126,6 +127,7 @@ class ConnectPlatformRepository implements PlatformRepository {
               path: item.path,
               feature: item.feature,
               priority: item.priority,
+              section: item.section,
               badgeCount: badgeResponse.counts[item.id] ?? 0,
             ),
           )
@@ -150,6 +152,29 @@ class ConnectPlatformRepository implements PlatformRepository {
     }
   }
 
+  @override
+  Future<PlatformUser> updateProfile(String accessToken, String displayName, String avatarUrl) async {
+    try {
+      final response = await AuthServiceClient(_transport).updateProfile(
+        UpdateProfileRequest()
+          ..displayName = displayName
+          ..avatarUrl = avatarUrl,
+        headers: _authHeaders(accessToken),
+      );
+      final user = response.user;
+      return PlatformUser(
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        isActive: user.isActive,
+        createdAt: DateTime.tryParse(user.createdAt),
+      );
+    } catch (e, stack) {
+      throw _wrapConnectError(e, stack);
+    }
+  }
+
   PlatformSession _sessionFromAuthResponse(AuthResponse response) {
     final claims = _extractClaims(response.accessToken);
     final user = response.user;
@@ -160,6 +185,7 @@ class ConnectPlatformRepository implements PlatformRepository {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
         isActive: user.isActive,
         createdAt: DateTime.tryParse(user.createdAt),
       ),

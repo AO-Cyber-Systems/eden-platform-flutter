@@ -42,12 +42,22 @@ class AuthState {
   PlatformUser? get user => session?.user;
 }
 
+/// Resolves the platform API base URL at runtime.
+/// Uses API_BASE_URL if set at compile time, otherwise derives from browser location.
+String _resolvePlatformBaseUrl() {
+  const envUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  if (envUrl.isNotEmpty) return envUrl;
+  try {
+    final uri = Uri.base;
+    return '${uri.scheme}://${uri.host}:${uri.port}';
+  } catch (_) {
+    return 'http://localhost:8080';
+  }
+}
+
 final platformRepositoryProvider = Provider<PlatformRepository>((ref) {
   return ConnectPlatformRepository(
-    baseUrl: const String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'http://localhost:8080',
-    ),
+    baseUrl: _resolvePlatformBaseUrl(),
   );
 });
 
@@ -88,6 +98,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
+    // Re-check after async gap — state may have been set externally (dev injection).
+    if (state.isAuthenticated) return;
     final refreshToken = prefs.getString(StorageKeys.kRefreshToken);
     if (refreshToken == null || refreshToken.isEmpty) {
       state = const AuthState.unauthenticated();
@@ -122,7 +134,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final ssoService = SSOAuthService(
         repository: _repository,
-        apiBaseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080'),
+        apiBaseUrl: _resolvePlatformBaseUrl(),
       );
       final session = await ssoService.authenticate(provider);
       await _persistTokens(session);
@@ -131,6 +143,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState.error(error.message, session: state.session);
     } catch (error) {
       state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  Future<void> updateProfile(String displayName, String avatarUrl) async {
+    final token = state.accessToken;
+    if (token == null) return;
+    try {
+      final updatedUser = await _repository.updateProfile(token, displayName, avatarUrl);
+      state = AuthState.authenticated(PlatformSession(
+        accessToken: state.session!.accessToken,
+        refreshToken: state.session!.refreshToken,
+        user: updatedUser,
+        companyId: state.companyId,
+        role: state.role,
+      ));
+    } catch (e) {
+      // Don't change auth state on profile update failure
+      rethrow;
     }
   }
 

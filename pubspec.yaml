@@ -13,9 +13,11 @@ dependencies:
     sdk: flutter
   connectrpc: ^1.0.0
   flutter_riverpod: ^2.6.1
+  http: ^1.2.0
   shared_preferences: ^2.3.0
   eden_platform_api_dart:
     path: ../eden-platform-api-dart
+  go_router: ^14.0.0
   eden_ui_flutter:
     path: ../eden-ui-flutter
 

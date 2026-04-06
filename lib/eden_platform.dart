@@ -1,3 +1,4 @@
+export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
 export 'src/auth/auth_provider.dart';
 export 'src/auth/login_screen.dart';
@@ -12,3 +13,9 @@ export 'src/navigation/nav_provider.dart';
 export 'src/settings/settings_screen.dart';
 export 'src/settings/settings_provider.dart';
 export 'src/platform_shell.dart';
+export 'src/entitlements/entitlements_models.dart';
+export 'src/entitlements/entitlements_repository.dart';
+export 'src/entitlements/entitlements_provider.dart';
+export 'src/entitlements/feature_gate.dart';
+export 'src/entitlements/quota_bar.dart';
+export 'src/entitlements/plan_badge.dart';
