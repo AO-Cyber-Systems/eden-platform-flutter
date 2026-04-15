@@ -60,7 +60,10 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Semantics(
+      identifier: 'eden-login-screen',
+      explicitChildNodes: true,
+      child: Scaffold(
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
@@ -96,21 +99,33 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                EdenInput(
-                  controller: _emailController,
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
+                Semantics(
+                  identifier: 'eden-login-email',
+                  textField: true,
+                  child: EdenInput(
+                    controller: _emailController,
+                    label: 'Email',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                EdenInput(
-                  controller: _passwordController,
-                  label: 'Password',
-                  obscureText: true,
+                Semantics(
+                  identifier: 'eden-login-password',
+                  textField: true,
+                  child: EdenInput(
+                    controller: _passwordController,
+                    label: 'Password',
+                    obscureText: true,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                EdenButton(
-                  onPressed: _loading ? null : _login,
-                  label: _loading ? 'Signing in...' : 'Sign in',
+                Semantics(
+                  identifier: 'eden-login-submit',
+                  button: true,
+                  child: EdenButton(
+                    onPressed: _loading ? null : _login,
+                    label: _loading ? 'Signing in...' : 'Sign in',
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Row(children: [
@@ -142,14 +157,19 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextButton(
-                  onPressed: widget.onSignUpTap,
-                  child: const Text("Don't have an account? Sign up"),
+                Semantics(
+                  identifier: 'eden-login-signup-link',
+                  button: true,
+                  child: TextButton(
+                    onPressed: widget.onSignUpTap,
+                    child: const Text("Don't have an account? Sign up"),
+                  ),
                 ),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }

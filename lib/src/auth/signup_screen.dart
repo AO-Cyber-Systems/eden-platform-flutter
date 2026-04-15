@@ -50,7 +50,10 @@ class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Semantics(
+      identifier: 'eden-signup-screen',
+      explicitChildNodes: true,
+      child: Scaffold(
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
@@ -86,36 +89,57 @@ class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                EdenInput(
-                  controller: _nameController,
-                  label: 'Display Name',
+                Semantics(
+                  identifier: 'eden-signup-name',
+                  textField: true,
+                  child: EdenInput(
+                    controller: _nameController,
+                    label: 'Display Name',
+                  ),
                 ),
                 const SizedBox(height: 16),
-                EdenInput(
-                  controller: _emailController,
-                  label: 'Email',
-                  keyboardType: TextInputType.emailAddress,
+                Semantics(
+                  identifier: 'eden-signup-email',
+                  textField: true,
+                  child: EdenInput(
+                    controller: _emailController,
+                    label: 'Email',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                EdenInput(
-                  controller: _passwordController,
-                  label: 'Password',
-                  obscureText: true,
+                Semantics(
+                  identifier: 'eden-signup-password',
+                  textField: true,
+                  child: EdenInput(
+                    controller: _passwordController,
+                    label: 'Password',
+                    obscureText: true,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                EdenButton(
-                  onPressed: _loading ? null : _signUp,
-                  label: _loading ? 'Creating account...' : 'Sign up',
+                Semantics(
+                  identifier: 'eden-signup-submit',
+                  button: true,
+                  child: EdenButton(
+                    onPressed: _loading ? null : _signUp,
+                    label: _loading ? 'Creating account...' : 'Sign up',
+                  ),
                 ),
                 const SizedBox(height: 16),
-                TextButton(
-                  onPressed: widget.onLoginTap,
-                  child: const Text('Already have an account? Sign in'),
+                Semantics(
+                  identifier: 'eden-signup-login-link',
+                  button: true,
+                  child: TextButton(
+                    onPressed: widget.onLoginTap,
+                    child: const Text('Already have an account? Sign in'),
+                  ),
                 ),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }
