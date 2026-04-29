@@ -71,6 +71,23 @@ class FakePlatformRepository implements PlatformRepository {
     if (listNavItemsError != null) throw listNavItemsError!;
     return listNavItemsResult ?? const [];
   }
+
+  @override
+  Future<String> initiateSSOForDesktop(String provider, String redirectUri) async {
+    return 'http://example.com/sso/$provider?redirect=$redirectUri';
+  }
+
+  @override
+  Future<PlatformUser> updateProfile(
+      String accessToken, String displayName, String avatarUrl) async {
+    return PlatformUser(
+      id: 'user-1',
+      email: 'dev@example.com',
+      displayName: displayName,
+      avatarUrl: avatarUrl,
+      isActive: true,
+    );
+  }
 }
 
 /// Waits for microtasks and short timers to complete.

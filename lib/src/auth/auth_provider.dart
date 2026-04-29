@@ -193,3 +193,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(repository: ref.watch(platformRepositoryProvider));
 });
+
+/// Derived `bool` view of [authProvider] — flips only when the user transitions
+/// to or from the [AuthStatus.authenticated] state.
+///
+/// Routers and other consumers should `ref.watch(isAuthenticatedProvider)`
+/// instead of `ref.watch(authProvider).isAuthenticated` so they DO NOT
+/// rebuild on every transient transition through [AuthStatus.refreshing]
+/// or [AuthStatus.error]. The full [authProvider] remains the source of
+/// truth for screens that want to show loading / error UI.
+///
+/// This is the structural fix for the post-login navigation race: when
+/// `_login()` flips the underlying state to `refreshing` mid-await, this
+/// derived bool stays `false` until the eventual `authenticated` transition,
+/// preventing GoRouter from disposing the login screen before
+/// `_persistTokens()` and `onLoginSuccess` complete.
+///
+/// Note: [AuthStatus.refreshing] is also entered by `restoreSession()` on app
+/// boot. Switching consumers to watch this derived bool means the router will
+/// NOT rebuild during boot-time refresh — that is the intentional behavior.
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  return ref.watch(authProvider.select((s) => s.isAuthenticated));
+});

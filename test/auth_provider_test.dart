@@ -205,4 +205,53 @@ void main() {
       expect(container.read(authProvider).status, AuthStatus.unauthenticated);
     });
   });
+
+  group('isAuthenticatedProvider', () {
+    test('returns false when unauthenticated', () async {
+      SharedPreferences.setMockInitialValues({});
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      expect(container.read(isAuthenticatedProvider), false);
+    });
+
+    test('returns true after successful login', () async {
+      SharedPreferences.setMockInitialValues({});
+      repository.loginResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      expect(container.read(isAuthenticatedProvider), true);
+    });
+
+    test('does not flicker during refreshing transition', () async {
+      // CRITICAL: this asserts the derived provider DOES NOT emit during the
+      // transient `refreshing` phase — it must only emit when the underlying
+      // bool flips. This is the structural fix for the navigation race.
+      SharedPreferences.setMockInitialValues({});
+      repository.loginResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      final events = <bool>[];
+      container.listen<bool>(
+        isAuthenticatedProvider,
+        (_, next) => events.add(next),
+        fireImmediately: true,
+      );
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      // Riverpod schedules listener notifications on a microtask; settle so
+      // the post-login `true` emission lands before assertions run.
+      await settle();
+
+      // Expected: [false, true]. No intermediate `false` from refreshing transit.
+      expect(events, [false, true]);
+    });
+  });
 }
