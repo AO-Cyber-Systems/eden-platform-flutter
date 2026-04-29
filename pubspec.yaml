@@ -15,6 +15,10 @@ dependencies:
   flutter_riverpod: ^2.6.1
   http: ^1.2.0
   shared_preferences: ^2.3.0
+  # CLI-01: encrypted token persistence (Keychain/EncryptedSharedPreferences).
+  # Pinned to 9.2.4 — DO NOT bump to 10.x (upstream issue #1043 data-loss bug).
+  # See eden-biz-flutter.SAAS/.planning/objectives/10-client-security-baseline/10-RESEARCH.md Pitfall 1.
+  flutter_secure_storage: 9.2.4
   eden_platform_api_dart:
     path: ../eden-platform-api-dart
   go_router: ^14.0.0

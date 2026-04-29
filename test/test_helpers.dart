@@ -71,6 +71,21 @@ class FakePlatformRepository implements PlatformRepository {
     if (listNavItemsError != null) throw listNavItemsError!;
     return listNavItemsResult ?? const [];
   }
+
+  // Pre-existing methods on PlatformRepository that older test_helpers.dart
+  // missed (added by TRD 10-03 for cross-repo unblocking — see SUMMARY).
+  // Both throw UnimplementedError; tests that exercise these paths must
+  // configure a result/error explicitly via subclass.
+  @override
+  Future<String> initiateSSOForDesktop(String provider, String redirectUri) async {
+    throw UnimplementedError('configure FakePlatformRepository subclass for SSO');
+  }
+
+  @override
+  Future<PlatformUser> updateProfile(
+      String accessToken, String displayName, String avatarUrl) async {
+    throw UnimplementedError('configure FakePlatformRepository subclass for profile updates');
+  }
 }
 
 /// Waits for microtasks and short timers to complete.
