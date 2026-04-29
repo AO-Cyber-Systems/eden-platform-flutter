@@ -28,10 +28,19 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       await ref.read(authProvider.notifier).loginWithSSO(provider);
-      widget.onLoginSuccess?.call();
+      // Defer navigation to a microtask so any setState/build cycles
+      // triggered by the auth state transition complete first.
+      if (!mounted) return;
+      Future.microtask(() {
+        if (!mounted) return;
+        widget.onLoginSuccess?.call();
+      });
     } catch (e) {
+      if (!mounted) return;
       setState(() { _error = e.toString(); });
     } finally {
+      // ignore: control_flow_in_finally — intentional mount guard before setState.
+      if (!mounted) return;
       setState(() { _loading = false; });
     }
   }
@@ -46,12 +55,21 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-      widget.onLoginSuccess?.call();
+      // Defer navigation to a microtask so any setState/build cycles
+      // triggered by the auth state transition complete first.
+      if (!mounted) return;
+      Future.microtask(() {
+        if (!mounted) return;
+        widget.onLoginSuccess?.call();
+      });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
       });
     } finally {
+      // ignore: control_flow_in_finally — intentional mount guard before setState.
+      if (!mounted) return;
       setState(() {
         _loading = false;
       });
@@ -64,15 +82,15 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
       identifier: 'eden-login-screen',
       explicitChildNodes: true,
       child: Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 Text(
                   'Welcome back',
                   style: Theme.of(context).textTheme.headlineMedium,
@@ -166,6 +184,7 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         ),
