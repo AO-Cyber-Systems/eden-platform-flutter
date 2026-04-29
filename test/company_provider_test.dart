@@ -12,7 +12,13 @@ void main() {
 
   setUp(() {
     repository = FakePlatformRepository();
+    // SecureTokenStorage (default backing for AuthNotifier in TRD 10-03)
+    // calls flutter_secure_storage which has no native side in unit tests —
+    // install a MethodChannel mock to avoid MissingPluginException.
+    installSecureStorageChannelMock();
   });
+
+  tearDown(uninstallSecureStorageChannelMock);
 
   /// Settle multiple rounds to allow auth -> company -> nav microtask chains.
   Future<void> deepSettle() async {

@@ -12,8 +12,6 @@
 //
 // ignore_for_file: avoid_relative_lib_imports
 
-import 'dart:async';
-
 import 'package:eden_platform_flutter/src/auth/secure_token_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

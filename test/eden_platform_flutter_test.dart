@@ -8,6 +8,14 @@ import 'test_helpers.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late Map<String, String> secureStore;
+
+  setUp(() {
+    secureStore = installSecureStorageChannelMock();
+  });
+
+  tearDown(uninstallSecureStorageChannelMock);
+
   test('restoreSession without persisted tokens becomes unauthenticated', () async {
     SharedPreferences.setMockInitialValues({});
     final repository = FakePlatformRepository();
@@ -44,9 +52,9 @@ void main() {
     expect(state.companyId, 'company-1');
     expect(state.role, 'owner');
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('access_token'), 'access-token');
-    expect(prefs.getString('refresh_token'), 'refresh-token');
+    // CLI-01: tokens persist to secure storage, not shared_preferences.
+    expect(secureStore['access_token'], 'access-token');
+    expect(secureStore['refresh_token'], 'refresh-token');
   });
 
   test('restoreSession refreshes persisted tokens', () async {

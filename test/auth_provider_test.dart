@@ -11,10 +11,17 @@ void main() {
 
   late FakePlatformRepository repository;
   late ProviderContainer container;
+  late Map<String, String> secureStore;
 
   setUp(() {
     repository = FakePlatformRepository();
+    // Install in-memory mock for flutter_secure_storage so the default
+    // SecureTokenStorage (via tokenStorageProvider) doesn't hit
+    // MissingPluginException in unit tests.
+    secureStore = installSecureStorageChannelMock();
   });
+
+  tearDown(uninstallSecureStorageChannelMock);
 
   ProviderContainer createContainer() {
     final c = ProviderContainer(
@@ -49,7 +56,9 @@ void main() {
       expect(repository.refreshCalls, 0);
     });
 
-    test('with refresh token -> refreshes and authenticates', () async {
+    test('with refresh token (legacy prefs) -> migrates, refreshes, and authenticates', () async {
+      // Legacy install: refresh_token is in shared_preferences. The new
+      // SecureTokenStorage migrates it to secure storage on first read.
       SharedPreferences.setMockInitialValues({'refresh_token': 'old-token'});
       repository.refreshResult = buildSession();
       container = createContainer();
@@ -59,6 +68,22 @@ void main() {
       final state = container.read(authProvider);
       expect(state.status, AuthStatus.authenticated);
       expect(state.accessToken, 'access-token');
+      expect(repository.refreshCalls, 1);
+      // After successful refresh, NEW tokens land in secure storage.
+      expect(secureStore['access_token'], 'access-token');
+      expect(secureStore['refresh_token'], 'refresh-token');
+    });
+
+    test('with refresh token (already in secure storage) -> refreshes', () async {
+      SharedPreferences.setMockInitialValues({});
+      secureStore['refresh_token'] = 'sealed-refresh';
+      repository.refreshResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.authenticated);
       expect(repository.refreshCalls, 1);
     });
 
@@ -87,7 +112,7 @@ void main() {
   });
 
   group('login', () {
-    test('success -> authenticated + tokens persisted', () async {
+    test('success -> authenticated + tokens persisted to secure storage', () async {
       SharedPreferences.setMockInitialValues({});
       repository.loginResult = buildSession();
       container = createContainer();
@@ -100,9 +125,9 @@ void main() {
       expect(state.status, AuthStatus.authenticated);
       expect(state.userId, 'user-1');
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('access_token'), 'access-token');
-      expect(prefs.getString('refresh_token'), 'refresh-token');
+      // CLI-01: tokens persisted to secure storage, not shared_preferences.
+      expect(secureStore['access_token'], 'access-token');
+      expect(secureStore['refresh_token'], 'refresh-token');
     });
 
     test('failure (PlatformError) -> error state with message', () async {
@@ -184,6 +209,9 @@ void main() {
       expect(container.read(authProvider).status, AuthStatus.unauthenticated);
       expect(repository.logoutCalls, 1);
 
+      // CLI-01: clear() drops both stores (secure + any legacy prefs straggler).
+      expect(secureStore['access_token'], isNull);
+      expect(secureStore['refresh_token'], isNull);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('access_token'), isNull);
       expect(prefs.getString('refresh_token'), isNull);

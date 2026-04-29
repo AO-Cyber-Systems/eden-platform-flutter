@@ -8,56 +8,10 @@
 // ignore_for_file: avoid_relative_lib_imports
 
 import 'package:eden_platform_flutter/eden_platform.dart';
-import 'package:eden_platform_flutter/src/auth/token_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
-
-/// Test-only TokenStorage backed by an in-memory map.
-class FakeTokenStorage implements TokenStorage {
-  final Map<String, String?> _values = <String, String?>{};
-  int readAccessCalls = 0;
-  int readRefreshCalls = 0;
-  int writeAccessCalls = 0;
-  int writeRefreshCalls = 0;
-  int clearCalls = 0;
-
-  @override
-  Future<String?> readAccessToken() async {
-    readAccessCalls++;
-    return _values['access'];
-  }
-
-  @override
-  Future<String?> readRefreshToken() async {
-    readRefreshCalls++;
-    return _values['refresh'];
-  }
-
-  @override
-  Future<void> writeAccessToken(String? value) async {
-    writeAccessCalls++;
-    _values['access'] = value;
-  }
-
-  @override
-  Future<void> writeRefreshToken(String? value) async {
-    writeRefreshCalls++;
-    _values['refresh'] = value;
-  }
-
-  @override
-  Future<void> clear() async {
-    clearCalls++;
-    _values.clear();
-  }
-
-  void seed({String? access, String? refresh}) {
-    if (access != null) _values['access'] = access;
-    if (refresh != null) _values['refresh'] = refresh;
-  }
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

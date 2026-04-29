@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/platform_repository.dart';
+import 'secure_token_storage.dart';
 import 'sso_auth_service.dart';
-import '../constants/storage_keys.dart';
+import 'token_storage.dart';
 import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
 
@@ -61,14 +61,30 @@ final platformRepositoryProvider = Provider<PlatformRepository>((ref) {
   );
 });
 
+/// Provider for the token persistence backend.
+///
+/// Default: [SecureTokenStorage] using `flutter_secure_storage` 9.2.4
+/// (Keychain on iOS, EncryptedSharedPreferences on Android) with transparent
+/// migration from `shared_preferences` for upgraded installs.
+///
+/// Tests override with a fake [TokenStorage]. Apps may override for custom
+/// persistence (e.g. encrypted-at-rest with app-managed keys).
+final tokenStorageProvider = Provider<TokenStorage>((ref) {
+  return SecureTokenStorage();
+});
+
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier({required PlatformRepository repository})
-      : _repository = repository,
+  AuthNotifier({
+    required PlatformRepository repository,
+    required TokenStorage tokenStorage,
+  })  : _repository = repository,
+        _tokenStorage = tokenStorage,
         super(const AuthState.unknown()) {
     unawaited(restoreSession());
   }
 
   final PlatformRepository _repository;
+  final TokenStorage _tokenStorage;
 
   Future<void> login(String email, String password) async {
     state = AuthState.refreshing(session: state.session);
@@ -97,10 +113,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> restoreSession() async {
-    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = await _tokenStorage.readRefreshToken();
     // Re-check after async gap — state may have been set externally (dev injection).
     if (state.isAuthenticated) return;
-    final refreshToken = prefs.getString(StorageKeys.kRefreshToken);
     if (refreshToken == null || refreshToken.isEmpty) {
       state = const AuthState.unauthenticated();
       return;
@@ -178,18 +193,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _persistTokens(PlatformSession session) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageKeys.kAccessToken, session.accessToken);
-    await prefs.setString(StorageKeys.kRefreshToken, session.refreshToken);
+    await _tokenStorage.writeAccessToken(session.accessToken);
+    await _tokenStorage.writeRefreshToken(session.refreshToken);
   }
 
   Future<void> _clearPersistedTokens() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(StorageKeys.kAccessToken);
-    await prefs.remove(StorageKeys.kRefreshToken);
+    await _tokenStorage.clear();
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(repository: ref.watch(platformRepositoryProvider));
+  return AuthNotifier(
+    repository: ref.watch(platformRepositoryProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });

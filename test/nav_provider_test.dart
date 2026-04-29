@@ -12,7 +12,10 @@ void main() {
 
   setUp(() {
     repository = FakePlatformRepository();
+    installSecureStorageChannelMock();
   });
+
+  tearDown(uninstallSecureStorageChannelMock);
 
   /// Settle multiple rounds to allow auth -> company -> nav microtask chains.
   Future<void> deepSettle() async {

@@ -22,7 +22,10 @@ void main() {
           }),
           // Override auth with a simple authenticated state
           authProvider.overrideWith((ref) {
-            return AuthNotifier(repository: FakePlatformRepository());
+            return AuthNotifier(
+              repository: FakePlatformRepository(),
+              tokenStorage: FakeTokenStorage(),
+            );
           }),
         ],
         child: const MaterialApp(
@@ -144,7 +147,10 @@ class _PresetNavNotifier extends NavNotifier {
 /// An AuthNotifier that starts with a pre-set state.
 class _PresetAuthNotifier extends AuthNotifier {
   _PresetAuthNotifier(AuthState initialState)
-      : super(repository: FakePlatformRepository()) {
+      : super(
+          repository: FakePlatformRepository(),
+          tokenStorage: FakeTokenStorage(),
+        ) {
     state = initialState;
   }
 }
