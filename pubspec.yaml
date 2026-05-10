@@ -24,11 +24,19 @@ dependencies:
   go_router: ^14.0.0
   eden_ui_flutter:
     path: ../eden-ui-flutter
+  # Networking — gold-standard dio_client donated from AODex.
+  # See lib/src/networking/README.md.
+  dio: ^5.9.0
+  dio_cookie_manager: ^3.1.1
+  cookie_jar: ^4.0.8
+  web_socket_channel: ^3.0.3
+  sentry_dio: ^8.14.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  mocktail: ^1.0.0
 
 flutter:
   uses-material-design: true

@@ -21,3 +21,15 @@ export 'src/entitlements/entitlements_provider.dart';
 export 'src/entitlements/feature_gate.dart';
 export 'src/entitlements/quota_bar.dart';
 export 'src/entitlements/plan_badge.dart';
+// Networking — donated from AODex (gold-standard dio_client). See
+// src/networking/README.md for the full surface and migration guide.
+export 'src/networking/api_exception.dart';
+export 'src/networking/auth_audit_interceptor.dart';
+export 'src/networking/auth_interceptor.dart';
+export 'src/networking/cookie_jar_helper.dart'
+    show initCookieJar, initCookieJarWeb, cookieJar;
+export 'src/networking/dio_client_config.dart';
+export 'src/networking/dio_client_factory.dart';
+export 'src/networking/login_path_rule.dart';
+export 'src/networking/retry_interceptor.dart';
+export 'src/networking/websocket_factory.dart';
