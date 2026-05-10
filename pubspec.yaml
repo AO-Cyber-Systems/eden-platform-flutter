@@ -32,7 +32,7 @@ dependencies:
   eden_ui_flutter:
     git:
       url: https://github.com/AO-Cyber-Systems/eden-ui-flutter.git
-      ref: e081038
+      ref: c50bc165e136f528ee3874e434da671c96018019
   # Networking — gold-standard dio_client donated from AODex.
   # See lib/src/networking/README.md.
   dio: ^5.9.0
