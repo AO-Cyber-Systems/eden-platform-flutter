@@ -19,5 +19,13 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+# Keep monorepo dev working — when running this example inside eden-libs,
+# redirect transitive deps to local paths.
+dependency_overrides:
+  eden_ui_flutter:
+    path: ../../eden-ui-flutter
+  eden_platform_api_dart:
+    path: ../../eden-platform-api-dart
+
 flutter:
   uses-material-design: true
