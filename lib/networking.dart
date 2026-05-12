@@ -32,4 +32,10 @@ export 'src/networking/websocket_factory.dart';
 export 'package:dio/dio.dart'
     show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
          ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
-         DioException, HttpClientAdapter, ResponseBody;
+         DioException, HttpClientAdapter, ResponseBody,
+         // Added for politihub-navigators Obj 7 TRD 07-09 (header-based futures).
+         // Body-field idempotency (ADR-0007) doesn't require this for Obj 7
+         // itself; this re-export lands in parallel for future use such as
+         // per-request `Idempotency-Key` headers, per-request timeouts, or
+         // streamed responses.
+         Options;
