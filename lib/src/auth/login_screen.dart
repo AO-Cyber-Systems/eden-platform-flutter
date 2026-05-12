@@ -7,10 +7,18 @@ class PlatformLoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSignUpTap;
   final VoidCallback? onLoginSuccess;
 
+  /// When true (the default, for back-compat), the "OR" divider and the
+  /// Microsoft + Google SSO buttons are rendered below the email/password
+  /// form. Pass `false` to render an email-only login form — used by
+  /// products like politihub Navigators that do not expose SSO via the
+  /// platform API.
+  final bool showSsoButtons;
+
   const PlatformLoginScreen({
     super.key,
     this.onSignUpTap,
     this.onLoginSuccess,
+    this.showSsoButtons = true,
   });
 
   @override
@@ -127,36 +135,38 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                     label: _loading ? 'Signing in...' : 'Sign in',
                   ),
                 ),
-                const SizedBox(height: 24),
-                Row(children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('OR', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                if (widget.showSsoButtons) ...[
+                  const SizedBox(height: 24),
+                  Row(children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ]),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : () => _loginWithSSO('microsoft'),
+                    icon: const Icon(Icons.window, size: 20),
+                    label: const Text('Sign in with Microsoft'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
-                  const Expanded(child: Divider()),
-                ]),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : () => _loginWithSSO('microsoft'),
-                  icon: const Icon(Icons.window, size: 20),
-                  label: const Text('Sign in with Microsoft'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : () => _loginWithSSO('google'),
+                    icon: const Icon(Icons.g_mobiledata, size: 24),
+                    label: const Text('Sign in with Google'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : () => _loginWithSSO('google'),
-                  icon: const Icon(Icons.g_mobiledata, size: 24),
-                  label: const Text('Sign in with Google'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
                 Semantics(
                   identifier: 'eden-login-signup-link',
                   button: true,

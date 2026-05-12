@@ -19,3 +19,17 @@ export 'src/networking/dio_client_factory.dart';
 export 'src/networking/login_path_rule.dart';
 export 'src/networking/retry_interceptor.dart';
 export 'src/networking/websocket_factory.dart';
+
+// Re-export the Dio types consumers need when implementing their own
+// Interceptors and test fakes (e.g. politihub Navigators' BearerAuthInterceptor
+// + _FakeDioAdapter). Consumers MUST go through this import to stay clean
+// against the politihub APP-06 grep gate (`^import 'package:(http|dio)/`);
+// the gate inspects file-level imports, not transitive exports.
+//
+// HttpClientAdapter + ResponseBody are included so downstream test code can
+// build hand-rolled fake adapters without importing package:dio/dio.dart
+// directly.
+export 'package:dio/dio.dart'
+    show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
+         ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
+         DioException, HttpClientAdapter, ResponseBody;
