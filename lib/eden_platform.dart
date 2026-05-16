@@ -37,3 +37,5 @@ export 'src/networking/websocket_factory.dart';
 // src/providers/README.md for usage and migration guide.
 export 'src/providers/paginated_async_notifier.dart';
 export 'src/providers/mutation_notifier.dart';
+// Riverpod ↔ eden-ui-flutter bridge helpers.
+export 'src/widgets/eden_async_snapshot_riverpod.dart';
