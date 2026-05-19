@@ -38,7 +38,7 @@ class ConnectPlatformRepository implements PlatformRepository {
           ..email = email
           ..password = password,
       );
-      return _sessionFromAuthResponse(response);
+      return _sessionFromAuthData(response.auth);
     } catch (e, stack) {
       throw _wrapConnectError(e, stack);
     }
@@ -53,7 +53,7 @@ class ConnectPlatformRepository implements PlatformRepository {
           ..password = password
           ..displayName = displayName,
       );
-      return _sessionFromAuthResponse(response);
+      return _sessionFromAuthData(response.auth);
     } catch (e, stack) {
       throw _wrapConnectError(e, stack);
     }
@@ -65,7 +65,7 @@ class ConnectPlatformRepository implements PlatformRepository {
       final response = await AuthServiceClient(_transport).refreshToken(
         RefreshTokenRequest()..refreshToken = refreshToken,
       );
-      return _sessionFromAuthResponse(response);
+      return _sessionFromAuthData(response.auth);
     } catch (e, stack) {
       throw _wrapConnectError(e, stack);
     }
@@ -175,12 +175,17 @@ class ConnectPlatformRepository implements PlatformRepository {
     }
   }
 
-  PlatformSession _sessionFromAuthResponse(AuthResponse response) {
-    final claims = _extractClaims(response.accessToken);
-    final user = response.user;
+  // Builds a PlatformSession from the AuthData payload that LoginResponse,
+  // SignUpResponse, and RefreshTokenResponse all carry under their `.auth`
+  // field. Previously this method took an `AuthResponse` (a single proto
+  // message); the proto was refactored to wrap auth fields in an `AuthData`
+  // sub-message shared across the three responses.
+  PlatformSession _sessionFromAuthData(AuthData auth) {
+    final claims = _extractClaims(auth.accessToken);
+    final user = auth.user;
     return PlatformSession(
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
       user: PlatformUser(
         id: user.id,
         email: user.email,
