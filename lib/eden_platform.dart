@@ -33,6 +33,9 @@ export 'src/networking/dio_client_factory.dart';
 export 'src/networking/login_path_rule.dart';
 export 'src/networking/retry_interceptor.dart';
 export 'src/networking/websocket_factory.dart';
+// Connect transport helpers — upstreamed from eden-biz (see networking/README.md).
+export 'src/networking/connect_bearer_interceptor.dart';
+export 'src/networking/proactive_refresh.dart';
 // Riverpod patterns — donated from AODex (pagination + mutation). See
 // src/providers/README.md for usage and migration guide.
 export 'src/providers/paginated_async_notifier.dart';
