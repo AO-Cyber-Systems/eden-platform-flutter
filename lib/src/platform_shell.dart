@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth/auth_provider.dart';
 import 'models/platform_models.dart';
 import 'navigation/sidebar.dart';
+// PlatformNavItem is part of platform_models.dart (imported above).
 
 /// Builder signature for an app-specific user menu rendered in the top-right
 /// of the [PlatformShell]'s AppBar. Receives the authenticated
@@ -31,12 +32,32 @@ class PlatformShell extends ConsumerWidget {
   /// user's avatar/name + a Logout button.
   final PlatformShellUserMenuBuilder? userMenuBuilder;
 
+  /// Override the sidebar's nav items. When non-null, the shell
+  /// constructs its inner [PlatformSidebar] with these entries, the
+  /// matching [sidebarSelectedId] highlight, and [onSidebarItemSelected]
+  /// (or `context.go(item.path)` fallback). When null, the shell uses
+  /// the default provider-backed sidebar.
+  ///
+  /// This forwards directly to [PlatformSidebar.items]; same semantics.
+  final List<PlatformNavItem>? sidebarItems;
+
+  /// Selected sidebar item id when [sidebarItems] is provided. Ignored
+  /// in provider-backed mode.
+  final String? sidebarSelectedId;
+
+  /// Tap callback for items-override sidebar mode. Defaults to
+  /// `context.go(item.path)` when null.
+  final void Function(PlatformNavItem item)? onSidebarItemSelected;
+
   const PlatformShell({
     super.key,
     required this.child,
     this.title,
     this.actions,
     this.userMenuBuilder,
+    this.sidebarItems,
+    this.sidebarSelectedId,
+    this.onSidebarItemSelected,
   });
 
   @override
@@ -53,6 +74,16 @@ class PlatformShell extends ConsumerWidget {
       return child; // Auth screens handle themselves
     }
 
+    // Build the sidebar — items-override mode when sidebarItems is set,
+    // provider-backed mode otherwise.
+    final sidebar = sidebarItems != null
+        ? PlatformSidebar(
+            items: sidebarItems,
+            selectedId: sidebarSelectedId,
+            onItemSelected: onSidebarItemSelected,
+          )
+        : const PlatformSidebar();
+
     // When the consumer hasn't requested any chrome (no actions, no user
     // menu), keep the legacy sidebar-only layout for backward compatibility.
     // `title` alone is insufficient to trigger an AppBar — the legacy shell
@@ -64,7 +95,7 @@ class PlatformShell extends ConsumerWidget {
       return Scaffold(
         body: Row(
           children: [
-            const PlatformSidebar(),
+            sidebar,
             Expanded(child: child),
           ],
         ),
@@ -85,7 +116,7 @@ class PlatformShell extends ConsumerWidget {
       ),
       body: Row(
         children: [
-          const PlatformSidebar(),
+          sidebar,
           Expanded(child: child),
         ],
       ),

@@ -162,6 +162,57 @@ void main() {
       expect(actionWidgets.last.key, const Key('user-menu'));
     });
 
+    testWidgets('sidebarItems forwards items-override to inner PlatformSidebar',
+        (tester) async {
+      final session = buildSession(displayName: 'Forward User');
+      PlatformNavItem? tapped;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(
+                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+            platformRepositoryProvider
+                .overrideWithValue(FakePlatformRepository()),
+          ],
+          child: MaterialApp(
+            home: PlatformShell(
+              userMenuBuilder: (ctx, s) => const SizedBox.shrink(),
+              sidebarItems: const [
+                PlatformNavItem(
+                  id: 'one',
+                  label: 'One',
+                  icon: 'home',
+                  path: '/one',
+                  feature: 'app',
+                  priority: 0,
+                ),
+                PlatformNavItem(
+                  id: 'two',
+                  label: 'Two',
+                  icon: 'star',
+                  path: '/two',
+                  feature: 'app',
+                  priority: 1,
+                ),
+              ],
+              sidebarSelectedId: 'one',
+              onSidebarItemSelected: (item) => tapped = item,
+              child: const Text('BODY'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('One'), findsOneWidget);
+      expect(find.text('Two'), findsOneWidget);
+
+      await tester.tap(find.text('Two'));
+      await tester.pump();
+      expect(tapped, isNotNull);
+      expect(tapped!.id, 'two');
+    });
+
     testWidgets('unauthenticated state returns child without chrome',
         (tester) async {
       await tester.pumpWidget(
