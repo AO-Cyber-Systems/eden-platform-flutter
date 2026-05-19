@@ -7,6 +7,10 @@ auth-refresh) and parameterises it for product-specific config.
 This kills five-plus forks of nearly-identical Dio wiring across the
 portfolio (AODex, AOFamily ×3, AOSentry-admin, justforme, etc).
 
+Also provides generic ConnectRPC primitives upstreamed from eden-biz:
+- `ProactiveRefresh` — JWT exp-claim polling + single-flight protection
+- `connectBearerInterceptor` — `Authorization: Bearer` for ConnectRPC
+
 ## Quick start
 
 ```dart
@@ -172,6 +176,53 @@ Products with their own Dio fork (AODex, AOFamily ×3, AOSentry-admin) should:
    factory files. Update consumers to import from
    `package:eden_platform_flutter/eden_platform.dart`.
 
+## ConnectRPC helpers
+
+### ProactiveRefresh
+
+Polls the JWT `exp` claim before sending a request (or on app resume) and
+fires a single-flight refresh if less than `threshold` is remaining.
+
+```dart
+final proactiveRefresh = ProactiveRefresh(
+  getAccessToken: () => ref.read(authProvider).accessToken,
+  restoreSession: () => ref.read(authProvider.notifier).restoreSession(),
+  threshold: const Duration(minutes: 2), // default
+);
+
+// In your Connect auth interceptor's onRequest:
+await proactiveRefresh.refreshIfNeeded();
+
+// In AppLifecycleListener.onResume (fire-and-forget, errors swallowed):
+onAppResumeCallProactiveRefresh(proactiveRefresh);
+```
+
+### connectBearerInterceptor
+
+Attaches `Authorization: Bearer <token>` to every outgoing ConnectRPC call.
+Token is read lazily so rotation is reflected immediately.
+
+```dart
+final transport = protocol.Transport(
+  baseUrl: baseUrl,
+  codec: const JsonCodec(),
+  interceptors: [
+    connectBearerInterceptor(() => ref.read(authProvider).accessToken),
+  ],
+);
+```
+
+For tests, use `connectBearerInterceptorForTest(tokenReader: () => 'fake-token')`
+to skip the Riverpod `Ref` dependency:
+
+```dart
+final transport = FakeTransportBuilder()
+    .unary(mySpec, (req, ctx) => myResponse)
+    .build(interceptors: [
+  connectBearerInterceptorForTest(tokenReader: () => 'test-jwt'),
+]);
+```
+
 ## Test coverage
 
 - `auth_interceptor_test.dart` — 14 cases covering exact-match exemptions,
@@ -186,3 +237,8 @@ Products with their own Dio fork (AODex, AOFamily ×3, AOSentry-admin) should:
   Rails / generic message-extraction.
 - `dio_client_factory_test.dart` — interceptor chain order + base options
   smoke test.
+- `proactive_refresh_test.dart` — 11 cases: null/no-exp/malformed no-op,
+  within-threshold + expired trigger, single-flight collapse, inflight slot
+  cleared, custom threshold, fire-and-forget + error swallow on resume.
+- `connect_bearer_interceptor_test.dart` — 5 cases: non-null token attaches
+  header, null/empty omit header, verbatim token, overwrites pre-existing.
