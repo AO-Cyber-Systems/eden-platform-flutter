@@ -45,19 +45,62 @@ IconData _resolveIcon(String iconName) {
   return iconMap[iconName] ?? Icons.circle_outlined;
 }
 
-/// Platform sidebar that reads from [navItemsProvider] and renders navigation
-/// using eden-ui-flutter's [EdenDesktopLayout] nav item model.
+/// Platform sidebar that renders a navigation rail using
+/// eden-ui-flutter's [EdenDesktopLayout] nav item model.
+///
+/// Two source-of-truth modes:
+/// - **Provider-backed (default):** reads from [navStateProvider] which
+///   loads items from `PlatformRepository.listNavItems`. Used by Eden CRM
+///   and other apps that drive their nav from a server-side registry.
+/// - **Items override:** when [items] is non-null, the sidebar renders
+///   those entries directly and **skips** the backend call. The
+///   [selectedId] parameter (if provided) controls highlighting; tapping
+///   an item calls [onItemSelected] (if provided) so the consumer can
+///   route via its own router. This mode is intended for apps with a
+///   static or client-derived nav (e.g. AOID's portal).
 class PlatformSidebar extends ConsumerWidget {
   final Widget? header;
   final Widget? footer;
 
-  const PlatformSidebar({super.key, this.header, this.footer});
+  /// Override the nav items rendered by the sidebar. When non-null, the
+  /// sidebar does not read from [navStateProvider] and the provider-backed
+  /// nav loading is bypassed entirely.
+  final List<PlatformNavItem>? items;
+
+  /// Selected item id when [items] is provided. Ignored in
+  /// provider-backed mode (the provider holds its own selection).
+  final String? selectedId;
+
+  /// Callback invoked when an item is tapped in items-override mode.
+  /// Receives the tapped item. Defaults to `context.go(item.path)` when
+  /// null — sufficient for go_router consumers that just want navigation.
+  final void Function(PlatformNavItem item)? onItemSelected;
+
+  const PlatformSidebar({
+    super.key,
+    this.header,
+    this.footer,
+    this.items,
+    this.selectedId,
+    this.onItemSelected,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final navState = ref.watch(navStateProvider);
-    final navItems = navState.items;
-    final selectedId = navState.selectedId;
+    final List<PlatformNavItem> navItems;
+    final String? activeId;
+
+    if (items != null) {
+      // Items-override mode: skip the provider read so the backend isn't
+      // queried and we don't subscribe to nav state.
+      navItems = items!;
+      activeId = selectedId;
+    } else {
+      final navState = ref.watch(navStateProvider);
+      navItems = navState.items;
+      activeId = navState.selectedId;
+    }
+
     final auth = ref.watch(authProvider);
 
     return Container(
@@ -83,7 +126,7 @@ class PlatformSidebar extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              children: _buildGroupedNavItems(context, ref, navItems, selectedId),
+              children: _buildGroupedNavItems(context, ref, navItems, activeId),
             ),
           ),
           const Divider(height: 1),
@@ -132,6 +175,25 @@ class PlatformSidebar extends ConsumerWidget {
     );
   }
 
+  /// Handle a tap on a nav item. In provider-backed mode (default), updates
+  /// [navStateProvider] selection and calls `context.go(item.path)`. In
+  /// items-override mode, calls [onItemSelected] (if non-null) or falls
+  /// back to `context.go(item.path)` so callers that just want navigation
+  /// don't have to wire a callback.
+  void _handleNavTap(BuildContext context, WidgetRef ref, PlatformNavItem item) {
+    if (items != null) {
+      final cb = onItemSelected;
+      if (cb != null) {
+        cb(item);
+      } else {
+        context.go(item.path);
+      }
+      return;
+    }
+    ref.read(navStateProvider.notifier).select(item.id);
+    context.go(item.path);
+  }
+
   List<Widget> _buildGroupedNavItems(
     BuildContext context,
     WidgetRef ref,
@@ -163,10 +225,7 @@ class PlatformSidebar extends ConsumerWidget {
           widgets.add(_NavItemTile(
             item: item,
             isSelected: item.id == selectedId,
-            onTap: () {
-              ref.read(navStateProvider.notifier).select(item.id);
-              context.go(item.path);
-            },
+            onTap: () => _handleNavTap(context, ref, item),
           ));
         }
         // Add divider after top-level group if there are more sections
@@ -197,10 +256,7 @@ class PlatformSidebar extends ConsumerWidget {
           widgets.add(_NavItemTile(
             item: item,
             isSelected: item.id == selectedId,
-            onTap: () {
-              ref.read(navStateProvider.notifier).select(item.id);
-              context.go(item.path);
-            },
+            onTap: () => _handleNavTap(context, ref, item),
           ));
         }
       }
