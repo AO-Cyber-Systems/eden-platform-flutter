@@ -19,6 +19,9 @@ export 'src/networking/dio_client_factory.dart';
 export 'src/networking/login_path_rule.dart';
 export 'src/networking/retry_interceptor.dart';
 export 'src/networking/websocket_factory.dart';
+// Connect transport helpers — upstreamed from eden-biz.
+export 'src/networking/connect_bearer_interceptor.dart';
+export 'src/networking/proactive_refresh.dart';
 
 // Re-export the Dio types consumers need when implementing their own
 // Interceptors and test fakes (e.g. politihub Navigators' BearerAuthInterceptor

@@ -1,6 +1,6 @@
 name: eden_platform_flutter
 description: "Shared auth, navigation, and platform shell for all Eden apps."
-version: 0.0.1
+version: 0.1.0
 homepage:
 publish_to: none
 
