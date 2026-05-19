@@ -81,11 +81,36 @@ class PlatformSession {
   final String? companyId;
   final String? role;
 
+  /// True when the session is bound to an HTTP cookie rather than a
+  /// bearer-token pair. Cookie-bound sessions carry empty [accessToken] and
+  /// [refreshToken] strings — auth state is the browser's session cookie,
+  /// not a Riverpod-held JWT.
+  ///
+  /// Consumers that need to attach Authorization headers (mobile / desktop
+  /// Connect-RPC clients) must check this flag and fall back to the
+  /// cookie-jar interceptor.
+  final bool cookieBound;
+
   const PlatformSession({
     required this.accessToken,
     required this.refreshToken,
     required this.user,
     this.companyId,
     this.role,
-  });
+  }) : cookieBound = false;
+
+  /// Constructs a session whose authentication is carried by an HTTP cookie
+  /// the browser (or native cookie-jar) manages out-of-band. The
+  /// access/refresh token fields default to empty strings since they are not
+  /// meaningful for cookie-bound flows.
+  ///
+  /// Use this constructor when integrating with a custom [AuthStrategy] that
+  /// relies on session cookies (e.g., AOID's WhoAmI-based session probe).
+  const PlatformSession.cookieBound({
+    required this.user,
+    this.companyId,
+    this.role,
+  })  : accessToken = '',
+        refreshToken = '',
+        cookieBound = true;
 }

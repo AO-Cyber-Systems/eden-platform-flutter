@@ -1,6 +1,7 @@
 export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
 export 'src/auth/auth_provider.dart';
+export 'src/auth/auth_strategy.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
