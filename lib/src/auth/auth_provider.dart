@@ -161,6 +161,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// FIX-19 2026-05-20: drop a fresh (accessToken, refreshToken) pair into
+  /// the session without going through the platform RefreshToken RPC.
+  ///
+  /// Used by biz's company-switch flow: POST /companies/switch on the biz
+  /// backend re-mints tokens scoped to the target company; this method
+  /// persists them and flips authState so the rest of the app picks up
+  /// the new cid claim immediately.
+  ///
+  /// Preserves the current `user` object (same human, different company)
+  /// and pulls the new companyId/role from the optional overrides. Callers
+  /// should invalidate company-scoped caches after calling this.
+  Future<void> replaceSession({
+    required String accessToken,
+    required String refreshToken,
+    String? companyId,
+    String? role,
+  }) async {
+    final existingUser = state.session?.user;
+    if (existingUser == null) {
+      // No active session to swap into — fall back to refreshing from
+      // storage. Callers should normally only invoke this while authed.
+      await restoreSession();
+      return;
+    }
+    final newSession = PlatformSession(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: existingUser,
+      companyId: companyId ?? state.companyId,
+      role: role ?? state.role,
+    );
+    await _persistTokens(newSession);
+    state = AuthState.authenticated(newSession);
+  }
+
   Future<void> updateProfile(String displayName, String avatarUrl) async {
     final token = state.accessToken;
     if (token == null) return;
