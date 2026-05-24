@@ -19,14 +19,17 @@ dependencies:
   # Pinned to 9.2.4 — DO NOT bump to 10.x (upstream issue #1043 data-loss bug).
   # See eden-biz-flutter.SAAS/.planning/objectives/10-client-security-baseline/10-RESEARCH.md Pitfall 1.
   flutter_secure_storage: 9.2.4
-  # Use git: with path: so external consumers can fetch this package
-  # standalone via `eden_platform_flutter: { git: { url, ref } }`. Inside
-  # the eden-libs monorepo, dependency_overrides in the consuming project
-  # can redirect this to the local path during dev.
+  # eden-platform-api-dart is published as its own standalone GitHub repo
+  # (AO-Cyber-Systems/eden-platform-api-dart, public). Referencing it
+  # directly avoids forcing consumers to authenticate against the private
+  # eden-libs superproject just to fetch the generated Dart clients.
+  # Inside the eden-libs monorepo, dependency_overrides in the consuming
+  # project can redirect this to the local path during dev.
+  # TODO: pin `ref:` to a specific SHA once eden-platform-api-dart's release
+  # cadence stabilizes — `main` is fine for now but trades reproducibility.
   eden_platform_api_dart:
     git:
-      url: https://github.com/AO-Cyber-Systems/eden-libs.git
-      path: eden-platform-api-dart
+      url: https://github.com/AO-Cyber-Systems/eden-platform-api-dart.git
       ref: main
   go_router: ^14.0.0
   eden_ui_flutter:
