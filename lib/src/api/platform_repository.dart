@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:connectrpc/connect.dart';
 import 'package:eden_platform_api_dart/eden_platform_api_dart.dart';
+import 'package:http/http.dart' as http;
 
 import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
@@ -20,8 +21,10 @@ abstract class PlatformRepository {
 
 class ConnectPlatformRepository implements PlatformRepository {
   ConnectPlatformRepository({required String baseUrl})
-      : _transport = createPlatformTransport(baseUrl: baseUrl);
+      : _baseUrl = baseUrl,
+        _transport = createPlatformTransport(baseUrl: baseUrl);
 
+  final String _baseUrl;
   final Transport _transport;
 
   Headers _authHeaders(String accessToken) {
@@ -30,45 +33,91 @@ class ConnectPlatformRepository implements PlatformRepository {
     return headers;
   }
 
+  // Login / SignUp / RefreshToken use raw HTTP+JSON instead of the generated
+  // ConnectRPC client because the Dart proto has been regenerated to nest auth
+  // fields under `LoginResponse.auth: AuthData`, while the currently-deployed
+  // platform servers still emit the older flat `AuthResponse` shape (fields:
+  // accessToken / refreshToken / user at the top level). Until eden-platform-go
+  // catches up, parsing the wire response through the generated proto would
+  // silently produce empty tokens. See
+  // https://github.com/AO-Cyber-Systems/eden-platform-go/issues/20 for the
+  // households-table conflict that is currently blocking the proto bump.
   @override
   Future<PlatformSession> login(String email, String password) async {
-    try {
-      final response = await AuthServiceClient(_transport).login(
-        LoginRequest()
-          ..email = email
-          ..password = password,
-      );
-      return _sessionFromAuthData(response.auth);
-    } catch (e, stack) {
-      throw _wrapConnectError(e, stack);
-    }
+    return _authPost(
+      method: 'Login',
+      body: {'email': email, 'password': password},
+    );
   }
 
   @override
   Future<PlatformSession> signUp(String email, String password, String displayName) async {
-    try {
-      final response = await AuthServiceClient(_transport).signUp(
-        SignUpRequest()
-          ..email = email
-          ..password = password
-          ..displayName = displayName,
-      );
-      return _sessionFromAuthData(response.auth);
-    } catch (e, stack) {
-      throw _wrapConnectError(e, stack);
-    }
+    return _authPost(
+      method: 'SignUp',
+      body: {
+        'email': email,
+        'password': password,
+        'displayName': displayName,
+      },
+    );
   }
 
   @override
   Future<PlatformSession> refreshToken(String refreshToken) async {
+    return _authPost(
+      method: 'RefreshToken',
+      body: {'refreshToken': refreshToken},
+    );
+  }
+
+  Future<PlatformSession> _authPost({
+    required String method,
+    required Map<String, dynamic> body,
+  }) async {
+    final url = Uri.parse('$_baseUrl/platform.v1.AuthService/$method');
     try {
-      final response = await AuthServiceClient(_transport).refreshToken(
-        RefreshTokenRequest()..refreshToken = refreshToken,
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
       );
-      return _sessionFromAuthData(response.auth);
+      if (resp.statusCode != 200) {
+        throw AuthError(
+          'Auth $method failed (HTTP ${resp.statusCode}): ${resp.body}',
+        );
+      }
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      // Support both shapes:
+      //   1. Flat (current server):  {accessToken, refreshToken, user}
+      //   2. Nested (future server): {auth: {accessToken, refreshToken, user}}
+      final root = data['auth'] is Map ? data['auth'] as Map<String, dynamic> : data;
+      return _sessionFromJsonMap(root);
     } catch (e, stack) {
-      throw _wrapConnectError(e, stack);
+      if (e is PlatformError) rethrow;
+      log('Auth $method failed: $e', name: 'ConnectPlatformRepository', stackTrace: stack);
+      throw NetworkError('Auth $method transport failure: $e', cause: e);
     }
+  }
+
+  PlatformSession _sessionFromJsonMap(Map<String, dynamic> m) {
+    final accessToken = (m['accessToken'] as String?) ?? '';
+    final refreshTokenStr = (m['refreshToken'] as String?) ?? '';
+    final user = (m['user'] as Map<String, dynamic>?) ?? const {};
+    final claims = _extractClaims(accessToken);
+    return PlatformSession(
+      accessToken: accessToken,
+      refreshToken: refreshTokenStr,
+      user: PlatformUser(
+        id: (user['id'] as String?) ?? '',
+        email: (user['email'] as String?) ?? '',
+        displayName: (user['displayName'] as String?) ?? '',
+        avatarUrl: (user['avatarUrl'] as String?) ?? '',
+        isActive: (user['isActive'] as bool?) ?? true,
+        createdAt: DateTime.tryParse((user['createdAt'] as String?) ?? ''),
+      ),
+      companyId: claims['cid'],
+      role: claims['role'],
+    );
   }
 
   @override
@@ -175,29 +224,12 @@ class ConnectPlatformRepository implements PlatformRepository {
     }
   }
 
-  // Builds a PlatformSession from the AuthData payload that LoginResponse,
-  // SignUpResponse, and RefreshTokenResponse all carry under their `.auth`
-  // field. Previously this method took an `AuthResponse` (a single proto
-  // message); the proto was refactored to wrap auth fields in an `AuthData`
-  // sub-message shared across the three responses.
-  PlatformSession _sessionFromAuthData(AuthData auth) {
-    final claims = _extractClaims(auth.accessToken);
-    final user = auth.user;
-    return PlatformSession(
-      accessToken: auth.accessToken,
-      refreshToken: auth.refreshToken,
-      user: PlatformUser(
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        isActive: user.isActive,
-        createdAt: DateTime.tryParse(user.createdAt),
-      ),
-      companyId: claims['cid'],
-      role: claims['role'],
-    );
-  }
+  // _sessionFromAuthData removed: the auth endpoints now use raw HTTP+JSON via
+  // _authPost / _sessionFromJsonMap, so the proto-typed helper is no longer
+  // needed. When eden-platform-go ships a vendor with the nested AuthData
+  // wire format and downstream apps adopt it, restore this helper and switch
+  // back to the generated ConnectRPC client. Until then the JSON path supports
+  // both flat (current) and nested (future) server shapes.
 
   Map<String, String> _extractClaims(String token) {
     try {
