@@ -102,6 +102,12 @@ class SecureTokenStorage implements TokenStorage {
         // 100ms backoff. Any other code is a real failure — rethrow.
         if (e.code != '-25308' || i == attempts - 1) rethrow;
         await Future<void>.delayed(const Duration(milliseconds: 100));
+      } catch (_) {
+        // Non-PlatformException failures: MissingPluginException or a Web Crypto
+        // DOMException on web, FormatException from malformed ciphertext.
+        // Retrying won't help, and a throw here would bubble up and stall auth
+        // bootstrap — treat an unreadable value as absent.
+        return null;
       }
     }
     return null;

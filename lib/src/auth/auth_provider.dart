@@ -230,7 +230,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    final refreshToken = await _tokenStorage.readRefreshToken();
+    String? refreshToken;
+    try {
+      refreshToken = await _tokenStorage.readRefreshToken();
+    } catch (e) {
+      // Reading secure storage can throw (e.g. on web, where
+      // flutter_secure_storage may have no implementation or Web Crypto
+      // rejects a stale ciphertext). An unhandled throw here leaves auth stuck
+      // in `unknown` forever, hanging every gated route behind a spinner — so
+      // swallow it, clear any persisted tokens, and fall through to login.
+      log('Token storage read failed during session restore: $e', name: 'AuthNotifier');
+      await _clearPersistedTokens();
+      state = const AuthState.unauthenticated();
+      return;
+    }
     // Re-check after async gap — state may have been set externally (dev injection).
     if (state.isAuthenticated) return;
     if (refreshToken == null || refreshToken.isEmpty) {
