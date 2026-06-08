@@ -335,6 +335,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.unauthenticated();
   }
 
+  /// Rotate the in-memory session tokens after a silent token refresh.
+  ///
+  /// Called by the app's [TokenStore.setTokens] implementation when the
+  /// ConnectRPC auth interceptor completes a reactive token refresh. Updates
+  /// the live [AuthState.session] with the new token pair and persists them
+  /// to secure storage so the next app restart restores correctly.
+  ///
+  /// No-op when the current session is null (unauthenticated) — there is
+  /// nothing to update in that case and the interceptor will drive logout.
+  Future<void> rotateTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    final current = state.session;
+    if (current == null) return;
+    final updated = PlatformSession(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: current.user,
+      companyId: current.companyId,
+      role: current.role,
+    );
+    await _persistTokens(updated);
+    state = AuthState.authenticated(updated);
+  }
+
   Future<void> _persistTokens(PlatformSession session) async {
     await _tokenStorage.writeAccessToken(session.accessToken);
     await _tokenStorage.writeRefreshToken(session.refreshToken);
