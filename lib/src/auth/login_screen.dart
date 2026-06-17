@@ -2,6 +2,7 @@ import 'package:eden_ui_flutter/eden_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_provider.dart';
+import 'social_login_providers.dart';
 
 class PlatformLoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSignUpTap;
@@ -32,37 +33,74 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
   bool _loading = false;
   String? _error;
 
-  Future<void> _loginWithSSO(String provider) async {
+  Future<void> _loginWithSocial(String provider) async {
     setState(() { _loading = true; _error = null; });
     try {
-      await ref.read(authProvider.notifier).loginWithSSO(provider);
-      widget.onLoginSuccess?.call();
+      await ref.read(authProvider.notifier).loginWithSocial(provider);
+      // loginWithSocial reports failures by setting AuthState.error WITHOUT
+      // throwing — inspect the resulting state rather than navigating
+      // optimistically (matches the password _login path).
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
+        widget.onLoginSuccess?.call();
+      } else {
+        setState(() {
+          _error = auth.errorMessage ?? 'Sign in failed. Please try again.';
+        });
+      }
     } catch (e) {
       setState(() { _error = e.toString(); });
     } finally {
-      setState(() { _loading = false; });
+      if (mounted) {
+        setState(() { _loading = false; });
+      }
     }
   }
 
   Future<void> _login() async {
+    // Client-side validation: don't fire a network round-trip (or clear the
+    // form) when either field is empty — surface an inline message instead.
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _error = 'Enter your email and password.';
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      await ref.read(authProvider.notifier).login(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
-      widget.onLoginSuccess?.call();
+      await ref.read(authProvider.notifier).login(email, password);
+      // AuthNotifier.login() reports auth failures by setting
+      // AuthState.error WITHOUT throwing, so we must inspect the resulting
+      // state rather than assume the await completing means success. Only
+      // invoke onLoginSuccess on a genuinely authenticated session;
+      // otherwise surface the failure inline (previously the callback fired
+      // unconditionally and the error was never shown to the user).
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated) {
+        widget.onLoginSuccess?.call();
+      } else {
+        setState(() {
+          _error = auth.errorMessage ??
+              'Sign in failed. Check your email and password and try again.';
+        });
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
       });
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      // onLoginSuccess may navigate away (unmounting this screen) — guard
+      // the trailing setState so it doesn't throw post-dispose.
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -73,12 +111,16 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
       explicitChildNodes: true,
       child: Scaffold(
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
+        // Scrollable so a tall error banner or the on-screen keyboard never
+        // overflows the form (RenderFlex bottom-overflow). Center keeps it
+        // vertically centered while the content is shorter than the viewport.
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
@@ -100,8 +142,13 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                     ),
                     child: Text(
                       _error!,
+                      // Foreground for an errorContainer surface is
+                      // onErrorContainer — using `error` here renders
+                      // red-on-red (invisible) under brand themes whose
+                      // error / errorContainer roles are close in hue
+                      // (e.g. EdenTheme red brand).
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
                       ),
                     ),
                   ),
@@ -146,26 +193,29 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                     const Expanded(child: Divider()),
                   ]),
                   const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: _loading ? null : () => _loginWithSSO('microsoft'),
-                    icon: const Icon(Icons.window, size: 20),
-                    label: const Text('Sign in with Microsoft'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  // Consumer social login (SOCIAL-06): five "Continue with"
+                  // providers, each driving AuthNotifier.loginWithSocial via
+                  // the cross-platform flutter_web_auth_2 flow. Replaces the
+                  // former enterprise Microsoft/Google SSO buttons.
+                  for (final p in kSocialLoginProviders) ...[
+                    Semantics(
+                      identifier: 'eden-login-social-${p.id}',
+                      button: true,
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _loading ? null : () => _loginWithSocial(p.id),
+                        icon: Icon(p.icon, size: 20),
+                        label: Text('Continue with ${p.label}'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _loading ? null : () => _loginWithSSO('google'),
-                    icon: const Icon(Icons.g_mobiledata, size: 24),
-                    label: const Text('Sign in with Google'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 4),
                 ],
                 Semantics(
                   identifier: 'eden-login-signup-link',
@@ -177,6 +227,7 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),
