@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/platform_repository.dart';
 import 'auth_strategy.dart';
 import 'secure_token_storage.dart';
+import 'social_auth_service.dart';
 import 'sso_auth_service.dart';
 import 'token_storage.dart';
 import '../errors/platform_errors.dart';
@@ -282,6 +283,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
         apiBaseUrl: _resolvePlatformBaseUrl(),
       );
       final session = await ssoService.authenticate(provider);
+      await _persistTokens(session);
+      state = AuthState.authenticated(session);
+    } on PlatformError catch (error) {
+      state = AuthState.error(error.message, session: state.session);
+    } catch (error) {
+      state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  /// Login via a consumer social provider (Google, Apple, Microsoft,
+  /// Facebook, X). Drives [SocialAuthService] (flutter_web_auth_2 → server
+  /// callback → token pair) and persists via the same SecureTokenStorage
+  /// path as password login. Mirrors [loginWithSSO] but uses the cross-platform
+  /// consumer flow instead of the enterprise desktop-only path.
+  Future<void> loginWithSocial(String provider) async {
+    state = AuthState.refreshing(session: state.session);
+    try {
+      final socialService = SocialAuthService(
+        repository: _repository,
+        baseUrl: _resolvePlatformBaseUrl(),
+      );
+      final session = await socialService.authenticate(provider);
       await _persistTokens(session);
       state = AuthState.authenticated(session);
     } on PlatformError catch (error) {

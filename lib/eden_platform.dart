@@ -5,6 +5,7 @@ export 'src/auth/auth_strategy.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
+export 'src/auth/social_auth_service.dart';
 export 'src/auth/sso_auth_service.dart';
 export 'src/auth/token_storage.dart';
 export 'src/api/platform_repository.dart';
