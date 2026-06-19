@@ -1,9 +1,12 @@
 export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
 export 'src/auth/auth_provider.dart';
+export 'src/auth/auth_strategy.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
+export 'src/auth/social_auth_service.dart';
+export 'src/auth/social_login_providers.dart';
 export 'src/auth/sso_auth_service.dart';
 export 'src/auth/token_storage.dart';
 export 'src/api/platform_repository.dart';
@@ -35,6 +38,8 @@ export 'src/networking/retry_interceptor.dart';
 export 'src/networking/websocket_factory.dart';
 // Connect transport helpers — upstreamed from eden-biz (see networking/README.md).
 export 'src/networking/connect_bearer_interceptor.dart';
+export 'src/networking/connect_cookie_interceptor.dart'
+    show connectCookieInterceptor;
 export 'src/networking/proactive_refresh.dart';
 // Riverpod patterns — donated from AODex (pagination + mutation). See
 // src/providers/README.md for usage and migration guide.

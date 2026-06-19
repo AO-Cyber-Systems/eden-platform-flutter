@@ -82,6 +82,20 @@ class FakePlatformRepository implements PlatformRepository {
     throw UnimplementedError('configure FakePlatformRepository subclass for SSO');
   }
 
+  // Configurable for social-login tests (09-04). Default: echo a canned auth
+  // URL embedding the provider so callers can assert routing.
+  String? initiateSocialLoginResult;
+  Object? initiateSocialLoginError;
+  int initiateSocialLoginCalls = 0;
+
+  @override
+  Future<String> initiateSocialLogin(String provider, String redirectUri) async {
+    initiateSocialLoginCalls++;
+    if (initiateSocialLoginError != null) throw initiateSocialLoginError!;
+    return initiateSocialLoginResult ??
+        'https://provider.example/authorize?provider=$provider';
+  }
+
   @override
   Future<PlatformUser> updateProfile(
       String accessToken, String displayName, String avatarUrl) async {

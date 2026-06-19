@@ -16,6 +16,13 @@ abstract class PlatformRepository {
   Future<List<PlatformCompany>> listCompanies(String accessToken);
   Future<List<PlatformNavItem>> listNavItems(String accessToken, String companyId);
   Future<String> initiateSSOForDesktop(String provider, String redirectUri);
+
+  /// Starts a consumer social-login flow (Google, Apple, Microsoft, Facebook,
+  /// X). Returns the provider authorization URL the client must open. Tokens
+  /// are delivered out-of-band by the server's `/auth/social/callback` HTTP
+  /// handler via redirect — not in this response.
+  Future<String> initiateSocialLogin(String provider, String redirectUri);
+
   Future<PlatformUser> updateProfile(String accessToken, String displayName, String avatarUrl);
 }
 
@@ -194,6 +201,20 @@ class ConnectPlatformRepository implements PlatformRepository {
     try {
       final response = await AuthServiceClient(_transport).initiateOIDC(
         InitiateOIDCRequest()..companyId = '', // Will be resolved server-side
+      );
+      return response.authUrl;
+    } catch (e, stack) {
+      throw _wrapConnectError(e, stack);
+    }
+  }
+
+  @override
+  Future<String> initiateSocialLogin(String provider, String redirectUri) async {
+    try {
+      final response = await AuthServiceClient(_transport).initiateSocialLogin(
+        InitiateSocialLoginRequest()
+          ..provider = provider
+          ..redirectUri = redirectUri,
       );
       return response.authUrl;
     } catch (e, stack) {

@@ -87,8 +87,14 @@ class SecureTokenStorage implements TokenStorage {
 
     // CRITICAL: write-then-clear. Reverse order would lose the user's
     // session if the secure-write fails after the prefs.remove succeeds.
-    await _secure.write(key: key, value: legacy);
-    await prefs.remove(key);
+    try {
+      await _secure.write(key: key, value: legacy);
+      await prefs.remove(key);
+    } catch (_) {
+      // Secure write can throw on web (no working secure-storage impl). Leave
+      // the legacy value in prefs so the session persists and restores from
+      // there next time, rather than losing it.
+    }
     return legacy;
   }
 
@@ -102,6 +108,12 @@ class SecureTokenStorage implements TokenStorage {
         // 100ms backoff. Any other code is a real failure — rethrow.
         if (e.code != '-25308' || i == attempts - 1) rethrow;
         await Future<void>.delayed(const Duration(milliseconds: 100));
+      } catch (_) {
+        // Non-PlatformException failures: MissingPluginException or a Web Crypto
+        // DOMException on web, FormatException from malformed ciphertext.
+        // Retrying won't help, and a throw here would bubble up and stall auth
+        // bootstrap — treat an unreadable value as absent.
+        return null;
       }
     }
     return null;
@@ -116,20 +128,40 @@ class SecureTokenStorage implements TokenStorage {
       _writeOrDelete(StorageKeys.kRefreshToken, value);
 
   Future<void> _writeOrDelete(String key, String? value) async {
-    if (value == null) {
-      await _secure.delete(key: key);
-    } else {
-      await _secure.write(key: key, value: value);
+    try {
+      if (value == null) {
+        await _secure.delete(key: key);
+      } else {
+        await _secure.write(key: key, value: value);
+      }
+    } catch (_) {
+      // Secure storage is unavailable (notably on web, where
+      // flutter_secure_storage's Web Crypto/localStorage calls can throw).
+      // A throw here would abort login (the caller treats any failure as an
+      // auth failure), so fall back to shared_preferences. On web that is
+      // localStorage — the same backing flutter_secure_storage_web uses — so
+      // it is not a meaningful security downgrade there.
+      final prefs = await SharedPreferences.getInstance();
+      if (value == null) {
+        await prefs.remove(key);
+      } else {
+        await prefs.setString(key, value);
+      }
     }
   }
 
   @override
   Future<void> clear() async {
-    // Secure side first.
-    await _secure.delete(key: StorageKeys.kAccessToken);
-    await _secure.delete(key: StorageKeys.kRefreshToken);
-    // Also clear any legacy shared_preferences stragglers (defense-in-depth
-    // for partial migrations and CLI-07 company-switch wipe).
+    // Secure side first — tolerate web, where secure storage may throw.
+    try {
+      await _secure.delete(key: StorageKeys.kAccessToken);
+      await _secure.delete(key: StorageKeys.kRefreshToken);
+    } catch (_) {
+      // Secure storage unavailable (web) — the prefs fallback copies below are
+      // still cleared, so the session is fully wiped either way.
+    }
+    // Also clear any legacy / web-fallback shared_preferences copies
+    // (defense-in-depth for partial migrations and CLI-07 company-switch wipe).
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(StorageKeys.kAccessToken);
     await prefs.remove(StorageKeys.kRefreshToken);

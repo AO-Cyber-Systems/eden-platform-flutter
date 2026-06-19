@@ -45,12 +45,26 @@ dependencies:
   cookie_jar: ^4.0.8
   web_socket_channel: ^3.0.3
   sentry_dio: ^8.14.2
+  # SOCIAL-06: cross-platform OAuth browser session (ASWebAuthenticationSession
+  # iOS/macOS, Chrome Custom Tab Android, postMessage Web) for consumer social
+  # login. Drives SocialAuthService — see lib/src/auth/social_auth_service.dart.
+  flutter_web_auth_2: ^5.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   mocktail: ^1.0.0
+
+# Dev-only: inside the eden-libs monorepo, redirect eden_platform_api_dart to
+# the local sibling checkout so this package builds against in-progress proto
+# bindings (e.g. SOCIAL-06's InitiateSocialLogin RPC) before they land on the
+# git `main` ref the `dependencies` block pins. External consumers that fetch
+# this package via git ignore dependency_overrides, so the published surface is
+# unaffected. Remove (or let it no-op) once the api-dart ref bumps.
+dependency_overrides:
+  eden_platform_api_dart:
+    path: ../eden-platform-api-dart
 
 flutter:
   uses-material-design: true

@@ -233,4 +233,237 @@ void main() {
       expect(container.read(authProvider).status, AuthStatus.unauthenticated);
     });
   });
+
+  group('AuthStrategy injection', () {
+    test('strategy.login -> Authenticated drives state.authenticated', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..initiateResult = Authenticated(buildSession(userId: 'strategy-1'));
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.authenticated);
+      expect(state.userId, 'strategy-1');
+      expect(strategy.initiateCalls, 1);
+      // Legacy repository.login must not be called when a strategy is set.
+      expect(repository.loginCalls, 0);
+    });
+
+    test('strategy.login -> TwoFactorRequired surfaces continuation token', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..initiateResult = const TwoFactorRequired('cont-abc');
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      final notifier = container.read(authProvider.notifier);
+      expect(notifier.continuationToken, 'cont-abc');
+      expect(container.read(authProvider).status, AuthStatus.refreshing);
+    });
+
+    test('strategy.completeLogin -> Authenticated clears continuation + auths', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..initiateResult = const TwoFactorRequired('cont-xyz')
+        ..completeResult = Authenticated(buildSession(userId: 'mfa-done'));
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      await container.read(authProvider.notifier).completeLogin({'totp': '123456'});
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.authenticated);
+      expect(state.userId, 'mfa-done');
+      expect(container.read(authProvider.notifier).continuationToken, isNull);
+      expect(strategy.completeCalls, 1);
+      expect(strategy.lastCompleteToken, 'cont-xyz');
+      expect(strategy.lastCompleteProof, {'totp': '123456'});
+    });
+
+    test('strategy.completeLogin -> Failed surfaces error message', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..initiateResult = const TwoFactorRequired('cont-1')
+        ..completeResult = const Failed('Invalid TOTP code');
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      await container.read(authProvider.notifier).completeLogin({'totp': '999999'});
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.error);
+      expect(state.errorMessage, 'Invalid TOTP code');
+    });
+
+    test('strategy.restoreSession -> Authenticated populates state at boot', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..restoreResult = buildSession(userId: 'restored-1');
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.authenticated);
+      expect(state.userId, 'restored-1');
+      expect(strategy.restoreCalls, 1);
+    });
+
+    test('strategy.logout transitions to unauthenticated', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _FakeStrategy()
+        ..initiateResult = Authenticated(buildSession())
+        ..restoreResult = null;
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      expect(container.read(authProvider).isAuthenticated, true);
+
+      await container.read(authProvider.notifier).logout();
+
+      expect(container.read(authProvider).status, AuthStatus.unauthenticated);
+      expect(strategy.logoutCalls, 1);
+    });
+
+    test('cookie-bound session does not persist empty tokens', () async {
+      SharedPreferences.setMockInitialValues({});
+      final cookieSession = PlatformSession.cookieBound(
+        user: const PlatformUser(
+          id: 'cookie-user',
+          email: 'cookie@ex.com',
+          displayName: 'Cookie',
+          isActive: true,
+        ),
+      );
+      final strategy = _FakeStrategy()..initiateResult = Authenticated(cookieSession);
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      await settle();
+
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, true);
+      expect(state.session?.cookieBound, true);
+      // Empty token strings must not clobber prior secure-storage values
+      // (the SecureTokenStorage mock writes through; cookie-bound flow
+      // skips persistence entirely so the store stays empty here).
+      expect(secureStore['access_token'], isNull);
+      expect(secureStore['refresh_token'], isNull);
+    });
+
+    test('legacy email+password flow unchanged when no strategy injected', () async {
+      // Backward-compatibility regression: a container with no
+      // authStrategyProvider override must still drive the repository.
+      SharedPreferences.setMockInitialValues({});
+      repository.loginResult = buildSession(userId: 'legacy-1');
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      final state = container.read(authProvider);
+      expect(state.status, AuthStatus.authenticated);
+      expect(state.userId, 'legacy-1');
+      expect(repository.loginCalls, 1);
+    });
+  });
+}
+
+/// In-memory [AuthStrategy] for unit tests.
+class _FakeStrategy implements AuthStrategy {
+  AuthResult initiateResult = const Failed('no initiate configured');
+  AuthResult completeResult = const Failed('no complete configured');
+  PlatformSession? restoreResult;
+
+  int initiateCalls = 0;
+  int completeCalls = 0;
+  int logoutCalls = 0;
+  int restoreCalls = 0;
+
+  String? lastCompleteToken;
+  Map<String, String>? lastCompleteProof;
+
+  @override
+  Future<AuthResult> initiateLogin(Map<String, String> credentials) async {
+    initiateCalls++;
+    return initiateResult;
+  }
+
+  @override
+  Future<AuthResult> completeLogin(
+      String continuationToken, Map<String, String> proof) async {
+    completeCalls++;
+    lastCompleteToken = continuationToken;
+    lastCompleteProof = proof;
+    return completeResult;
+  }
+
+  @override
+  Future<void> logout() async {
+    logoutCalls++;
+  }
+
+  @override
+  Future<PlatformSession?> restoreSession() async {
+    restoreCalls++;
+    return restoreResult;
+  }
 }

@@ -4,7 +4,9 @@ import 'dart:developer';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/platform_repository.dart';
+import 'auth_strategy.dart';
 import 'secure_token_storage.dart';
+import 'social_auth_service.dart';
 import 'sso_auth_service.dart';
 import 'token_storage.dart';
 import '../errors/platform_errors.dart';
@@ -77,17 +79,47 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier({
     required PlatformRepository repository,
     required TokenStorage tokenStorage,
+    AuthStrategy? strategy,
   })  : _repository = repository,
         _tokenStorage = tokenStorage,
+        _strategy = strategy,
         super(const AuthState.unknown()) {
     unawaited(restoreSession());
   }
 
   final PlatformRepository _repository;
   final TokenStorage _tokenStorage;
+  final AuthStrategy? _strategy;
+
+  /// Last continuation token returned by [_strategy] for a multi-step
+  /// login. Held in memory only — the UI passes it back via
+  /// [completeLogin] when submitting the second factor.
+  String? _continuationToken;
+
+  /// Last continuation token surfaced from a multi-step login. Consumers
+  /// that need to render an MFA prompt can read this to scope the prompt
+  /// to the in-flight login attempt.
+  String? get continuationToken => _continuationToken;
+
+  /// Whether this notifier is delegating to a custom [AuthStrategy]. When
+  /// false, the notifier executes the legacy email+password flow against
+  /// [PlatformRepository].
+  bool get usesStrategy => _strategy != null;
 
   Future<void> login(String email, String password) async {
     state = AuthState.refreshing(session: state.session);
+    if (_strategy != null) {
+      try {
+        final result = await _strategy.initiateLogin({
+          'email': email,
+          'password': password,
+        });
+        _applyAuthResult(result);
+      } catch (error) {
+        state = AuthState.error(error.toString(), session: state.session);
+      }
+      return;
+    }
     try {
       final session = await _repository.login(email, password);
       await _persistTokens(session);
@@ -96,6 +128,72 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthState.error(error.message, session: state.session);
     } catch (error) {
       state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  /// Initiate a login using the injected [AuthStrategy] with arbitrary
+  /// [credentials]. Throws [StateError] when no strategy is configured.
+  /// Tests and consumers that need richer credentials than email+password
+  /// should call this directly rather than [login].
+  Future<void> initiateStrategyLogin(Map<String, String> credentials) async {
+    final strategy = _strategy;
+    if (strategy == null) {
+      throw StateError('AuthNotifier has no AuthStrategy configured');
+    }
+    state = AuthState.refreshing(session: state.session);
+    try {
+      final result = await strategy.initiateLogin(credentials);
+      _applyAuthResult(result);
+    } catch (error) {
+      state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  /// Complete a multi-step login by submitting [proof] (e.g. TOTP code).
+  /// Uses the continuation token captured from the most recent
+  /// [TwoFactorRequired]. Throws [StateError] when no continuation is
+  /// pending.
+  Future<void> completeLogin(Map<String, String> proof) async {
+    final strategy = _strategy;
+    final token = _continuationToken;
+    if (strategy == null) {
+      throw StateError('AuthNotifier has no AuthStrategy configured');
+    }
+    if (token == null) {
+      throw StateError(
+        'No continuation token pending — call initiateStrategyLogin first',
+      );
+    }
+    state = AuthState.refreshing(session: state.session);
+    try {
+      final result = await strategy.completeLogin(token, proof);
+      _applyAuthResult(result);
+    } catch (error) {
+      state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  /// Reduce an [AuthResult] from a strategy into the [AuthState] machine.
+  void _applyAuthResult(AuthResult result) {
+    switch (result) {
+      case Authenticated(:final session):
+        _continuationToken = null;
+        // Only persist tokens for bearer-style sessions; cookie-bound
+        // sessions have empty token strings that would clobber any prior
+        // real values in secure storage.
+        if (!session.cookieBound) {
+          unawaited(_persistTokens(session));
+        }
+        state = AuthState.authenticated(session);
+      case TwoFactorRequired(:final continuationToken):
+        _continuationToken = continuationToken;
+        // Refreshing state semantically covers "waiting for the user to
+        // provide a second factor" — downstream UI inspects
+        // [continuationToken] to disambiguate.
+        state = AuthState.refreshing(session: state.session);
+      case Failed(:final reason):
+        _continuationToken = null;
+        state = AuthState.error(reason, session: state.session);
     }
   }
 
@@ -113,7 +211,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> restoreSession() async {
-    final refreshToken = await _tokenStorage.readRefreshToken();
+    // Strategy path: defer entirely to the injected strategy. Cookie-bound
+    // flows have no refresh-token to read, so we skip the secure-storage
+    // probe.
+    if (_strategy != null) {
+      if (state.isAuthenticated) return;
+      state = AuthState.refreshing(session: state.session);
+      try {
+        final session = await _strategy.restoreSession();
+        if (session != null) {
+          state = AuthState.authenticated(session);
+        } else {
+          state = const AuthState.unauthenticated();
+        }
+      } catch (e) {
+        log('Strategy restoreSession failed: $e', name: 'AuthNotifier');
+        state = const AuthState.unauthenticated();
+      }
+      return;
+    }
+
+    String? refreshToken;
+    try {
+      refreshToken = await _tokenStorage.readRefreshToken();
+    } catch (e) {
+      // Reading secure storage can throw (e.g. on web, where
+      // flutter_secure_storage may have no implementation or Web Crypto
+      // rejects a stale ciphertext). An unhandled throw here leaves auth stuck
+      // in `unknown` forever, hanging every gated route behind a spinner — so
+      // swallow it, clear any persisted tokens, and fall through to login.
+      log('Token storage read failed during session restore: $e', name: 'AuthNotifier');
+      await _clearPersistedTokens();
+      state = const AuthState.unauthenticated();
+      return;
+    }
     // Re-check after async gap — state may have been set externally (dev injection).
     if (state.isAuthenticated) return;
     if (refreshToken == null || refreshToken.isEmpty) {
@@ -152,6 +283,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
         apiBaseUrl: _resolvePlatformBaseUrl(),
       );
       final session = await ssoService.authenticate(provider);
+      await _persistTokens(session);
+      state = AuthState.authenticated(session);
+    } on PlatformError catch (error) {
+      state = AuthState.error(error.message, session: state.session);
+    } catch (error) {
+      state = AuthState.error(error.toString(), session: state.session);
+    }
+  }
+
+  /// Login via a consumer social provider (Google, Apple, Microsoft,
+  /// Facebook, X). Drives [SocialAuthService] (flutter_web_auth_2 → server
+  /// callback → token pair) and persists via the same SecureTokenStorage
+  /// path as password login. Mirrors [loginWithSSO] but uses the cross-platform
+  /// consumer flow instead of the enterprise desktop-only path.
+  Future<void> loginWithSocial(String provider) async {
+    state = AuthState.refreshing(session: state.session);
+    try {
+      final socialService = SocialAuthService(
+        repository: _repository,
+        baseUrl: _resolvePlatformBaseUrl(),
+      );
+      final session = await socialService.authenticate(provider);
       await _persistTokens(session);
       state = AuthState.authenticated(session);
     } on PlatformError catch (error) {
@@ -215,6 +368,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    if (_strategy != null) {
+      try {
+        await _strategy.logout();
+      } catch (e) {
+        log('Strategy logout failed (non-blocking): $e', name: 'AuthNotifier');
+      }
+      _continuationToken = null;
+      // Best-effort: clear any stale tokens that might still be persisted
+      // from a pre-strategy boot.
+      await _clearPersistedTokens();
+      state = const AuthState.unauthenticated();
+      return;
+    }
     final refreshToken = state.refreshToken;
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
@@ -227,6 +393,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState.unauthenticated();
   }
 
+  /// Rotate the in-memory session tokens after a silent token refresh.
+  ///
+  /// Called by the app's [TokenStore.setTokens] implementation when the
+  /// ConnectRPC auth interceptor completes a reactive token refresh. Updates
+  /// the live [AuthState.session] with the new token pair and persists them
+  /// to secure storage so the next app restart restores correctly.
+  ///
+  /// No-op when the current session is null (unauthenticated) — there is
+  /// nothing to update in that case and the interceptor will drive logout.
+  Future<void> rotateTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    final current = state.session;
+    if (current == null) return;
+    final updated = PlatformSession(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      user: current.user,
+      companyId: current.companyId,
+      role: current.role,
+    );
+    await _persistTokens(updated);
+    state = AuthState.authenticated(updated);
+  }
+
   Future<void> _persistTokens(PlatformSession session) async {
     await _tokenStorage.writeAccessToken(session.accessToken);
     await _tokenStorage.writeRefreshToken(session.refreshToken);
@@ -237,9 +429,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
+/// Optional override hook for consumers that want to inject a custom
+/// [AuthStrategy] (e.g., AOID's multi-step PasswordLoginStart/Complete
+/// flow). Default: null, which preserves the legacy email+password flow
+/// against [PlatformRepository].
+final authStrategyProvider = Provider<AuthStrategy?>((ref) => null);
+
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
     repository: ref.watch(platformRepositoryProvider),
     tokenStorage: ref.watch(tokenStorageProvider),
+    strategy: ref.watch(authStrategyProvider),
   );
 });
