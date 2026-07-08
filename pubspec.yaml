@@ -14,6 +14,8 @@ dependencies:
   connectrpc: ^1.0.0
   flutter_riverpod: ^2.6.1
   http: ^1.2.0
+  # PKCE (RFC 7636) S256 code_challenge hashing for AoidOidcAuthStrategy.
+  crypto: ^3.0.0
   shared_preferences: ^2.3.0
   # CLI-01: encrypted token persistence (Keychain/EncryptedSharedPreferences).
   # Pinned to 9.2.4 — DO NOT bump to 10.x (upstream issue #1043 data-loss bug).
