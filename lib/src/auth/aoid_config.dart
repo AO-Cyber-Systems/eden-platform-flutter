@@ -38,9 +38,17 @@ class AoidConfig {
   /// `--dart-define` compile-time constants. This is the PRODUCTION path;
   /// tests should override [aoidConfigProvider] instead of calling this.
   factory AoidConfig.fromEnvironment() => const AoidConfig(
-        enabled: bool.fromEnvironment('AOID_CONSOLE_LOGIN_ENABLED'),
-        issuer: String.fromEnvironment('AOID_ISSUER'),
-        clientId: String.fromEnvironment('AOID_CLIENT_ID'),
+        // AOID login is the DEFAULT: on unless a build explicitly passes
+        // --dart-define=AOID_CONSOLE_LOGIN_ENABLED=false. issuer/clientId
+        // default to the prod eden-biz web console so the fail-fast guard is
+        // satisfied without dart-defines; other RPs (mobile/pos) override
+        // AOID_CLIENT_ID (and any env its issuer differs).
+        enabled: bool.fromEnvironment('AOID_CONSOLE_LOGIN_ENABLED',
+            defaultValue: true),
+        issuer: String.fromEnvironment('AOID_ISSUER',
+            defaultValue: 'https://auth.aocyber.ai'),
+        clientId: String.fromEnvironment('AOID_CLIENT_ID',
+            defaultValue: 'eden-biz-console'),
       );
 
   /// Whether the AOID OIDC login strategy should be wired in place of the
