@@ -89,7 +89,10 @@ sealed class ApiException implements Exception {
       case DioExceptionType.badCertificate:
         return const ApiException.network();
 
-      case DioExceptionType.unknown:
+      // default catches DioExceptionType.unknown plus version-specific
+      // members (e.g. transformTimeout added in dio 5.10.0) without a
+      // static reference that would break on older dio.
+      default:
         return ApiException.unknown(error.message ?? 'Unknown error');
     }
   }
