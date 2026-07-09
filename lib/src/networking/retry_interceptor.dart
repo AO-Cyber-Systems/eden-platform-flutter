@@ -86,7 +86,9 @@ class RetryInterceptor extends Interceptor {
         case DioExceptionType.cancel:
         case DioExceptionType.badCertificate:
         case DioExceptionType.badResponse:
-        case DioExceptionType.unknown:
+        // default catches unknown + version-specific members
+        // (transformTimeout, dio 5.10.0) without breaking older dio.
+        default:
           return false;
       }
     }
