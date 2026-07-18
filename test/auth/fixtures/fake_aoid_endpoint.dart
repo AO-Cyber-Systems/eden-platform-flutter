@@ -33,6 +33,16 @@ class FakeAoidEndpoint {
   String? tokenAccessToken;
   String? tokenRefreshToken;
 
+  /// Overrides the `id_token` in the token response. Defaults to the fixture
+  /// id_token when unset (and [omitIdToken] is false).
+  String? tokenIdToken;
+
+  /// When true, the token response OMITS the `id_token` key entirely --
+  /// simulating a legacy/non-OIDC AOID response so the strategy's
+  /// backward-compat (id_token absent => session.idToken == null) can be
+  /// exercised.
+  bool omitIdToken = false;
+
   /// Make the NEXT `/oauth/token` call respond with [status] (a JSON AOID
   /// error body) instead of 200. One-shot — resets after being consumed.
   void respondNextTokenCallWith(int status) {
@@ -80,11 +90,17 @@ class FakeAoidEndpoint {
       _assertRefreshTokenBody(form);
     }
 
+    final body = aoidTokenResponse(
+      accessToken: tokenAccessToken,
+      refreshToken: tokenRefreshToken,
+      idToken: tokenIdToken,
+    );
+    if (omitIdToken) {
+      body.remove('id_token');
+    }
+
     return http.Response(
-      jsonEncode(aoidTokenResponse(
-        accessToken: tokenAccessToken,
-        refreshToken: tokenRefreshToken,
-      )),
+      jsonEncode(body),
       200,
       headers: {'content-type': 'application/json'},
     );

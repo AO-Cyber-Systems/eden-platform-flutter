@@ -91,12 +91,20 @@ class PlatformSession {
   /// cookie-jar interceptor.
   final bool cookieBound;
 
+  /// The AOID OIDC `id_token` from the PKCE token response, when present.
+  ///
+  /// Carries the verified `email` / `email_verified` claims that biz-api's
+  /// JIT path keys off (COMPANION-AV05-AOID-JIT). Null for password/cookie
+  /// sessions and for AOID responses that omit an id_token (backward-compat).
+  final String? idToken;
+
   const PlatformSession({
     required this.accessToken,
     required this.refreshToken,
     required this.user,
     this.companyId,
     this.role,
+    this.idToken,
   }) : cookieBound = false;
 
   /// Constructs a session whose authentication is carried by an HTTP cookie
@@ -112,5 +120,6 @@ class PlatformSession {
     this.role,
   })  : accessToken = '',
         refreshToken = '',
-        cookieBound = true;
+        cookieBound = true,
+        idToken = null;
 }
