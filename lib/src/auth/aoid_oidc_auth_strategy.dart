@@ -192,6 +192,11 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
     final accessToken = json['access_token'] as String?;
     final refreshToken = json['refresh_token'] as String?;
+    // AOID returns the OIDC id_token (verified email/email_verified) here; it
+    // was previously discarded. Capture it — biz-api's JIT path keys off the
+    // verified email (COMPANION-AV05-AOID-JIT). Optional: null when absent
+    // (legacy/non-OIDC responses) so the session stays backward-compatible.
+    final idToken = json['id_token'] as String?;
     if (accessToken == null || refreshToken == null) {
       return const Failed(_reasonMissingTokens);
     }
@@ -205,6 +210,7 @@ class AoidOidcAuthStrategy implements AuthStrategy {
       user: _placeholderUser,
       companyId: null,
       role: null,
+      idToken: idToken,
     ));
   }
 

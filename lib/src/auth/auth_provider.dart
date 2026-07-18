@@ -37,6 +37,12 @@ class AuthState {
 
   bool get isAuthenticated => status == AuthStatus.authenticated && session != null;
   String? get accessToken => session?.accessToken;
+
+  /// The AOID OIDC id_token for the active session, or null when there is no
+  /// session or the session carries no id_token (password/cookie sessions,
+  /// or an AOID response that omitted it). Surfaced so the biz transport can
+  /// attach it as the `X-AOID-ID-Token` header (COMPANION-AV05-AOID-JIT).
+  String? get idToken => session?.idToken;
   String? get refreshToken => session?.refreshToken;
   String? get userId => session?.user.id;
   String? get companyId => session?.companyId;
