@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:eden_platform_flutter/eden_platform.dart';
@@ -24,6 +25,16 @@ String _buildJwt({int? exp}) {
 int _expAt(Duration offset) =>
     (DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000) +
     offset.inSeconds;
+
+/// Runs [op] and returns the runtime type name of the error it completes with,
+/// or `'ok'` if it completed normally. The error handler is attached to the
+/// future via `.then(onError:)` (synchronously chained) rather than
+/// `await`-in-try/catch: the latter makes flutter_test's zone double-report the
+/// `.timeout()` throw as an unhandled error. This mirrors how the real
+/// AuthInterceptor consumes refreshIfNeeded (its failure is caught, not left to
+/// bubble).
+Future<String> _outcome(Future<void> Function() op) =>
+    op().then((_) => 'ok', onError: (Object e) => e.runtimeType.toString());
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -179,6 +190,60 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 5));
       // A fresh call on an expired token should attempt again.
       expect(calls, 1);
+    });
+
+    test(
+        'wedged refresh times out and CLEARS the slot so the next call re-enters',
+        () async {
+      // THE BUG (Gap A): on Flutter web, if a refresh is in-flight when the
+      // browser suspends a backgrounded tab, the socket can die WITHOUT the
+      // Future ever completing. Before this fix _inflight never cleared, so on
+      // resume every request's onRequest awaited the wedged future forever →
+      // the whole app spun until a full page reload. The timeout must clear the
+      // slot so a subsequent call re-enters instead of returning the stuck one.
+      int calls = 0;
+      final expiring = _buildJwt(exp: _expAt(const Duration(seconds: 10)));
+      final pr = ProactiveRefresh(
+        getAccessToken: () => expiring,
+        // A fresh never-completing future each call — simulates a refresh whose
+        // socket died at tab-suspend (the Future never resolves or errors).
+        restoreSession: () {
+          calls++;
+          return Completer<void>().future;
+        },
+        refreshTimeout: const Duration(milliseconds: 50),
+      );
+
+      expect(await _outcome(pr.refreshIfNeeded), 'TimeoutException',
+          reason: 'a refresh that never completes must time out, not hang');
+      expect(calls, 1);
+
+      // The wedged future must NOT poison later calls: the slot cleared, so a
+      // fresh call calls restoreSession AGAIN rather than handing back the
+      // stuck future. This is the app-wide-spinner fix.
+      expect(await _outcome(pr.refreshIfNeeded), 'TimeoutException');
+      expect(calls, 2,
+          reason: 'slot cleared on timeout → next call re-enters');
+    });
+
+    test('concurrent callers on a wedged refresh all time out (no infinite hang)',
+        () async {
+      final wedged = Completer<void>();
+      final expiring = _buildJwt(exp: _expAt(const Duration(seconds: 10)));
+      final pr = ProactiveRefresh(
+        getAccessToken: () => expiring,
+        restoreSession: () => wedged.future,
+        refreshTimeout: const Duration(milliseconds: 50),
+      );
+
+      final outcomes = await Future.wait<String>([
+        pr.refreshIfNeeded().then((_) => 'ok').catchError((Object e) => 'to'),
+        pr.refreshIfNeeded().then((_) => 'ok').catchError((Object e) => 'to'),
+        pr.refreshIfNeeded().then((_) => 'ok').catchError((Object e) => 'to'),
+      ]);
+
+      expect(outcomes, everyElement('to'),
+          reason: 'no concurrent caller may hang past the refresh timeout');
     });
 
     test('custom threshold respected', () async {
