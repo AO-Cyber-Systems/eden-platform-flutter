@@ -46,7 +46,20 @@ dependencies:
   dio_cookie_manager: ^3.1.1
   cookie_jar: ^4.0.8
   web_socket_channel: ^3.0.3
-  sentry_dio: ^8.14.2
+  # opsCluster obj-31 TRD 31-08 (TELE-03): bumped 8.14.2 -> 9.x and paired with
+  # sentry_flutter for the shared initSentry + PII scrubbers in
+  # lib/src/observability/sentry_init.dart.
+  #
+  # The old ^8.14.2 pin was the ROOT of the fleet's version skew: every 9.x
+  # consumer carried a dependency_overrides block to escape it —
+  #   aodex          sentry_flutter ^9.25.0  (forced by an Xcode 26 /
+  #                  sentry-cocoa incompatibility in 8.x, per its pubspec)
+  #   eden-biz, pos, ops-console   ^9.19.0
+  #   aocore-admin   ^8.14.2       (the last app still on 8.x)
+  # Overrides are invisible coupling; fixing the pin here lets consumers delete
+  # theirs. aocore-admin must move to 9.x with this change.
+  sentry_dio: ^9.19.0
+  sentry_flutter: ^9.19.0
   # SOCIAL-06: cross-platform OAuth browser session (ASWebAuthenticationSession
   # iOS/macOS, Chrome Custom Tab Android, postMessage Web) for consumer social
   # login. Drives SocialAuthService — see lib/src/auth/social_auth_service.dart.
