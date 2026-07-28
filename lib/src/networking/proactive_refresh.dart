@@ -34,6 +34,7 @@ class ProactiveRefresh {
     required this.getAccessToken,
     required this.restoreSession,
     this.threshold = const Duration(minutes: 2),
+    this.refreshTimeout = const Duration(seconds: 20),
   });
 
   /// Returns the current access token, or null if unauthenticated.
@@ -45,6 +46,15 @@ class ProactiveRefresh {
 
   /// How much remaining lifetime triggers a proactive refresh. Default: 2m.
   final Duration threshold;
+
+  /// Hard bound on a single refresh. **Load-bearing:** without it, a refresh
+  /// whose socket died while a backgrounded Flutter-web tab was suspended never
+  /// completes, so the single-flight [_inflight] slot never clears and, on
+  /// resume, EVERY request awaiting [refreshIfNeeded] hangs — the whole app
+  /// spins until a full page reload. The timeout makes the wedged refresh fail
+  /// (with [TimeoutException]) so the slot clears and the reactive 401 path can
+  /// recover. Default: 20s.
+  final Duration refreshTimeout;
 
   Future<void>? _inflight;
 
@@ -66,9 +76,13 @@ class ProactiveRefresh {
     if (remaining > threshold) return Future<void>.value();
 
     // Single-flight: wrap the refresh in a stored Future. Concurrent callers
-    // attach to the same Future. Once it resolves (or fails), clear the slot
-    // so the next call re-enters.
-    final f = restoreSession().whenComplete(() {
+    // attach to the same Future. Once it resolves (or fails, INCLUDING a
+    // timeout), clear the slot so the next call re-enters. The .timeout() is
+    // what prevents a refresh wedged at tab-suspend from poisoning the slot —
+    // see [refreshTimeout]. (The underlying restoreSession() may keep running
+    // in the background; that is harmless — what matters is that callers stop
+    // waiting and the slot frees.)
+    final f = restoreSession().timeout(refreshTimeout).whenComplete(() {
       _inflight = null;
     });
     _inflight = f;
