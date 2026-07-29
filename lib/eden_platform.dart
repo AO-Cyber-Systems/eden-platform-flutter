@@ -50,3 +50,9 @@ export 'src/providers/paginated_async_notifier.dart';
 export 'src/providers/mutation_notifier.dart';
 // Riverpod ↔ eden-ui-flutter bridge helpers.
 export 'src/widgets/eden_async_snapshot_riverpod.dart';
+
+// Shared Sentry init + PII scrubbers (opsCluster obj-31 TRD 31-08 / TELE-03).
+// Every AOCyber Flutter app calls initSentry from here so the scrubbers exist
+// in exactly ONE place — four copies of a privacy control is the failure mode
+// this replaces.
+export 'src/observability/sentry_init.dart';
