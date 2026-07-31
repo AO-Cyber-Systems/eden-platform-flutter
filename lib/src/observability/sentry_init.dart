@@ -121,6 +121,28 @@ Breadcrumb? scrubBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
   return breadcrumb;
 }
 
+/// Narrows which outbound origins carry `sentry-trace` / `baggage`.
+///
+/// A top-level function for the same reason [scrubEvent] is one: it can be
+/// asserted directly, without booting the SDK.
+///
+/// [targets] null or empty is NOT the same as "propagate nowhere" — it means
+/// "keep the SDK default", which is `['.*']`. Assigning an empty list would
+/// match no origin at all and silently disable Flutter→Go correlation
+/// everywhere, a failure indistinguishable from a backend that never received
+/// the headers. Callers pass real hosts or nothing.
+void applyTracePropagationTargets(
+  SentryOptions options,
+  List<String>? targets,
+) {
+  if (targets == null || targets.isEmpty) return;
+  // `tracePropagationTargets` is declared `final List<String>` in sentry 9.x —
+  // it is MUTATED, not reassigned. Assigning to it does not compile.
+  options.tracePropagationTargets
+    ..clear()
+    ..addAll(targets);
+}
+
 /// Initialise Sentry for an AOCyber Flutter app.
 ///
 /// [dsn] empty (the default when neither `window.APP_CONFIG.SENTRY_DSN` nor
@@ -136,6 +158,32 @@ Breadcrumb? scrubBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
 /// read and is not harmless now that several apps point at the self-hosted
 /// stack. Error capture is unaffected — this samples performance traces only.
 ///
+/// [tracePropagationTargets] controls which outbound origins receive the
+/// `sentry-trace` and `baggage` headers that let a Flutter error be joined to
+/// the Go span that served it (opsCluster obj-31 TRD 31-12 / TELE-15).
+///
+/// The SDK default is `['.*']` — attach to EVERYTHING, including third-party
+/// origins. That leaks internal trace ids to anyone the app talks to, so pass
+/// the real API hosts explicitly. Entries are treated as regular expressions
+/// matched against the request URL.
+///
+/// Getting this wrong looks exactly like a server-side bug: the headers are
+/// simply never attached, the backend starts a fresh trace, and nothing in
+/// either system reports an error. Note the browser can defeat this from the
+/// other side too — `sentry-trace` and `baggage` are non-simple headers, so if
+/// they are absent from the API's `Access-Control-Allow-Headers` the browser
+/// strips them during CORS preflight before the request is ever sent.
+///
+/// [propagateTraceparent] defaults to **true**, which is NOT the SDK default.
+///
+/// Sentry attaches `sentry-trace` + `baggage`. Those are Sentry's own format —
+/// an OpenTelemetry receiver does not understand them. Every AOCyber backend is
+/// instrumented with `otelhttp` and the W3C propagator, which extracts
+/// `traceparent`. With sentry's default (`propagateTraceparent = false`) the Go
+/// side sees no header it recognises, starts a FRESH trace, and the Sentry event
+/// and its server span become two unrelated searches — while every piece of
+/// config looks correct. Turning it on is what actually joins the two systems.
+///
 /// [transport] and [eventProcessors] are test injection points
 /// (InMemoryTransport + scope-injection processors for synthetic requests).
 Future<void> initSentry({
@@ -145,6 +193,8 @@ Future<void> initSentry({
   String? dist,
   String environment = 'production',
   double tracesSampleRate = 0.1,
+  List<String>? tracePropagationTargets,
+  bool propagateTraceparent = true,
   Transport? transport,
   List<EventProcessor> eventProcessors = const [],
 }) async {
@@ -155,6 +205,9 @@ Future<void> initSentry({
       if (release != null && release.isNotEmpty) options.release = release;
       if (dist != null && dist.isNotEmpty) options.dist = dist;
       options.tracesSampleRate = tracesSampleRate;
+      applyTracePropagationTargets(options, tracePropagationTargets);
+      // See the doc comment: without this the Go/OTel side cannot join.
+      options.propagateTraceparent = propagateTraceparent;
 
       // PII posture. sendDefaultPii stays FALSE so the SDK does not attach
       // user IP / cookies of its own accord; the hooks below then remove what

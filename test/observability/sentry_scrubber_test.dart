@@ -159,4 +159,48 @@ void main() {
       }
     });
   });
+  // opsCluster obj-31 TRD 31-12 (TELE-15). These assert the OPTION-shaping half
+  // of initSentry, which is otherwise only observable by booting the SDK.
+  //
+  // The default matters: sentry's own default is ['.*'] (attach sentry-trace +
+  // baggage to EVERY outbound origin, third parties included). Narrowing it is
+  // the point, but narrowing it to an EMPTY list would attach the headers to
+  // nothing and silently kill Flutter->Go correlation — a failure that looks
+  // identical to a backend bug. Both directions are pinned here.
+  group('tracePropagationTargets', () {
+    test('supplied targets replace the permissive default', () {
+      final options = SentryFlutterOptions();
+      applyTracePropagationTargets(options, const [
+        r'^https://api\.dex\.aocyber\.ai',
+      ]);
+      expect(options.tracePropagationTargets,
+          equals([r'^https://api\.dex\.aocyber\.ai']));
+    });
+
+    test('null leaves the SDK default untouched', () {
+      final options = SentryFlutterOptions();
+      final before = List<String>.from(options.tracePropagationTargets);
+      applyTracePropagationTargets(options, null);
+      expect(options.tracePropagationTargets, equals(before));
+    });
+
+    test('REGRESSION: an empty list must NOT disable propagation', () {
+      final options = SentryFlutterOptions();
+      final before = List<String>.from(options.tracePropagationTargets);
+      applyTracePropagationTargets(options, const []);
+      expect(options.tracePropagationTargets, equals(before),
+          reason: 'empty must fall back to the default, not match nothing');
+    });
+  });
+
+  // The single option that decides whether obj-31's correlation must-have can
+  // be met at all. Sentry's own default is false; every AOCyber backend speaks
+  // W3C/OTel, so false means the Go side starts a fresh trace and the join
+  // silently never happens.
+  group('propagateTraceparent', () {
+    test('SDK default is false — the thing we must override', () {
+      expect(SentryFlutterOptions().propagateTraceparent, isFalse);
+    });
+  });
+
 }
