@@ -35,4 +35,7 @@ export 'src/networking/proactive_refresh.dart';
 export 'package:dio/dio.dart'
     show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
          ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
-         DioException, HttpClientAdapter, ResponseBody;
+         DioException, HttpClientAdapter, ResponseBody,
+         // Per-request Options (headers etc.) — consumed by politihub
+         // Navigators' navigators_api.dart for Idempotency-Key injection.
+         Options;
