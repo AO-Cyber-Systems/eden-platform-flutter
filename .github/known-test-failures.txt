@@ -1,0 +1,3 @@
+test/auth/login_screen_test.dart	PlatformLoginScreen showSsoButtons defaults to true and renders Microsoft + Google SSO buttons (back-compat)
+test/platform_sidebar_test.dart	tapping nav item selects it
+test/secure_token_storage_test.dart	SecureTokenStorage migration from shared_preferences migration failure recovery: secure-write throws, prefs untouched

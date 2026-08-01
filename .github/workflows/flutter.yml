@@ -1,0 +1,125 @@
+name: flutter
+
+# FIRST CI for this package. Before AOID objective 50 TRD 50-01 there was no
+# .github/ directory at all, despite 18 apps depending on eden-platform-flutter.
+# Every gate written by 50-02..50-14 (the riverpod firewall, the D3 no-leak
+# gates, the token-in-URL regression gate) was decorative until this existed.
+#
+# ADVISORY, not required-for-merge — yet. The suite has a standing failure
+# ("No GoRouter in context"; eden was 201/202 at AOID Objective 12, and 250/253
+# at the 50-01 capture). Later TRDs in AOID objective 50 diff against
+# aoid/.planning/baseline/50-eden-flutter-baseline.txt rather than asserting a
+# green bar. Promote this to a required check once that set is empty.
+#
+# HOW THIS STAYS A REAL GATE WHILE THE SUITE IS RED
+# Two knobs, both deliberate, neither of them `continue-on-error` (which would
+# paint the job green and read as coverage it does not have):
+#
+#   1. analyze   — fatal on ERRORS only. There are 0 errors today, so this job
+#                  is genuinely green and genuinely fails on a regression.
+#                  There are 3 warnings + 4 infos of pre-existing debt
+#                  (sso_auth_service.dart unused field; two unused locals in
+#                  tests; unnecessary_underscores). Drop the --no-fatal-*
+#                  flags once that debt is cleared.
+#   2. test      — diffs the failing-test SET against .github/known-test-failures.txt
+#                  and fails on any failure NOT already in that set. A known-red
+#                  suite still gives a usable signal this way.
+#
+#                  It is a SET diff, not a count. A count-based ratchet passes
+#                  when one test starts failing and another starts passing —
+#                  a regression and a fix cancelling out is exactly the case
+#                  you most want to see.
+#
+# .github/known-test-failures.txt is the eden-local mirror of
+# aoid/.planning/baseline/50-eden-flutter-baseline.txt (which carries the full
+# 253-test set; this file carries only the failures). When you fix one, DELETE
+# its line in the same PR — that is what makes the ratchet tighten instead of
+# rot. When it is empty, drop the --no-fatal-* flags above, delete this block,
+# and mark the check required.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned: the local toolchain is 3.41.4 stable. An unpinned CI that drifts
+  # ahead of every developer produces failures nobody can reproduce.
+  FLUTTER_VERSION: "3.41.4"
+
+jobs:
+  analyze-and-test:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Fatal on errors only — see the header for why, and for the exit plan.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # `flutter test` exits non-zero while the suite is red, so its exit code
+      # cannot be the gate. Capture per-test results and ratchet on the count.
+      - name: Test
+        run: |
+          # `flutter test` exits non-zero while the suite is red, so its exit
+          # code cannot be the gate. `|| true` is therefore deliberate — the
+          # gate is the set diff below, which CAN and DOES fail.
+          flutter test --reporter json > raw.jsonl 2>&1 || true
+
+          # Key on suite path + test name. NOT .testID: Dart's JSON reporter
+          # assigns testID as a run-order integer, so it renumbers whenever a
+          # test is added and identifies nothing.
+          jq -R 'fromjson? // empty' raw.jsonl > events.jsonl
+          jq -s -r -f .github/test-result-set.jq events.jsonl \
+            | sort > test-results.txt
+
+          total=$(wc -l < test-results.txt | tr -d ' ')
+          grep -v '^success' test-results.txt | cut -f2,3 | sort > failing.txt
+          failures=$(wc -l < failing.txt | tr -d ' ')
+          known=$(wc -l < .github/known-test-failures.txt | tr -d ' ')
+
+          echo "::notice::$failures failing / $total tests (known: $known)"
+
+          if [ "$total" -eq 0 ]; then
+            echo "::error::No tests ran. A run that matches no files exits 0 and must never read as success."
+            exit 1
+          fi
+
+          # Regressions: failing now, not in the known set.
+          comm -23 failing.txt .github/known-test-failures.txt > new-failures.txt
+          if [ -s new-failures.txt ]; then
+            echo "::error::These tests failed and are NOT in .github/known-test-failures.txt:"
+            cat new-failures.txt
+            exit 1
+          fi
+
+          # Fixes: in the known set, passing now. Not a failure — but the file
+          # must be updated or the ratchet loosens back over time.
+          comm -13 failing.txt .github/known-test-failures.txt > fixed.txt
+          if [ -s fixed.txt ]; then
+            echo "::warning::These are no longer failing — delete them from .github/known-test-failures.txt to lock the fix in:"
+            cat fixed.txt
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results.txt
+            new-failures.txt
+          if-no-files-found: warn
