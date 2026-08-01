@@ -22,7 +22,7 @@
 // re-exports src/networking/*.dart which fails to compile under the CFE
 // against the resolved dio 5.10.0 (DioExceptionType.transformTimeout). See
 // pkce_generator_test.dart for the full note.
-import 'package:eden_platform_flutter/src/auth/aoid_config.dart';
+import 'package:eden_platform_flutter/src/aoid/aoid_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

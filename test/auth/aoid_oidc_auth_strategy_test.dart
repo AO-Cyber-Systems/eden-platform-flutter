@@ -24,7 +24,7 @@
 // (DioExceptionType.transformTimeout). See pkce_generator_test.dart for the
 // full note. The auth strategy contract has no networking dependency, so the
 // narrow src/ imports + a local fake TokenStorage keep this suite green.
-import 'package:eden_platform_flutter/src/auth/aoid_oidc_auth_strategy.dart';
+import 'package:eden_platform_flutter/src/aoid_riverpod/aoid_oidc_auth_strategy.dart';
 import 'package:eden_platform_flutter/src/auth/auth_strategy.dart';
 import 'package:eden_platform_flutter/src/auth/token_storage.dart';
 import 'package:flutter_test/flutter_test.dart';

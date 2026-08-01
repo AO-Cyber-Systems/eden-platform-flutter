@@ -1,11 +1,20 @@
 export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
-export 'src/auth/aoid_config.dart';
-export 'src/auth/aoid_oidc_auth_strategy.dart';
+// AOID module (AOID objective 50 TRD 50-01). The AOID surface moved from
+// src/auth/{pkce_generator,aoid_config,aoid_oidc_auth_strategy}.dart into
+// lib/src/aoid{,_riverpod}/ and is re-exported here through its two barrels,
+// so this file's exported SYMBOL SET is unchanged — every existing consumer
+// compiles untouched. Verified by test/aoid/eden_platform_surface_test.dart,
+// which names each relocated symbol; a diffstat cannot prove this.
+//
+// aoid.dart is the riverpod-FREE half (importable by a flutter_riverpod 3.x
+// consumer such as AODex); aoid_riverpod.dart is the riverpod-2 adapter.
+// Consumers of THIS barrel are riverpod-2 already, so they get both.
+export 'aoid.dart';
+export 'aoid_riverpod.dart';
 export 'src/auth/auth_provider.dart';
 export 'src/auth/auth_strategy.dart';
 export 'src/auth/login_screen.dart';
-export 'src/auth/pkce_generator.dart';
 export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
 export 'src/auth/social_auth_service.dart';

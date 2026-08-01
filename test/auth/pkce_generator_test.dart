@@ -4,7 +4,7 @@
 // the package's ^5.9.0 switch statements predate it). `flutter analyze` skips
 // that, but `flutter test` compiles it. PkceGenerator has no networking
 // dependency, so importing it directly keeps this suite green regardless.
-import 'package:eden_platform_flutter/src/auth/pkce_generator.dart';
+import 'package:eden_platform_flutter/src/aoid/pkce.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // RFC 7636 unreserved verifier charset: ALPHA / DIGIT / "-" / "." / "_" / "~".

@@ -12,6 +12,14 @@
 // into this shared package so console/mobile/POS all consume one
 // implementation. See docs/aoid-console-oauth-client.md in that repo for the
 // frozen contract this strategy implements.
+//
+// Lives on the ADAPTER side of the riverpod split (AOID obj-50 TRD 50-01)
+// because it `implements AuthStrategy`, the interface AuthNotifier — a
+// riverpod-2 StateNotifier — drives. Reachable via
+// `package:eden_platform_flutter/aoid_riverpod.dart`, never from aoid.dart.
+// (Its own import closure happens to be riverpod-free today; the placement is
+// a layering decision about where AuthStrategy belongs, not a present
+// technical necessity. 50-04 owns auth_strategy.dart.)
 
 import 'dart:convert';
 
@@ -19,10 +27,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 
+import '../aoid/pkce.dart';
+import '../auth/auth_strategy.dart';
+import '../auth/token_storage.dart';
 import '../models/platform_models.dart';
-import 'auth_strategy.dart';
-import 'pkce_generator.dart';
-import 'token_storage.dart';
 
 /// Injectable browser-launch signature. Matches the callable shape of
 /// [FlutterWebAuth2.authenticate] (its extra optional `options` param is

@@ -11,7 +11,7 @@
 // re-exports src/networking/*.dart, which fails to compile under the CFE
 // against the resolved dio). auth_provider.dart is the handwritten AuthState
 // only and pulls no networking, so importing it directly is safe.
-import 'package:eden_platform_flutter/src/auth/aoid_oidc_auth_strategy.dart';
+import 'package:eden_platform_flutter/src/aoid_riverpod/aoid_oidc_auth_strategy.dart';
 import 'package:eden_platform_flutter/src/auth/auth_provider.dart';
 import 'package:eden_platform_flutter/src/auth/auth_strategy.dart';
 import 'package:eden_platform_flutter/src/auth/token_storage.dart';
