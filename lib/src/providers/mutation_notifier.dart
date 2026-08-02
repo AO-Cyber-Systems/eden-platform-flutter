@@ -135,9 +135,10 @@ class MutationFailure<T> extends MutationState<T> {
 /// form. Both are covered by `test/providers/mutation_notifier_test.dart`,
 /// which proves the drop-on-detach behaviour against a keep-alive control.
 ///
-/// This package previously shipped a second class, `AutoDisposeMutationNotifier
-/// <T>`, whose superclass riverpod 3 deleted. It is **gone**; migrate to the
-/// provider flag above. See `doc/riverpod-3-migration.md` §3.1.
+/// This package previously shipped a second class,
+/// `AutoDisposeMutationNotifier<T>`, whose superclass riverpod 3 deleted. It is
+/// **gone**; migrate to the provider flag above. See
+/// `doc/riverpod-3-migration.md` §3.1.
 class MutationNotifier<T> extends Notifier<MutationState<T>> {
   @override
   MutationState<T> build() => MutationState<T>.idle();

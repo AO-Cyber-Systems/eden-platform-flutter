@@ -372,6 +372,106 @@ path. A 2.x pin there makes version solving fail for the entire repo, not just t
 example. It was bumped to `^3.0.0` in Stage A. **The consumer table in TRD 50-06 omits
 this package** — see §4.
 
+### 3.5 `AsyncValue.value` no longer throws — the compile-clean change (TRD 50-20)
+
+**Read this before touching any `AsyncNotifier` in 50-21 / 50-22 / 50-23.** Nothing here
+produces an analyzer error; it is a pure behaviour change.
+
+| riverpod | `AsyncValue.value` on an error state with **no** previous value |
+|---|---|
+| 2.6.1 (`lib/src/common.dart:493`) | **rethrows the error** |
+| 3.3.2 (`lib/src/core/async_value.dart:551`) | returns **`null`** (`ValueT? get value => _value?.$1`) |
+
+`AsyncValue.valueOrNull` was deleted; in 3.x plain `value` *is* the old `valueOrNull`.
+
+**What `.value` actually returns, measured on 3.3.2** (not recalled — a probe test was
+run against each state shape):
+
+| `state` | `.value` | `.asData?.value` | `.hasValue` |
+|---|---|---|---|
+| `AsyncData` | items | items | true |
+| `AsyncError` **with** a previous value | **items** | **null** | true |
+| `AsyncError` **no** previous value | null | null | false |
+| `AsyncLoading` mid-refresh | **items** | **null** | true |
+| `AsyncLoading` never loaded | null | null | false |
+
+Two traps fall out of that table:
+
+1. **`state.asData?.value` is NOT a safe "explicit" replacement for `state.value`.**
+   `asData` is null for *any* non-`AsyncData` state, so swapping to it silently discards
+   the retained items in exactly the error and mid-refresh cases. This was proposed as
+   the fix during planning and is **falsified**: substituting it breaks two tests in
+   `test/providers/paginated_async_notifier_test.dart`.
+2. **Assigning `state = AsyncError(e, st)` inside a notifier does NOT discard the
+   previous value.** riverpod routes the assignment through
+   `ElementWithFuture.onError → asyncTransition → copyWithPrevious`
+   (`element.dart:67,106`), and `AsyncError.copyWithPrevious` keeps `previous._value`
+   (`async_value.dart:873`). So "the error wipes my data" is false.
+
+**The real defect, and it is inherited by every consumer subclassing
+`PaginatedAsyncNotifier`.** All **seven** read sites in that class (not eleven — the
+planning doc's count was wrong; its own list of affected methods names seven) read
+`state.value ?? const []`. When a notifier has **never** produced a list — `build()`
+itself threw — riverpod 2 made that read **rethrow the original error** out of a `void`
+helper, which was loud. riverpod 3 returns `null`, so `?? const []` substitutes an empty
+list and the helper then writes `state = AsyncData([...])` — **silently replacing a hard
+error state with a fabricated one-item list and discarding the error.** The user sees a
+list containing an item they never had, instead of the error.
+
+To be precise about the pre-bump behaviour, because it is easy to overstate: riverpod 2
+did **not** silently drop items the user already had — with a previous value present,
+`hasValue` was true and the read returned those items, same as 3.x. The regression is
+confined to the *valueless* error/loading case, where 2.x threw and 3.x fabricates.
+
+**Fix applied in 50-20.** The seven sites are replaced by one documented accessor:
+
+```dart
+List<T>? get currentItems => state.hasValue ? state.value : null;
+```
+
+`hasValue` — not a null/empty check on the list, which would conflate "no list yet" with
+"a legitimately empty list" — is the predicate that distinguishes the two. The six
+local-mutation helpers (`prependItem`, `appendItem`, `removeItem`, `updateItem`,
+`applyOptimistic`, `applyOptimisticRemoval`) now refuse to write data over a valueless
+error. `loadMore` is deliberately **exempt**: it fetches real data, so promoting an error
+state to `AsyncData` is recovery, not fabrication. Both the rule and the exemption are
+pinned by test, and both were confirmed by mutation.
+
+### 3.6 A `Notifier` instance is REUSED across a rebuild — fields are not wiped for you
+
+The planning material asserted that riverpod 3 recreates `Notifier` instances on every
+rebuild, and that therefore fields living outside `state` are volatile. **Measured on
+3.3.2, the opposite is true for `invalidate`:** the notifier instance before and after
+`container.invalidate(p)` is `identical`, and `build()` simply re-runs on it.
+
+Consequence for 50-21 / 50-22 / 50-23: **any field a notifier keeps outside `state` must
+be reset explicitly at the top of `build()`** — nothing wipes it. `PaginatedAsyncNotifier`
+already does this (`_nextCursor = null; _hasMore = true;`). Those two lines look redundant
+because the success path overwrites both from the fetched page; they are load-bearing only
+when `fetchPage` **throws**, where without them a failed rebuild leaves a stale cursor
+pointing into the previous pagination and can permanently dead-end `loadMore`. Deleting
+them survived the suite until a test was written for the failing-rebuild path.
+
+### 3.7 `==` filtering + `const` sentinels — when a state assignment does NOT notify
+
+riverpod 3 filters **all** provider updates with `==`. `MutationState` deliberately does
+not override `==`, so `==` is identity, and that interacts with `const`:
+
+| assignment | notifies? | why |
+|---|---|---|
+| `state = const MutationState.inFlight()` (repeat) | **no** | const-canonicalized: the identical instance |
+| `state = const MutationState.idle()` (repeat) | **no** | same |
+| `reset()` → `state = MutationState<T>.idle()` (repeat) | **yes** | not const; allocates fresh, so identity differs |
+
+Two nearly identical lines with different notification behaviour. Both are intentional and
+are pinned by `test/providers/mutation_notifier_test.dart`. Value equality was
+**deliberately not added** to `MutationState`: it would also collapse a genuine re-`run`
+that produced an equal result, and UIs legitimately re-trigger on a repeated success.
+
+**For 50-21 / 50-22 / 50-23:** any state class that is `const`-constructed and lacks a
+value `==` inherits this. A notifier that relies on "assign the sentinel again to force a
+rebuild" is broken under riverpod 3.
+
 ---
 
 ## 4. The measured consumer table

@@ -32,7 +32,9 @@ class PaginatedPage<T> {
 /// - optimistic create/update/delete that swaps `state` and rolls back on error
 ///
 /// `PaginatedAsyncNotifier<T>` extracts that pattern. Subclasses implement
-/// `fetchPage(cursor)` and read `state.value` for current items; the base
+/// `fetchPage(cursor)` and read [currentItems] for the current items — NOT
+/// `state.value` directly, whose riverpod 3 semantics are subtle enough to be
+/// worth documenting in exactly one place; the base
 /// class owns the cursor + hasMore state and provides ready-made
 /// `loadMore`, `prependItem`, `removeItem`, `updateItem`, and
 /// `applyOptimistic` helpers that handle revert-on-error.
@@ -98,6 +100,42 @@ abstract class PaginatedAsyncNotifier<T> extends AsyncNotifier<List<T>> {
   @protected
   void sortItems(List<T> items) {}
 
+  /// The items currently held by [state], or `null` if this notifier has never
+  /// successfully produced a list.
+  ///
+  /// ## Why this exists — riverpod 3 changed `AsyncValue.value`
+  ///
+  /// This is the single place the raw read happens. Every mutating helper below
+  /// goes through it, so the post-error/post-loading read path is one decision
+  /// in one place instead of seven undocumented copies of `state.value ?? []`.
+  ///
+  /// Measured against the resolved **riverpod 3.3.2**, not recalled:
+  ///
+  /// | `state`                          | `.value` | `.asData?.value` | `.hasValue` |
+  /// |----------------------------------|----------|------------------|-------------|
+  /// | `AsyncData`                      | items    | items            | true        |
+  /// | `AsyncError` **with** a previous | items    | **null**         | true        |
+  /// | `AsyncError` **no** previous     | null     | null             | false       |
+  /// | `AsyncLoading` mid-refresh       | items    | **null**         | true        |
+  /// | `AsyncLoading` never loaded      | null     | null             | false       |
+  ///
+  /// Two consequences that are easy to get backwards:
+  ///
+  /// 1. **`state.value` is the correct accessor here, and `state.asData?.value`
+  ///    is not.** `asData` is null for *any* non-`AsyncData` state, so reading
+  ///    through it would discard the retained items in exactly the error and
+  ///    mid-refresh cases this class cares about — the opposite of the intent.
+  /// 2. **riverpod 3 no longer throws from this read.** Under riverpod 2,
+  ///    `AsyncValue.value` on a valueless error state rethrew the error
+  ///    (`riverpod-2.6.1/lib/src/common.dart:493`); under 3 it returns `null`
+  ///    (`riverpod-3.3.2/lib/src/core/async_value.dart:551`). The version bump
+  ///    therefore turned a loud failure into a silent one. `hasValue` — not a
+  ///    null-check on a list that is legitimately empty — is what distinguishes
+  ///    "no list yet" from "an empty list", so the helpers below use it to
+  ///    refuse to fabricate data over an error. See doc/riverpod-3-migration.md
+  ///    §3.5.
+  List<T>? get currentItems => state.hasValue ? state.value : null;
+
   @override
   Future<List<T>> build() async {
     _nextCursor = null;
@@ -130,7 +168,11 @@ abstract class PaginatedAsyncNotifier<T> extends AsyncNotifier<List<T>> {
   /// Reverts the cursor and keeps existing data if the page fetch fails.
   Future<void> loadMore() async {
     if (!_hasMore) return;
-    final existing = state.value ?? const [];
+    // Deliberately NOT guarded on [currentItems] being non-null: unlike the
+    // local-mutation helpers below, loadMore fetches real data, so producing
+    // AsyncData from an error state is a legitimate recovery rather than a
+    // fabrication.
+    final existing = currentItems ?? const [];
     final previousCursor = _nextCursor;
     try {
       final page = await fetchPage(_nextCursor);
@@ -149,35 +191,47 @@ abstract class PaginatedAsyncNotifier<T> extends AsyncNotifier<List<T>> {
   }
 
   /// Prepend an item to the list. Re-applies [sortItems] afterward.
+  ///
+  /// No-op while [currentItems] is null (see [currentItems]).
   void prependItem(T item) {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return;
     final next = [item, ...existing];
     sortItems(next);
     state = AsyncData(next);
   }
 
   /// Append an item to the list. Re-applies [sortItems] afterward.
+  ///
+  /// No-op while [currentItems] is null (see [currentItems]).
   void appendItem(T item) {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return;
     final next = [...existing, item];
     sortItems(next);
     state = AsyncData(next);
   }
 
   /// Remove the first item matching [predicate]. No-op if no match.
+  ///
+  /// Also a no-op while [currentItems] is null (see [currentItems]).
   void removeItem(bool Function(T item) predicate) {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return;
     final next = existing.where((i) => !predicate(i)).toList();
     state = AsyncData(next);
   }
 
   /// Replace the first item matching [predicate] with [transform(old)].
   /// No-op if no match.
+  ///
+  /// Also a no-op while [currentItems] is null (see [currentItems]).
   void updateItem(
     bool Function(T item) predicate,
     T Function(T item) transform,
   ) {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return;
     final next = existing
         .map((i) => predicate(i) ? transform(i) : i)
         .toList(growable: false);
@@ -197,12 +251,16 @@ abstract class PaginatedAsyncNotifier<T> extends AsyncNotifier<List<T>> {
   ///
   /// Useful for `rename`/`pin`/`archive` style mutations where the UI
   /// should reflect the change immediately and roll back on error.
+  /// While [currentItems] is null there is nothing to be optimistic about, so
+  /// [commit] still runs (the caller awaits its result) but [state] is left
+  /// alone — an error state is not overwritten with a fabricated list.
   Future<R> applyOptimistic<R>({
     required bool Function(T item) predicate,
     required T Function(T item) transform,
     required Future<R> Function(List<T> updated) commit,
   }) async {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return commit(const []);
     final updated = existing
         .map((i) => predicate(i) ? transform(i) : i)
         .toList(growable: false);
@@ -218,11 +276,15 @@ abstract class PaginatedAsyncNotifier<T> extends AsyncNotifier<List<T>> {
 
   /// Optimistically remove items matching [predicate], then run [commit].
   /// Restores on failure and rethrows.
+  ///
+  /// While [currentItems] is null, [commit] still runs but [state] is left
+  /// alone (same rule as [applyOptimistic]).
   Future<R> applyOptimisticRemoval<R>({
     required bool Function(T item) predicate,
     required Future<R> Function() commit,
   }) async {
-    final existing = state.value ?? const [];
+    final existing = currentItems;
+    if (existing == null) return commit();
     final updated = existing.where((i) => !predicate(i)).toList();
     state = AsyncData(updated);
     try {
