@@ -1,0 +1,121 @@
+// conflation_probe — ANALYZED at test time, NEVER compiled into the package.
+//
+// Stored with a `.dart.txt` extension on purpose. It contains deliberate
+// compile errors; as a real `.dart` file anywhere under the package it would
+// make `flutter analyze` red for everyone. `no_conflation_compile_gate_test.dart`
+// copies it to `<package>/.aoid_conflation_probe/probe.dart` at test time — a
+// dot-directory, which the analyzer's default sweep skips, but which still
+// inherits `.dart_tool/package_config.json` so
+// `package:eden_platform_flutter/...` resolves — runs `dart analyze` over it,
+// asserts the diagnostics, and deletes it.
+//
+// Regions are delimited by the `>>> REGION:` / `<<< END REGION` markers below
+// and asserted on by LINE RANGE plus DIAGNOSTIC CODE. Never by a total count:
+// a probe that failed to resolve produces errors everywhere and would satisfy
+// a count-based check while proving nothing. That is what the positiveControl
+// region is for.
+
+import 'package:eden_platform_flutter/aoid.dart';
+
+/// Consumes a value so the positive-control region has no unused locals.
+/// Takes `String` rather than `Object?` deliberately: an extension type is not
+/// assignable to `Object`, so an `Object?` parameter could not accept one.
+void sink(String value) {}
+
+// >>> REGION: positiveControl
+// MUST COMPILE. Zero errors and zero warnings are expected here. If this region
+// is dirty, the probe itself is broken and the negative regions below prove
+// nothing — so the gate must fail.
+void positiveControl(AoidAccessClaims a, AoidIdClaims i) {
+  final AoidActiveTenantSlug ok1 = a.activeTenant;
+  final AoidHomeTenantId ok2 = i.homeTenant;
+  sink(ok1.slug);
+  sink(ok2.uuid);
+  sink(ok1.debugLabel);
+  sink(ok2.debugLabel);
+  const AoidActiveTenantSlug literal = AoidActiveTenantSlug('acme');
+  sink(literal.slug);
+}
+// <<< END REGION
+
+// >>> REGION: conflateAccessFromHome
+// MUST NOT COMPILE — the HOME tenant UUID where the ACTIVE tenant slug is
+// expected. This is D5's headline defect: sending the home UUID as
+// `active_tenant` would be an `invalid_grant` at runtime.
+// Expected diagnostic: invalid_assignment
+void conflateAccessFromHome(AoidIdClaims i) {
+  final AoidActiveTenantSlug bad = i.homeTenant;
+  sink(bad.slug);
+}
+// <<< END REGION
+
+// >>> REGION: conflateHomeFromActive
+// MUST NOT COMPILE — the reverse direction. Keying local user linking on the
+// active tenant would re-link the account on every tenant switch.
+// Expected diagnostic: invalid_assignment
+void conflateHomeFromActive(AoidAccessClaims a) {
+  final AoidHomeTenantId bad = a.activeTenant;
+  sink(bad.uuid);
+}
+// <<< END REGION
+
+// >>> REGION: noValueGetter
+// MUST NOT COMPILE — neither type may expose a semantically neutral `value`.
+// `AoidActiveTenantSlug(homeId.uuid)` is self-evidently wrong when you read it;
+// `AoidActiveTenantSlug(homeId.value)` is not.
+// Expected diagnostic: undefined_getter
+void noValueGetter(AoidAccessClaims a, AoidIdClaims i) {
+  sink(a.activeTenant.value);
+  sink(i.homeTenant.value);
+}
+// <<< END REGION
+
+// >>> REGION: rawStringIsNotATenantRef
+// MUST NOT COMPILE — a bare String cannot become either type implicitly. You
+// have to name the type at the point of construction, which is where the
+// decision is reviewable.
+// Expected diagnostic: invalid_assignment
+void rawStringIsNotATenantRef(String s) {
+  final AoidActiveTenantSlug a = s;
+  final AoidHomeTenantId h = s;
+  sink(a.slug);
+  sink(h.uuid);
+}
+// <<< END REGION
+
+// >>> REGION: noLeakToPlainString
+// MUST NOT COMPILE — neither type erases back to String implicitly, so one
+// cannot be smuggled into a `String` parameter and lose its meaning on the way.
+// Expected diagnostic: invalid_assignment
+void noLeakToPlainString(AoidAccessClaims a, AoidIdClaims i) {
+  final String slug = a.activeTenant;
+  final Object home = i.homeTenant;
+  sink(slug);
+  sink(home.toString());
+}
+// <<< END REGION
+
+// >>> REGION: noVarianceHole
+// MUST NOT COMPILE — collections and nullable forms do not open a hole either.
+// Expected diagnostic: invalid_assignment
+void noVarianceHole(List<AoidActiveTenantSlug> slugs, AoidActiveTenantSlug? s) {
+  final List<AoidHomeTenantId> homes = slugs;
+  final AoidHomeTenantId? h = s;
+  sink(homes.length.toString());
+  sink(h?.uuid ?? '');
+}
+// <<< END REGION
+
+// >>> REGION: toStringCannotBeOverridden
+// MUST NOT COMPILE — Dart forbids an extension type from declaring a member
+// named like an `Object` member. This is why `tenant_ref.dart` provides
+// `debugLabel` instead of overriding `toString()`, and why interpolating one of
+// these types yields the erased String. If a future Dart lifts this
+// restriction, this region goes green and the gate fails — which is the signal
+// to revisit `debugLabel`.
+// Expected diagnostic: extension_type_declares_member_of_object
+extension type const ProbeTenantRef(String v) {
+  @override
+  String toString() => 'ProbeTenantRef($v)';
+}
+// <<< END REGION
