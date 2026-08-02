@@ -40,24 +40,34 @@ class AoidConfig {
   /// `--dart-define` compile-time constants. This is the PRODUCTION path;
   /// tests should override `aoidConfigProvider` instead of calling this.
   factory AoidConfig.fromEnvironment() => const AoidConfig(
-        // AOID login is the DEFAULT: on unless a build explicitly passes
-        // --dart-define=AOID_CONSOLE_LOGIN_ENABLED=false. issuer/clientId
-        // default to the prod eden-biz web console so the fail-fast guard is
-        // satisfied without dart-defines; other RPs (mobile/pos) override
-        // AOID_CLIENT_ID (and any env its issuer differs).
-        //
-        // NOTE (AOID obj-50): these defaults are a live production concern —
-        // 50-CONTEXT C3 flags the default-on web path as durably storing a
-        // refresh token. TRD 50-02 owns that fix. This TRD relocated the file
-        // WITHOUT changing behaviour, deliberately, so the security change
-        // lands as its own reviewable diff.
-        enabled: bool.fromEnvironment('AOID_CONSOLE_LOGIN_ENABLED',
-            defaultValue: true),
-        issuer: String.fromEnvironment('AOID_ISSUER',
-            defaultValue: 'https://auth.aocyber.ai'),
-        clientId: String.fromEnvironment('AOID_CLIENT_ID',
-            defaultValue: 'eden-biz-console'),
-      );
+    // AOID login is OPT-IN: off unless a build explicitly passes
+    // --dart-define=AOID_CONSOLE_LOGIN_ENABLED=true.
+    //
+    // THE POLARITY WAS FLIPPED BY AOID obj-50 TRD 50-02, and the flip is
+    // part of the security fix, not tidying. This defaulted to TRUE, with
+    // issuer/clientId defaulting to the PRODUCTION eden-biz web console —
+    // so every build that did not opt OUT ran AOID login against prod, on
+    // web, where the strategy then wrote a refresh token to localStorage.
+    // That default is what made 50-CONTEXT.md premise correction C3 a live
+    // exposure rather than a latent flaw. An opt-in default means a build
+    // has to ask for AOID login before it can be affected by anything in
+    // this path.
+    //
+    // CONSUMER IMPACT: any app relying on the implicit default (eden-biz
+    // console) must now pass --dart-define=AOID_CONSOLE_LOGIN_ENABLED=true
+    // to keep AOID login. issuer/clientId defaults are UNCHANGED, so that
+    // single define is all an opting-in build needs; other RPs
+    // (mobile/pos) still override AOID_CLIENT_ID and AOID_ISSUER.
+    enabled: bool.fromEnvironment('AOID_CONSOLE_LOGIN_ENABLED'),
+    issuer: String.fromEnvironment(
+      'AOID_ISSUER',
+      defaultValue: 'https://auth.aocyber.ai',
+    ),
+    clientId: String.fromEnvironment(
+      'AOID_CLIENT_ID',
+      defaultValue: 'eden-biz-console',
+    ),
+  );
 
   /// Whether the AOID OIDC login strategy should be wired in place of the
   /// legacy email+password flow.

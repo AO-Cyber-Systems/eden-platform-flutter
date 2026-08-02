@@ -35,13 +35,20 @@ import '../models/platform_models.dart';
 /// Injectable browser-launch signature. Matches the callable shape of
 /// [FlutterWebAuth2.authenticate] (its extra optional `options` param is
 /// assignable to this narrower type).
-typedef AuthorizeFn = Future<String> Function({
-  required String url,
-  required String callbackUrlScheme,
-});
+typedef AuthorizeFn =
+    Future<String> Function({
+      required String url,
+      required String callbackUrlScheme,
+    });
 
 /// AOID authorization-code + PKCE(S256) [AuthStrategy].
 class AoidOidcAuthStrategy implements AuthStrategy {
+  /// [isWeb] defaults to [kIsWeb] and decides whether a refresh token may be
+  /// persisted at all (50-CONTEXT.md D4 — it may not, on web). It is
+  /// injectable because `kIsWeb` is a compile-time constant that
+  /// `flutter test` fixes to false, so the web branch is otherwise
+  /// untestable; same seam as `connectCookieInterceptorWebForTest`
+  /// (lib/src/networking/connect_cookie_interceptor.dart:63-67).
   AoidOidcAuthStrategy({
     required this.tokenStorage,
     required this.issuer,
@@ -49,8 +56,10 @@ class AoidOidcAuthStrategy implements AuthStrategy {
     required this.redirectUri,
     http.Client? httpClient,
     AuthorizeFn? authorize,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _authorize = authorize ?? FlutterWebAuth2.authenticate;
+    bool isWeb = kIsWeb,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _authorize = authorize ?? FlutterWebAuth2.authenticate,
+       _isWeb = isWeb;
 
   final TokenStorage tokenStorage;
 
@@ -66,6 +75,9 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
   final http.Client _httpClient;
   final AuthorizeFn _authorize;
+
+  /// Whether this build runs on web. Governs refresh-token custody (D4).
+  final bool _isWeb;
 
   /// PKCE material for the in-flight authorization request. Held between the
   /// authorize launch and the token exchange, and cleared by [logout] (AOID
@@ -105,20 +117,21 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
   /// callbackUrlScheme for the browser-launch: `https` on web (universal-link
   /// style, served by web/auth.html), custom `edenbiz` scheme on native.
-  String get _callbackUrlScheme => kIsWeb ? 'https' : 'edenbiz';
+  String get _callbackUrlScheme => _isWeb ? 'https' : 'edenbiz';
 
   /// Builds the AOID `/oauth/authorize` URL (frozen contract §1) for the
   /// given PKCE material.
-  Uri _buildAuthorizeUrl(PkcePair pair) =>
-      _authorizeEndpoint.replace(queryParameters: {
-        'response_type': 'code',
-        'client_id': clientId,
-        'redirect_uri': redirectUri,
-        'scope': _scope,
-        'code_challenge': pair.codeChallenge,
-        'code_challenge_method': 'S256',
-        'state': pair.state,
-      });
+  Uri _buildAuthorizeUrl(PkcePair pair) => _authorizeEndpoint.replace(
+    queryParameters: {
+      'response_type': 'code',
+      'client_id': clientId,
+      'redirect_uri': redirectUri,
+      'scope': _scope,
+      'code_challenge': pair.codeChallenge,
+      'code_challenge_method': 'S256',
+      'state': pair.state,
+    },
+  );
 
   @override
   Future<AuthResult> initiateLogin(Map<String, String> credentials) async {
@@ -170,13 +183,16 @@ class AoidOidcAuthStrategy implements AuthStrategy {
   }) async {
     final http.Response resp;
     try {
-      resp = await _httpClient.post(_tokenEndpoint, body: {
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': redirectUri,
-        'client_id': clientId,
-        'code_verifier': codeVerifier,
-      });
+      resp = await _httpClient.post(
+        _tokenEndpoint,
+        body: {
+          'grant_type': 'authorization_code',
+          'code': code,
+          'redirect_uri': redirectUri,
+          'client_id': clientId,
+          'code_verifier': codeVerifier,
+        },
+      );
     } catch (e) {
       return Failed('AOID token exchange failed: $e');
     }
@@ -210,24 +226,48 @@ class AoidOidcAuthStrategy implements AuthStrategy {
     }
 
     await tokenStorage.writeAccessToken(accessToken);
-    await tokenStorage.writeRefreshToken(refreshToken);
 
-    return Authenticated(PlatformSession(
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      user: _placeholderUser,
-      companyId: null,
-      role: null,
-      idToken: idToken,
-    ));
+    // D4 / SDK-11. Until AOID objective 50 this line was
+    //     await tokenStorage.writeRefreshToken(refreshToken);
+    // with no guard at all — and AoidConfig.fromEnvironment() defaulted AOID
+    // login ON against the eden-biz WEB console in production. Every web
+    // login durably wrote a refresh token to localStorage (both through
+    // shared_preferences and through flutter_secure_storage_web, which keeps
+    // the ciphertext and its AES key there together). That is the exposure
+    // 50-CONTEXT.md premise correction C3 documents.
+    //
+    // On web the refresh token is now DROPPED, and the stored key is actively
+    // CLEARED so a token written by an earlier build does not linger. Clearing
+    // is always legal on every AoidTokenStore. Web sessions restore through
+    // Mode A (the app's backend holds the refresh token and sets an httpOnly
+    // SameSite cookie) — assembled by TRD 50-09 — or not at all.
+    if (_isWeb) {
+      await tokenStorage.writeRefreshToken(null);
+    } else {
+      await tokenStorage.writeRefreshToken(refreshToken);
+    }
+
+    return Authenticated(
+      PlatformSession(
+        accessToken: accessToken,
+        // Empty on web, deliberately. AuthNotifier._persistTokens writes
+        // session.refreshToken verbatim for every non-cookie-bound session
+        // (auth_provider.dart:184-191), so carrying the real value here would
+        // undo the restraint above one layer up.
+        refreshToken: _isWeb ? '' : refreshToken,
+        user: _placeholderUser,
+        companyId: null,
+        role: null,
+        idToken: idToken,
+      ),
+    );
   }
 
   @override
   Future<AuthResult> completeLogin(
     String continuationToken,
     Map<String, String> proof,
-  ) async =>
-      const Failed(_reasonCompleteUnsupported);
+  ) async => const Failed(_reasonCompleteUnsupported);
 
   @override
   Future<void> logout() async {
@@ -237,10 +277,10 @@ class AoidOidcAuthStrategy implements AuthStrategy {
     final refreshToken = await tokenStorage.readRefreshToken();
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
-        await _httpClient.post(_revokeEndpoint, body: {
-          'token': refreshToken,
-          'client_id': clientId,
-        });
+        await _httpClient.post(
+          _revokeEndpoint,
+          body: {'token': refreshToken, 'client_id': clientId},
+        );
       } catch (_) {
         // Swallow — revoke is best-effort.
       }
@@ -261,11 +301,14 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
     final http.Response resp;
     try {
-      resp = await _httpClient.post(_tokenEndpoint, body: {
-        'grant_type': 'refresh_token',
-        'refresh_token': refreshToken,
-        'client_id': clientId,
-      });
+      resp = await _httpClient.post(
+        _tokenEndpoint,
+        body: {
+          'grant_type': 'refresh_token',
+          'refresh_token': refreshToken,
+          'client_id': clientId,
+        },
+      );
     } catch (_) {
       // Transient network error — let the UI re-prompt for login.
       return null;

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,25 +36,49 @@ import 'token_storage.dart';
 /// tokens accessible after the device is unlocked once after boot — matches
 /// user mental model.
 ///
+/// **Refresh token on web (AOID objective 50, 50-CONTEXT.md D4 / C3):** the
+/// refresh token is never persisted to `shared_preferences`, and a legacy one
+/// found there is never copied into secure storage. On web both of those are
+/// `localStorage` — `flutter_secure_storage_web` keeps the ciphertext and its
+/// AES key there side by side — so either write makes the token readable by
+/// any XSS. The access token keeps both behaviours; see [_writeOrDelete].
+///
 /// Reference: 10-RESEARCH.md Pattern 1, Pitfall 1 (DO NOT bump to 10.x), and
 /// Pitfall 8 (iOS Simulator -25308 retry).
 class SecureTokenStorage implements TokenStorage {
   /// Creates a storage instance. Pass an injected [FlutterSecureStorage] for
   /// testing; the default applies the production AndroidOptions/iOSOptions
   /// per the class doc.
-  SecureTokenStorage([FlutterSecureStorage? secure])
-      : _secure = secure ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock,
-              ),
-            );
+  SecureTokenStorage([FlutterSecureStorage? secure]) : this._(secure, kIsWeb);
+
+  /// Test seam for the web-specific refresh-token behaviour.
+  ///
+  /// [kIsWeb] is a compile-time constant and `flutter test` is never web, so
+  /// the web branches below are otherwise unreachable from a unit test. Same
+  /// pattern as `connectCookieInterceptorWebForTest`
+  /// (lib/src/networking/connect_cookie_interceptor.dart:63-67).
+  @visibleForTesting
+  SecureTokenStorage.forPlatform({
+    FlutterSecureStorage? secure,
+    required bool isWeb,
+  }) : this._(secure, isWeb);
+
+  SecureTokenStorage._(FlutterSecureStorage? secure, this._isWeb)
+    : _secure =
+          secure ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            iOptions: IOSOptions(
+              accessibility: KeychainAccessibility.first_unlock,
+            ),
+          );
 
   final FlutterSecureStorage _secure;
+  final bool _isWeb;
   // Per-key in-flight read+migration. Concurrent readers attach to the same
   // Future so the migration runs exactly once across N callers.
-  final Map<String, Future<String?>> _inflightByKey = <String, Future<String?>>{};
+  final Map<String, Future<String?>> _inflightByKey =
+      <String, Future<String?>>{};
 
   @override
   Future<String?> readAccessToken() =>
@@ -84,6 +109,16 @@ class SecureTokenStorage implements TokenStorage {
     final prefs = await SharedPreferences.getInstance();
     final legacy = prefs.getString(key);
     if (legacy == null) return null;
+
+    // AOID obj-50 / D4: on web, do NOT create a second persisted copy of the
+    // refresh token. Migrating it means writing it into secure storage, which
+    // on web is window.localStorage with the AES key alongside — the state D4
+    // forbids. The pre-existing prefs value is deliberately left ALONE and
+    // still returned: purging tokens users already hold needs a coordinated
+    // eden-biz change and is escalated by TRD 50-02's SUMMARY, not done here.
+    if (_isWeb && key == StorageKeys.kRefreshToken) {
+      return legacy;
+    }
 
     // CRITICAL: write-then-clear. Reverse order would lose the user's
     // session if the secure-write fails after the prefs.remove succeeds.
@@ -135,12 +170,27 @@ class SecureTokenStorage implements TokenStorage {
         await _secure.write(key: key, value: value);
       }
     } catch (_) {
-      // Secure storage is unavailable (notably on web, where
-      // flutter_secure_storage's Web Crypto/localStorage calls can throw).
-      // A throw here would abort login (the caller treats any failure as an
-      // auth failure), so fall back to shared_preferences. On web that is
-      // localStorage — the same backing flutter_secure_storage_web uses — so
-      // it is not a meaningful security downgrade there.
+      // Secure storage failed (notably on web, where flutter_secure_storage's
+      // Web Crypto/localStorage calls can throw).
+      //
+      // For the ACCESS token we fall back to shared_preferences: it is
+      // short-lived, and throwing here aborts login (the caller treats any
+      // storage failure as an auth failure).
+      //
+      // For the REFRESH token we do NOT fall back. On web, shared_preferences
+      // is localStorage, and so is flutter_secure_storage_web (it puts the AES
+      // key and the ciphertext in localStorage side by side). Persisting a
+      // refresh token to either makes it readable by any XSS. That is the
+      // configuration AOID objective 50 / 50-CONTEXT.md D4 forbids, and it is
+      // what this package shipped until obj-50. Deleting (value == null, or an
+      // empty string — a cookie-bound/web session clobbering a stale value)
+      // still falls through to both backends: clearing must always be
+      // best-effort, or a logout can strand a token.
+      if (key == StorageKeys.kRefreshToken &&
+          value != null &&
+          value.isNotEmpty) {
+        rethrow;
+      }
       final prefs = await SharedPreferences.getInstance();
       if (value == null) {
         await prefs.remove(key);
