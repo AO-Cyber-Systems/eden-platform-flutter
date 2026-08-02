@@ -107,6 +107,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// to the in-flight login attempt.
   String? get continuationToken => _continuationToken;
 
+  /// Authorization URL surfaced by the most recent [RedirectRequired], or
+  /// null when no browser hop is pending.
+  ///
+  /// A redirect is a FIRST-CLASS path, not an error (50-CONTEXT.md D7): the
+  /// notifier stays in [AuthStatus.refreshing] and exposes the URL here so
+  /// the UI can open a system browser (ASWebAuthenticationSession / Chrome
+  /// Custom Tabs) and finish via the redirect flow. It is surfaced as a
+  /// notifier field rather than a new [AuthStatus] value deliberately —
+  /// adding an enum value breaks every exhaustive switch in the 18 packages
+  /// that consume [AuthState].
+  ///
+  /// Cleared by any subsequent result, so a stale URL can never be opened
+  /// after the ceremony has moved on.
+  Uri? _pendingRedirectUrl;
+  Uri? get pendingRedirectUrl => _pendingRedirectUrl;
+
   /// Whether this notifier is delegating to a custom [AuthStrategy]. When
   /// false, the notifier executes the legacy email+password flow against
   /// [PlatformRepository].
@@ -184,6 +200,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     switch (result) {
       case Authenticated(:final session):
         _continuationToken = null;
+        _pendingRedirectUrl = null;
         // Only persist tokens for bearer-style sessions; cookie-bound
         // sessions have empty token strings that would clobber any prior
         // real values in secure storage.
@@ -191,14 +208,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
           unawaited(_persistTokens(session));
         }
         state = AuthState.authenticated(session);
-      case TwoFactorRequired(:final continuationToken):
+      case FactorRequired(:final continuationToken):
+        // Objective 49 rotates `auth_session` on EVERY step (49-06). This
+        // write is the rotation capture: the handle we just received replaces
+        // the one we presented. Removing it makes the second completeLogin
+        // present a consumed handle and fail with invalid_session. Pinned by
+        // test/auth_provider_test.dart "rotation across sequential
+        // completeLogin".
         _continuationToken = continuationToken;
+        _pendingRedirectUrl = null;
         // Refreshing state semantically covers "waiting for the user to
         // provide a second factor" — downstream UI inspects
         // [continuationToken] to disambiguate.
         state = AuthState.refreshing(session: state.session);
+      // NOTE: there is deliberately no `case TwoFactorRequired`. It is a
+      // SUBCLASS of FactorRequired (auth_strategy.dart), so the arm above
+      // already matches it — including the AOID portal's deprecated
+      // `const TwoFactorRequired(...)` construction. A separate arm here
+      // would be dead code.
+      case RedirectRequired(:final authorizationUrl):
+        // NOT an error (50-CONTEXT.md D7). The user merely needs a browser
+        // hop — social IdP, PIV/CAC, or a tenancy tier that forbids native
+        // login. Mapping this onto AuthState.error is the exact defect TRD
+        // 50-04 exists to remove: it shows "login failed" to a user whose
+        // credentials are fine. Pinned by test/auth_provider_test.dart
+        // "RedirectRequired does not put the notifier into an error state".
+        _pendingRedirectUrl = authorizationUrl;
+        state = AuthState.refreshing(session: state.session);
       case Failed(:final reason):
         _continuationToken = null;
+        _pendingRedirectUrl = null;
         state = AuthState.error(reason, session: state.session);
     }
   }
