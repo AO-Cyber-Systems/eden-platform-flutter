@@ -349,6 +349,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final socialService = SocialAuthService(
         repository: _repository,
         baseUrl: _resolvePlatformBaseUrl(),
+        // REQUIRED per-app configuration (TRD 50-10). Previously a hardcoded
+        // personal bundle identifier in the shared library, which meant every
+        // consumer's mobile callback claimed to be one developer's app.
+        // Build with --dart-define=SOCIAL_CALLBACK_SCHEME=<your.bundle.id>.
+        // Throws ArgumentError when unset — caught below and surfaced as an
+        // auth error rather than failing silently on a device.
+        callbackScheme: SocialAuthService.callbackSchemeFromEnvironment(),
       );
       final session = await socialService.authenticate(provider);
       await _persistTokens(session);

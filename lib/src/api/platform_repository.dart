@@ -37,7 +37,8 @@ abstract class PlatformRepository {
   /// Use `initiateSocialLogin` + [SocialAuthService], which is cross-platform
   /// and takes an authorization CODE rather than tokens in a URL.
   @Deprecated(
-    'Unused since TRD 50-10 removed SSOAuthService (tokens-in-URL, Process.run). '
+    'Unused since TRD 50-10 removed SSOAuthService (a tokens-in-URL loopback '
+    'reader that shelled out to launch a browser). '
     'Use initiateSocialLogin + SocialAuthService. Slated for removal in a '
     'coordinated cross-repo change once consumer test fakes drop their overrides.',
   )
