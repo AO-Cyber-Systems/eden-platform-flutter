@@ -150,8 +150,38 @@ class MutationNotifier<T> extends Notifier<MutationState<T>> {
 
 /// AutoDispose variant — drops state when the last listener detaches.
 /// Use for one-off form-submit mutations.
-class AutoDisposeMutationNotifier<T>
-    extends AutoDisposeNotifier<MutationState<T>> {
+///
+/// ## riverpod 3 changed how auto-dispose is expressed — READ THIS
+///
+/// riverpod 3 **fused `AutoDisposeNotifier` into `Notifier`**. `AutoDisposeNotifier`
+/// no longer exists, and — unlike `StateNotifier` — it is NOT one of the eight
+/// symbols `package:flutter_riverpod/legacy.dart` re-exports, so there is no shim
+/// for it. Auto-dispose is now a property of the PROVIDER, not of the notifier
+/// class: `NotifierProvider(..., isAutoDispose: true)`, spelled
+/// `NotifierProvider.autoDispose(...)`.
+///
+/// AOID objective 50 TRD 50-06 (Stage A, the version axis) therefore re-based this
+/// class from `AutoDisposeNotifier<MutationState<T>>` onto
+/// `Notifier<MutationState<T>>` — the minimum edit that compiles on 3.x. That
+/// makes this class currently identical in behaviour to [MutationNotifier]; the
+/// auto-dispose semantics moved to the call site, which must now say:
+///
+/// ```dart
+/// final saveMutation = NotifierProvider.autoDispose<
+///     AutoDisposeMutationNotifier<Conversation>, MutationState<Conversation>>(
+///   AutoDisposeMutationNotifier<Conversation>.new,
+/// );
+/// ```
+///
+/// **This is a CONSUMER-VISIBLE break** and the only one Stage A could not absorb:
+/// any consumer writing `AutoDisposeNotifierProvider<...>` must switch to
+/// `NotifierProvider.autoDispose<...>`. It is recorded in
+/// doc/riverpod-3-migration.md.
+///
+/// **TRD 50-20 owns the real consolidation** — deciding whether this class is
+/// deprecated in favour of [MutationNotifier] plus an auto-dispose provider, or
+/// kept as a named alias. 50-20 should VERIFY this re-base rather than redo it.
+class AutoDisposeMutationNotifier<T> extends Notifier<MutationState<T>> {
   @override
   MutationState<T> build() => MutationState<T>.idle();
 

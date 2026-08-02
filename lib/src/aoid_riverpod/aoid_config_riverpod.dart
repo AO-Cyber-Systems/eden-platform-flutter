@@ -14,6 +14,16 @@
 // Behaviour is unchanged from the pre-split file; only the location moved.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// riverpod 3.x split the old single barrel into THREE: flutter_riverpod.dart
+// (core), legacy.dart (StateNotifier & friends) and misc.dart. `Override` — the
+// return type of buildAoidOverrides below — moved into misc.dart. STAGE A of
+// AOID objective 50's riverpod alignment (50-CONTEXT.md D2, TRD 50-06).
+//
+// This import is TEMPORARY only in the sense that 50-24 (barrel reunification)
+// decides the final import surface; `Override` itself is NOT deprecated and has
+// no Notifier-API replacement, so unlike the legacy.dart shims this one may well
+// survive. See doc/riverpod-3-migration.md.
+import 'package:flutter_riverpod/misc.dart';
 
 import '../aoid/aoid_config.dart';
 import '../auth/auth_provider.dart';

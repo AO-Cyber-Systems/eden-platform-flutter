@@ -1,4 +1,19 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// riverpod 3.x moved StateNotifier/StateNotifierProvider out of the main barrel
+// into legacy.dart. STAGE A of AOID objective 50's riverpod alignment
+// (50-CONTEXT.md D2, TRD 50-06) — compiles on 3.x with ZERO API change.
+//
+// NOTE: this file is the ONLY one where the main `flutter_riverpod.dart` import
+// had to be DROPPED rather than kept alongside legacy.dart. Every symbol it uses
+// (StateNotifier, StateNotifierProvider) now comes from legacy.dart, and the
+// `ThemeMode` below is this package's own enum, not Flutter's — so after the
+// barrel split the main barrel became genuinely unused and tripped
+// `unused_import`.
+//
+// This import is TEMPORARY. TRD 50-22 migrates SettingsNotifier to the 3.x
+// Notifier API and must RE-ADD `package:flutter_riverpod/flutter_riverpod.dart`
+// when it does, since `Notifier`/`NotifierProvider` live in the main barrel.
+// See doc/riverpod-3-migration.md.
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/storage_keys.dart';

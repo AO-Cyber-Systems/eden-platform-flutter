@@ -12,7 +12,19 @@ dependencies:
   flutter:
     sdk: flutter
   connectrpc: ^1.0.0
-  flutter_riverpod: ^2.6.1
+  # STAGE A of AOID objective 50's riverpod alignment (50-CONTEXT.md D2, TRD 50-06).
+  # This is the VERSION axis only: the pin moved 2.6.1 -> 3.x and every
+  # StateNotifier site kept compiling via `package:flutter_riverpod/legacy.dart`,
+  # which in 3.x still exports StateNotifier/StateController/StateNotifierProvider/
+  # StateProvider/ChangeNotifierProvider and the *Family variants.
+  #
+  # The StateNotifier -> Notifier API rewrites are DELIBERATELY separate work
+  # (50-20..50-23), one notifier at a time, so that a break in any of the 18
+  # downstream consumer packages is attributable to a single change.
+  #
+  # See doc/riverpod-3-migration.md for the four-stage plan and the per-notifier
+  # inventory with owning TRDs.
+  flutter_riverpod: ^3.0.0
   http: ^1.2.0
   # PKCE (RFC 7636) S256 code_challenge hashing for AoidOidcAuthStrategy.
   crypto: ^3.0.0

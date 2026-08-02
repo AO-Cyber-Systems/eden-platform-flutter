@@ -1,6 +1,14 @@
 import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// riverpod 3.x moved StateNotifier/StateNotifierProvider out of the main barrel
+// into legacy.dart. STAGE A of AOID objective 50's riverpod alignment
+// (50-CONTEXT.md D2, TRD 50-06) — compiles on 3.x with ZERO API change.
+//
+// This import is TEMPORARY. It is removed by TRD 50-23, which migrates
+// EntitlementsNotifier to the 3.x Notifier API.
+// See doc/riverpod-3-migration.md.
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../auth/auth_provider.dart';
 import '../company/company_provider.dart';

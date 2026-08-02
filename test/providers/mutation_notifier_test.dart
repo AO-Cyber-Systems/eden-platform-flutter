@@ -18,7 +18,12 @@ final _saveProvider = NotifierProvider<MutationNotifier<int>, MutationState<int>
   MutationNotifier<int>.new,
 );
 
-final _autoDisposeProvider = AutoDisposeNotifierProvider<
+// riverpod 3 removed the `AutoDisposeNotifierProvider` type. Auto-dispose is now
+// a flag on NotifierProvider, spelled `.autoDispose`. This is the one
+// consumer-visible break AOID objective 50's Stage A (TRD 50-06) could not
+// absorb behind a legacy.dart shim — `AutoDisposeNotifier` is not among
+// legacy.dart's eight re-exported symbols. See doc/riverpod-3-migration.md.
+final _autoDisposeProvider = NotifierProvider.autoDispose<
     AutoDisposeMutationNotifier<int>, MutationState<int>>(
   AutoDisposeMutationNotifier<int>.new,
 );

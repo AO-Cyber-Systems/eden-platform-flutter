@@ -8,7 +8,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_riverpod: ^2.6.1
+  # STAGE A of AOID objective 50's riverpod alignment (TRD 50-06). This must
+  # track the parent package's constraint: `example` depends on
+  # eden_platform_flutter by path, so a 2.x pin here makes `flutter pub get`
+  # fail for the whole repo. See ../doc/riverpod-3-migration.md.
+  flutter_riverpod: ^3.0.0
   eden_platform_flutter:
     path: ..
   eden_ui_flutter:
