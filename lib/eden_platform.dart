@@ -19,7 +19,11 @@ export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
 export 'src/auth/social_auth_service.dart';
 export 'src/auth/social_login_providers.dart';
-export 'src/auth/sso_auth_service.dart';
+// REMOVED (AOID objective 50, TRD 50-10 / SDK-08 / D6):
+// `export 'src/auth/sso_auth_service.dart'`. SSOAuthService read access_token
+// and refresh_token out of a desktop loopback callback URL and shelled out via
+// Process.run. Zero callers across ~/dev, so it was deleted, not repaired.
+// BREAKING for anyone importing the symbol — the grep proved there is nobody.
 export 'src/auth/token_storage.dart';
 export 'src/api/platform_repository.dart';
 export 'src/company/company_provider.dart';

@@ -17,7 +17,6 @@ import '../api/platform_repository.dart';
 import 'auth_strategy.dart';
 import 'secure_token_storage.dart';
 import 'social_auth_service.dart';
-import 'sso_auth_service.dart';
 import 'token_storage.dart';
 import '../errors/platform_errors.dart';
 import '../models/platform_models.dart';
@@ -328,30 +327,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Login via SSO provider (Microsoft, Google).
-  /// Desktop: opens browser, captures callback. Web: redirects window.
-  Future<void> loginWithSSO(String provider, {String? redirectUri}) async {
-    state = AuthState.refreshing(session: state.session);
-    try {
-      final ssoService = SSOAuthService(
-        repository: _repository,
-        apiBaseUrl: _resolvePlatformBaseUrl(),
-      );
-      final session = await ssoService.authenticate(provider);
-      await _persistTokens(session);
-      state = AuthState.authenticated(session);
-    } on PlatformError catch (error) {
-      state = AuthState.error(error.message, session: state.session);
-    } catch (error) {
-      state = AuthState.error(error.toString(), session: state.session);
-    }
-  }
+  // REMOVED (AOID objective 50, TRD 50-10 / SDK-08 / D6): `loginWithSSO`.
+  //
+  // It was the sole caller of `SSOAuthService`, which read `access_token` and
+  // `refresh_token` straight out of a desktop loopback callback URL and
+  // launched the system browser via `Process.run`. A repo-wide grep across
+  // ~/dev (excluding .pub-cache and worktrees) found ZERO callers of either
+  // symbol, so the whole chain was deleted rather than repaired.
+  //
+  // Desktop is already covered by `flutter_web_auth_2`, which [SocialAuthService]
+  // uses on every platform. Gate: test/aoid/no_tokens_in_callback_gate_test.dart.
 
   /// Login via a consumer social provider (Google, Apple, Microsoft,
   /// Facebook, X). Drives [SocialAuthService] (flutter_web_auth_2 → server
-  /// callback → token pair) and persists via the same SecureTokenStorage
-  /// path as password login. Mirrors [loginWithSSO] but uses the cross-platform
-  /// consumer flow instead of the enterprise desktop-only path.
+  /// callback carrying an authorization CODE → POST exchange → token pair in
+  /// the response body) and persists via the same SecureTokenStorage path as
+  /// password login.
   Future<void> loginWithSocial(String provider) async {
     state = AuthState.refreshing(session: state.session);
     try {

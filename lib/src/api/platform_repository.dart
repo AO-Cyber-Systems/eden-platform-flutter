@@ -15,6 +15,32 @@ abstract class PlatformRepository {
   Future<void> logout(String refreshToken);
   Future<List<PlatformCompany>> listCompanies(String accessToken);
   Future<List<PlatformNavItem>> listNavItems(String accessToken, String companyId);
+
+  /// Returns the enterprise SSO authorization URL for a desktop loopback flow.
+  ///
+  /// DEPRECATED (AOID objective 50, TRD 50-10 / SDK-08 / D6). Its only consumer
+  /// was `SSOAuthService`, which has been DELETED: it read `access_token` and
+  /// `refresh_token` out of the loopback callback URL and launched the browser
+  /// through `Process.run`. Nothing in eden calls this method any more.
+  ///
+  /// It is kept — deprecated rather than removed — because 6 `@override`
+  /// implementations of it exist in test fakes across 5 consumer packages
+  /// (politihub/flutter-navigators, justinforme/flutter/{admin,volunteer},
+  /// eden-biz/{flutter,mobile}), four of which consume this package by PATH and
+  /// would take a new `override_on_non_overriding_member` analyzer warning the
+  /// moment it disappeared. Removing it is a coordinated cross-repo change, not
+  /// a side effect of a security fix.
+  ///
+  /// Deprecating costs those consumers nothing: an `@override` of a deprecated
+  /// member produces no diagnostic (verified with `dart analyze`).
+  ///
+  /// Use `initiateSocialLogin` + [SocialAuthService], which is cross-platform
+  /// and takes an authorization CODE rather than tokens in a URL.
+  @Deprecated(
+    'Unused since TRD 50-10 removed SSOAuthService (tokens-in-URL, Process.run). '
+    'Use initiateSocialLogin + SocialAuthService. Slated for removal in a '
+    'coordinated cross-repo change once consumer test fakes drop their overrides.',
+  )
   Future<String> initiateSSOForDesktop(String provider, String redirectUri);
 
   /// Starts a consumer social-login flow (Google, Apple, Microsoft, Facebook,
