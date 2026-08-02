@@ -25,6 +25,25 @@ void main() {
     }
   }
 
+  /// Open a REAL, long-lived subscription to [navStateProvider].
+  ///
+  /// This must not be a bare `container.read(navStateProvider)`. `read` opens a
+  /// subscription and closes it again immediately, so it leaves the provider
+  /// with zero listeners. riverpod 3 treats an unlistened provider as *paused*
+  /// ("a provider is considered paused if all of its listeners are paused" —
+  /// riverpod 3.0 CHANGELOG) and `ProviderElement.onCancel` then calls
+  /// `deactivate()` on every subscription that element itself created — here,
+  /// nav's two `ref.listen` calls. The pause cascades up the whole
+  /// auth -> company -> nav chain, so the chain never delivers and nav stays
+  /// empty. In riverpod 2 there were no pause semantics, so the one-shot read
+  /// happened to work.
+  ///
+  /// Not closed deliberately: `container.dispose()` at the end of each test
+  /// tears it down. See doc/riverpod-3-migration.md §3.2.
+  void subscribeNav(ProviderContainer container) {
+    container.listen<NavState>(navStateProvider, (previous, next) {});
+  }
+
   group('loadForCompany', () {
     test('loads nav items for given company', () async {
       SharedPreferences.setMockInitialValues({});
@@ -44,8 +63,9 @@ void main() {
       container.read(authProvider.notifier);
       await deepSettle();
 
-      // Subscribe to nav state to start the listener chain
-      container.read(navStateProvider);
+      // Subscribe to nav state to start the listener chain.
+      // MUST be a real subscription, not `read` — see subscribeNav.
+      subscribeNav(container);
 
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
@@ -73,7 +93,7 @@ void main() {
 
       container.read(authProvider.notifier);
       await deepSettle();
-      container.read(navStateProvider);
+      subscribeNav(container);
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
 
@@ -100,7 +120,7 @@ void main() {
 
       container.read(authProvider.notifier);
       await deepSettle();
-      container.read(navStateProvider);
+      subscribeNav(container);
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
 
@@ -126,7 +146,7 @@ void main() {
 
       container.read(authProvider.notifier);
       await deepSettle();
-      container.read(navStateProvider);
+      subscribeNav(container);
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
 
@@ -156,7 +176,7 @@ void main() {
 
       container.read(authProvider.notifier);
       await deepSettle();
-      container.read(navStateProvider);
+      subscribeNav(container);
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
 
@@ -181,7 +201,7 @@ void main() {
 
       container.read(authProvider.notifier);
       await deepSettle();
-      container.read(navStateProvider);
+      subscribeNav(container);
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
       await deepSettle();
 

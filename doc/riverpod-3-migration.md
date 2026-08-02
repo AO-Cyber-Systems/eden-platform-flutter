@@ -1,7 +1,10 @@
 # riverpod 2 → 3 migration — the staged plan
 
 **Owner:** AOID objective 50 (`aoid/.planning/objectives/50-aoid-flutter-embed-sdk-…`).
-**Status:** Stage A landed (TRD 50-06). Stages B–D outstanding.
+**Status:** Stage A landed (TRD 50-06) + gap-closure. Stages B–D outstanding.
+**Suite:** back to its pre-Stage-A red count — **403 tests, 3 non-success**, all three
+pre-existing on `origin/main`. The six `nav_provider` regressions 50-06 escalated are
+**fixed**; see §3.2, and note that their root cause was *not* what 50-06 concluded.
 **Authority for the consumer numbers below:** `tool/consumer_compat_gate.sh`, not this
 prose. Re-run the gate; do not trust a table nobody executed.
 
@@ -142,7 +145,14 @@ exception rather than scope creep: the superclass ceased to exist, so the file c
 compile any other way. Everything else in `lib/` is untouched — `MutationNotifier` and
 `PaginatedAsyncNotifier` already extended `Notifier`/`AsyncNotifier` before this TRD.
 
-### 3.2 `navStateProvider` regressed — six tests, owned by 50-22
+### 3.2 `navStateProvider` regressed — six tests. FIXED (gap-closure after 50-06)
+
+> **STATUS: RESOLVED.** The six tests are green again. The fix was **entirely in
+> `test/nav_provider_test.dart`**; `lib/` was not touched. `NavNotifier` is still a
+> `StateNotifier`, and **50-22's scope is unchanged.**
+>
+> **The root cause below is NOT what 50-06 concluded, and the fix 50-06 attributed to
+> 50-22 was empirically falsified.** Read §3.2.1 before doing anything in 50-22.
 
 **This is a genuine riverpod 3 lifecycle change, and Stage A did NOT fix it.**
 
@@ -181,14 +191,130 @@ Two distinct symptoms:
 * A disposed host's listener does *not* fire after `invalidate` in isolation — the break
   needs the full auth → company → nav chain, so it does not reduce to a small repro.
 
-**Owner: 50-22.** The fix is the `Notifier` migration itself: move the microtask
-bootstrap and both `ref.listen` calls **into `NavNotifier.build()`**, which is where
-riverpod 3 expects a notifier's dependencies and side effects to be declared. Attempting
-to patch the factory-side-effect pattern in place is not worth it — it is the pattern
-riverpod 3 removed support for.
+~~**Owner: 50-22.** The fix is the `Notifier` migration itself: move the microtask
+bootstrap and both `ref.listen` calls **into `NavNotifier.build()`**…~~ — **WRONG. See
+§3.2.1.** That hypothesis was tested directly and falsified.
 
-**Until 50-22 lands, this package's suite carries six known-red tests beyond its
-pre-existing three.** Do not "fix" them by editing assertions.
+---
+
+#### 3.2.1 The actual root cause: riverpod 3 pauses an unlistened provider
+
+The variable that decides pass/fail is **not which notifier API is used**. It is
+**whether anything is actually listening to `navStateProvider`.**
+
+riverpod 3.0 CHANGELOG, breaking changes:
+
+> A provider is now considered "paused" if all of its listeners are also paused. So if a
+> provider `A` is watched _only_ by a provider `B`, and `B` is currently unused, then `A`
+> will be paused.
+
+The mechanism, in `riverpod-3.3.2/lib/src/core/element.dart`:
+
+```dart
+bool get isActive => (listenerCount - pausedActiveSubscriptionCount) > 0;   // :407
+
+void onCancel() {                                                           // :990
+  subscriptions?.forEach((sub) => sub.impl.deactivate());
+}
+```
+
+`onCancel()` fires when an element's `isActive` goes `true → false`, and it **deactivates
+every subscription that element itself created** — for `navStateProvider`, both of its
+`ref.listen` calls. A deactivated subscription does not deliver (`_notifyData` bails on
+`isPaused`, `provider_subscription.dart:178`).
+
+The six tests each did:
+
+```dart
+container.read(navStateProvider);   // "Subscribe to nav state to start the listener chain"
+```
+
+`ProviderContainer.read` opens a subscription **and closes it again immediately**. So nav
+was left with **zero** listeners → inactive → `onCancel()` → both `ref.listen`
+subscriptions deactivated. And because nav was nav's only route to
+`currentCompanyProvider`, the pause **cascaded up the entire chain**:
+
+```
+nav (0 listeners, inactive) → currentCompanyProvider → companyStateProvider → authProvider
+```
+
+so the whole auth → company → nav chain went quiet and `items` stayed `0`. In riverpod 2
+there were no pause semantics, so the one-shot `read` happened to work. The comment on
+that line always claimed it subscribed; it never did.
+
+That also explains **why `fireImmediately: true` did not fix it** (50-06 tried and
+reverted it): `fireImmediately` fires once at registration time. It cannot re-activate a
+subscription that is deactivated later.
+
+And it explains the `select updates selectedId` **error** specifically — `Bad state:
+Tried to use NavNotifier after 'dispose' was called`. The final
+`container.read(navStateProvider.notifier)` momentarily re-activates the element, which
+flushes the deferred company change, which fires nav's listener, which starts
+`loadForCompany` — and then the read's subscription closes again, tearing the notifier
+down while `loadForCompany` is still awaiting. The post-`await` `state =` then throws.
+
+#### 3.2.2 The `Notifier.build()` migration would NOT have fixed this — measured
+
+Before changing anything, a faithful mirror of `NavNotifier` was written as a riverpod-3
+`Notifier` with the bootstrap microtask and **both `ref.listen` calls moved into
+`build()`** — i.e. exactly the fix §3.2 used to prescribe for 50-22 — and run against the
+same auth → company → nav flow:
+
+| Wiring | one-shot `container.read` | real `container.listen` |
+|---|---|---|
+| `StateNotifier` + side effects in the provider factory (current `lib/`) | `items=0` **BROKEN** | `items=2` **WORKS** |
+| `Notifier` + bootstrap and both listeners in `build()` (the 50-22 plan) | `items=0` **BROKEN** | `items=2` **WORKS** |
+
+`NotifierProvider` goes through the **same** `ProviderElement.onCancel()` deactivation.
+Moving the wiring into `build()` changes nothing about it. **The migration is orthogonal
+to this bug.**
+
+There is also no in-provider escape hatch: `ref.keepAlive()` only guards *disposal* of
+auto-dispose providers (`mayNeedDispose` is gated on `provider.isAutoDispose`,
+`element.dart:1197`) and does not stop `onCancel`; `reactivate()` is `@internal`; and a
+provider cannot listen to itself. A provider genuinely cannot keep itself active in
+riverpod 3.
+
+#### 3.2.3 What was actually changed
+
+**`test/nav_provider_test.dart` only. `lib/` is byte-identical to its post-50-06 state.**
+
+A `subscribeNav(container)` helper was added that opens a real, long-lived subscription:
+
+```dart
+void subscribeNav(ProviderContainer container) {
+  container.listen<NavState>(navStateProvider, (previous, next) {});
+}
+```
+
+and the six `container.read(navStateProvider);` "subscribe" statements were replaced with
+`subscribeNav(container);`. It is not closed explicitly — each test's existing
+`container.dispose()` tears it down.
+
+**No `expect` was touched.** This is not "fixing the tests by editing assertions"; it
+makes the harness do the thing its own comment said it was doing. riverpod 3's
+pause-when-unlistened behaviour is intentional, and real usage always satisfies it —
+`sidebar.dart` reaches nav via `ref.watch(navItemsProvider)`, so a mounted widget keeps
+the element active.
+
+#### 3.2.4 For 50-22: VERIFY, do not duplicate
+
+* `NavNotifier` is **still a `StateNotifier`**, its `legacy.dart` shim is still in place,
+  and `lib/src/navigation/nav_provider.dart` is unchanged. **50-22's scope is unchanged.**
+* When 50-22 migrates `NavNotifier` to `Notifier`, `test/nav_provider_test.dart` should
+  keep `subscribeNav`. Per §3.2.2 the migration does **not** remove the need for it; if
+  the helper is dropped, the same six tests fail again on the `Notifier` API.
+* **Do not** re-attempt `fireImmediately: true` (falsified twice now) or try to make the
+  provider hold itself active (§3.2.2 — no API for it).
+* **DEFERRED TO 50-22 — a real crash path, deliberately not fixed here.**
+  `NavNotifier.loadForCompany` assigns `state` after an `await` with **no `mounted`
+  guard** — both the success path (`nav_provider.dart:61`) and the `catch` path
+  (`:66`, which is where the throw actually surfaced). That is what turned `select updates
+  selectedId` into an *error* rather than a plain failure. It is latent in production for
+  any consumer that lets nav go unlistened mid-load. The one-line
+  `if (!mounted) return;` was **not** applied here because this gap-closure was scoped to
+  the minimum that restores the six tests, and 50-22 is already rewriting this method.
+  **50-22 must add it** (as `Notifier`, the equivalent is `ref.mounted`).
 
 ### 3.3 A file may stop needing the main barrel entirely
 
