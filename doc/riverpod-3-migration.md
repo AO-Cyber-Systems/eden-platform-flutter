@@ -123,7 +123,7 @@ final p = NotifierProvider.autoDispose<MyNotifier, MyState>(MyNotifier.new);
 
 `AutoDisposeNotifierProvider` as a *type* is gone too.
 
-**What Stage A did about it — 50-20 please VERIFY rather than duplicate:**
+**What Stage A did about it (TRD 50-06):**
 
 * `lib/src/providers/mutation_notifier.dart:184` — `AutoDisposeMutationNotifier<T>` was
   re-based from `extends AutoDisposeNotifier<MutationState<T>>` to
@@ -132,13 +132,51 @@ final p = NotifierProvider.autoDispose<MyNotifier, MyState>(MyNotifier.new);
 * `test/providers/mutation_notifier_test.dart` — the provider was changed from
   `AutoDisposeNotifierProvider<…>` to `NotifierProvider.autoDispose<…>`.
 
-Consequence: `AutoDisposeMutationNotifier` is now behaviourally **identical** to
-`MutationNotifier`; the auto-dispose semantics live at the call site. **TRD 50-20 owns
-the real consolidation** — decide whether to deprecate the class in favour of
-`MutationNotifier` + an auto-dispose provider, or keep it as a named alias.
+#### RESOLVED by TRD 50-20 — `AutoDisposeMutationNotifier<T>` is DELETED
 
-**This is CONSUMER-VISIBLE.** Any consumer writing `AutoDisposeNotifierProvider<…>` or
-subclassing `AutoDisposeNotifier` must change. Stage D must grep for both.
+50-06's re-base was verified (its class body was confirmed **byte-identical** to
+`MutationNotifier`'s — only the superclass line differed) and then consolidated. The
+class is **gone**. It is deliberately **not** a typedef or subclass alias: an alias
+hides a real upstream break from every consumer and guarantees a second migration later.
+
+**Final public shape — one notifier class, lifetime chosen on the provider:**
+
+```dart
+// keep-alive
+NotifierProvider<MutationNotifier<T>, MutationState<T>>(MutationNotifier<T>.new);
+
+// auto-dispose  (was: AutoDisposeMutationNotifier<T> + AutoDisposeNotifierProvider)
+NotifierProvider<MutationNotifier<T>, MutationState<T>>(
+  MutationNotifier<T>.new,
+  isAutoDispose: true,
+);
+```
+
+`isAutoDispose` is the real parameter name, verified against the **resolved riverpod
+3.3.2** rather than inferred from `Provider`'s changelog entry:
+
+```
+riverpod-3.3.2/lib/src/providers/notifier/orphan.dart:86   super.isAutoDispose = false,
+riverpod-3.3.2/lib/src/providers/notifier/orphan.dart:108  static const autoDispose = AutoDisposeNotifierProviderBuilder();
+```
+
+`NotifierProvider.autoDispose<...>(...)` is equivalent sugar; both spellings are covered
+by tests.
+
+**The behaviour is proven, not assumed** — the mechanism moved from base class to
+provider flag, so `test/providers/mutation_notifier_test.dart` asserts that an
+`isAutoDispose: true` provider drops its state on last-listener-detach **and** that an
+otherwise identical keep-alive provider retains it through the same sequence. Mutation
+tested: removing the flag kills the first test, adding it to the control kills the second.
+
+**Consumer migration (mechanical):** replace `AutoDisposeMutationNotifier<Foo>` with
+`MutationNotifier<Foo>`, and `AutoDisposeNotifierProvider<...>` with
+`NotifierProvider<...>(..., isAutoDispose: true)`. The recipe in
+`lib/src/providers/README.md` has been updated and carries a migration note.
+
+**This is CONSUMER-VISIBLE.** Any consumer writing `AutoDisposeNotifierProvider<…>`,
+subclassing the deleted riverpod base class, or naming `AutoDisposeMutationNotifier`
+must change. Stage D (50-25 / 50-26) must grep for **all three** identifiers.
 
 This is also the sole exception to Stage A's "no API migrated" rule, and it is a *forced*
 exception rather than scope creep: the superclass ceased to exist, so the file could not

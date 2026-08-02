@@ -5,7 +5,7 @@ Generic Riverpod patterns donated from AODex Flutter. Two patterns ship here:
 | Pattern | When you reach for it |
 |---|---|
 | `PaginatedAsyncNotifier<T>` | A list of `T` loaded a page at a time, with optional optimistic create/update/delete. Owns cursor + `hasMore` state. |
-| `MutationNotifier<T>` (and `AutoDisposeMutationNotifier<T>`) | A single CRUD-style mutation (create, update, delete, etc.) where the UI needs to track `idle → inFlight → success | failure`. |
+| `MutationNotifier<T>` | A single CRUD-style mutation (create, update, delete, etc.) where the UI needs to track `idle → inFlight → success | failure`. |
 
 Both ship as plain Dart classes so consumers don't need codegen — the only
 dependency is `flutter_riverpod`.
@@ -82,18 +82,45 @@ class ConversationsNotifier extends PaginatedAsyncNotifier<Conversation> {
 
 ## `MutationNotifier<T>`
 
-Two flavors, depending on lifetime:
+**One notifier class, two lifetimes.** The lifetime is chosen on the
+**provider**, not by picking a base class:
 
-- `MutationNotifier<T>` — keep-alive variant.
-- `AutoDisposeMutationNotifier<T>` — drops state when the last listener
-  detaches; use for one-off form submissions.
+```dart
+// keep-alive — state survives the last listener detaching
+NotifierProvider<MutationNotifier<T>, MutationState<T>>(
+  MutationNotifier<T>.new,
+);
+
+// auto-dispose — state is dropped when the last listener detaches;
+// use for one-off form submissions
+NotifierProvider<MutationNotifier<T>, MutationState<T>>(
+  MutationNotifier<T>.new,
+  isAutoDispose: true,
+);
+```
+
+`NotifierProvider.autoDispose<...>(...)` is equivalent sugar for the second
+form. Both spellings are covered by `test/providers/mutation_notifier_test.dart`,
+which proves the drop-on-detach behaviour against a keep-alive control.
+
+> **Migrating from `AutoDisposeMutationNotifier<T>`?** That class is **gone**.
+> riverpod 3 deleted the auto-dispose notifier base class it extended (it fused
+> the two notifier base classes into one), so the eden subclass had nothing left
+> to distinguish it from `MutationNotifier<T>`. Replace
+> `AutoDisposeMutationNotifier<Foo>` with `MutationNotifier<Foo>` and add
+> `isAutoDispose: true` to the provider. This is the one riverpod-3 break that
+> `package:flutter_riverpod/legacy.dart` cannot shim — see
+> `doc/riverpod-3-migration.md` §3.1.
 
 Most callers don't subclass — just instantiate:
 
 ```dart
 final saveConversationMutation =
-    AutoDisposeNotifierProvider<AutoDisposeMutationNotifier<Conversation>,
-        MutationState<Conversation>>(AutoDisposeMutationNotifier<Conversation>.new);
+    NotifierProvider<MutationNotifier<Conversation>,
+        MutationState<Conversation>>(
+  MutationNotifier<Conversation>.new,
+  isAutoDispose: true,
+);
 
 // In the widget:
 final state = ref.watch(saveConversationMutation);

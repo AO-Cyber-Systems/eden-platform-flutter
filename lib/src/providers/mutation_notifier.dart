@@ -76,9 +76,10 @@ class MutationFailure<T> extends MutationState<T> {
 /// Most callers don't need a subclass — they just create a one-off provider:
 ///
 /// ```dart
-/// final saveConversationMutation = AutoDisposeNotifierProvider<
+/// final saveConversationMutation = NotifierProvider<
 ///     MutationNotifier<Conversation>, MutationState<Conversation>>(
 ///   MutationNotifier<Conversation>.new,
+///   isAutoDispose: true, // drop the state when the last listener detaches
 /// );
 ///
 /// // In the widget:
@@ -111,6 +112,32 @@ class MutationFailure<T> extends MutationState<T> {
 ///       });
 /// }
 /// ```
+///
+/// ## Choosing the lifetime (there is only ONE notifier class)
+///
+/// There is no separate auto-dispose notifier class. Lifetime is a property of
+/// the **provider**:
+///
+/// ```dart
+/// // keep-alive: state survives the last listener detaching
+/// NotifierProvider<MutationNotifier<T>, MutationState<T>>(
+///   MutationNotifier<T>.new,
+/// );
+///
+/// // auto-dispose: state is dropped when the last listener detaches
+/// NotifierProvider<MutationNotifier<T>, MutationState<T>>(
+///   MutationNotifier<T>.new,
+///   isAutoDispose: true,
+/// );
+/// ```
+///
+/// `NotifierProvider.autoDispose<...>(...)` is equivalent sugar for the second
+/// form. Both are covered by `test/providers/mutation_notifier_test.dart`,
+/// which proves the drop-on-detach behaviour against a keep-alive control.
+///
+/// This package previously shipped a second class, `AutoDisposeMutationNotifier
+/// <T>`, whose superclass riverpod 3 deleted. It is **gone**; migrate to the
+/// provider flag above. See `doc/riverpod-3-migration.md` §3.1.
 class MutationNotifier<T> extends Notifier<MutationState<T>> {
   @override
   MutationState<T> build() => MutationState<T>.idle();
@@ -121,10 +148,29 @@ class MutationNotifier<T> extends Notifier<MutationState<T>> {
   /// subsequent [run] calls before completion are dropped (return value is
   /// the last successful or failing future result; new calls return null
   /// during in-flight). Override [allowConcurrent] to true to opt in.
+  ///
+  /// ## Notification semantics (riverpod 3 filters every update with `==`)
+  ///
+  /// [MutationState] deliberately does NOT override `==`, so `==` is identity.
+  /// Combined with riverpod 3's update filtering that makes the const and
+  /// non-const constructors behave differently, which is measured and pinned by
+  /// `test/providers/mutation_notifier_test.dart`:
+  ///
+  /// - `const MutationState.inFlight()` is **const-canonicalized** — every
+  ///   evaluation yields the identical instance. Assigning it while already
+  ///   inFlight notifies listeners **zero** extra times.
+  /// - `MutationState<T>.idle()` in [reset] is **not** const and allocates a
+  ///   fresh instance, so calling [reset] twice notifies **twice**.
+  ///
+  /// Both are intentional. Value equality is NOT added to [MutationState]: it
+  /// would also collapse a genuine re-`run` that produced an equal result, and
+  /// UIs legitimately re-trigger on a repeated success.
   Future<T?> run(Future<T> Function() task) async {
     if (state.isInFlight && !allowConcurrent) {
       return null;
     }
+    // const: canonicalized, so a redundant inFlight->inFlight write is filtered
+    // by riverpod 3's `==` check rather than waking every listener.
     state = const MutationState.inFlight();
     try {
       final result = await task();
@@ -137,6 +183,10 @@ class MutationNotifier<T> extends Notifier<MutationState<T>> {
   }
 
   /// Reset to idle. Useful after the UI has surfaced a success/failure.
+  ///
+  /// Note the missing `const`: this allocates a fresh [MutationIdle] every
+  /// call, so `reset()` always notifies — including when already idle. See the
+  /// notification-semantics section on [run].
   void reset() {
     state = MutationState<T>.idle();
   }
@@ -148,62 +198,15 @@ class MutationNotifier<T> extends Notifier<MutationState<T>> {
   bool get allowConcurrent => false;
 }
 
-/// AutoDispose variant — drops state when the last listener detaches.
-/// Use for one-off form-submit mutations.
-///
-/// ## riverpod 3 changed how auto-dispose is expressed — READ THIS
-///
-/// riverpod 3 **fused `AutoDisposeNotifier` into `Notifier`**. `AutoDisposeNotifier`
-/// no longer exists, and — unlike `StateNotifier` — it is NOT one of the eight
-/// symbols `package:flutter_riverpod/legacy.dart` re-exports, so there is no shim
-/// for it. Auto-dispose is now a property of the PROVIDER, not of the notifier
-/// class: `NotifierProvider(..., isAutoDispose: true)`, spelled
-/// `NotifierProvider.autoDispose(...)`.
-///
-/// AOID objective 50 TRD 50-06 (Stage A, the version axis) therefore re-based this
-/// class from `AutoDisposeNotifier<MutationState<T>>` onto
-/// `Notifier<MutationState<T>>` — the minimum edit that compiles on 3.x. That
-/// makes this class currently identical in behaviour to [MutationNotifier]; the
-/// auto-dispose semantics moved to the call site, which must now say:
-///
-/// ```dart
-/// final saveMutation = NotifierProvider.autoDispose<
-///     AutoDisposeMutationNotifier<Conversation>, MutationState<Conversation>>(
-///   AutoDisposeMutationNotifier<Conversation>.new,
-/// );
-/// ```
-///
-/// **This is a CONSUMER-VISIBLE break** and the only one Stage A could not absorb:
-/// any consumer writing `AutoDisposeNotifierProvider<...>` must switch to
-/// `NotifierProvider.autoDispose<...>`. It is recorded in
-/// doc/riverpod-3-migration.md.
-///
-/// **TRD 50-20 owns the real consolidation** — deciding whether this class is
-/// deprecated in favour of [MutationNotifier] plus an auto-dispose provider, or
-/// kept as a named alias. 50-20 should VERIFY this re-base rather than redo it.
-class AutoDisposeMutationNotifier<T> extends Notifier<MutationState<T>> {
-  @override
-  MutationState<T> build() => MutationState<T>.idle();
-
-  Future<T?> run(Future<T> Function() task) async {
-    if (state.isInFlight && !allowConcurrent) {
-      return null;
-    }
-    state = const MutationState.inFlight();
-    try {
-      final result = await task();
-      state = MutationState.success(result);
-      return result;
-    } catch (e, st) {
-      state = MutationState.failure(e, st);
-      return null;
-    }
-  }
-
-  void reset() {
-    state = MutationState<T>.idle();
-  }
-
-  @protected
-  bool get allowConcurrent => false;
-}
+// `AutoDisposeMutationNotifier<T>` used to live here. It was a verbatim
+// duplicate of [MutationNotifier]'s body whose only distinguishing feature was
+// its superclass, and riverpod 3 deleted that superclass (it fused the
+// auto-dispose notifier base class into the plain one). Auto-dispose is now
+// expressed on the PROVIDER — `NotifierProvider(..., isAutoDispose: true)` —
+// so one notifier class covers both lifetimes and the duplicate has no reason
+// to exist.
+//
+// Deliberately NOT replaced with a typedef or subclass alias: a local alias
+// would hide a real upstream break from every consumer and guarantee a second
+// migration later. The removal, the replacement recipe and the consumer impact
+// are recorded in doc/riverpod-3-migration.md §3.1.
