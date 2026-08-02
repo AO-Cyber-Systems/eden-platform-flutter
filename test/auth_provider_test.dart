@@ -408,6 +408,196 @@ void main() {
       expect(secureStore['refresh_token'], isNull);
     });
 
+    // --- AOID objective 50 TRD 50-04: the widened AuthResult family ---
+
+    test('RedirectRequired does not put the notifier into an error state — a '
+        'browser hop is a first-class path (50-CONTEXT.md D7)', () async {
+      SharedPreferences.setMockInitialValues({});
+      final authorizationUrl = Uri.parse(
+        'https://auth.aocyber.ai/oauth/authorize'
+        '?client_id=aodex&response_type=code&state=xyz',
+      );
+      final strategy = _FakeStrategy()
+        ..initiateResult = RedirectRequired(
+          authorizationUrl,
+          reason: 'redirect_to_web',
+        );
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      final state = container.read(authProvider);
+      // The defect this TRD removes: a user who merely needs a browser hop
+      // being shown "login failed".
+      expect(state.status, isNot(AuthStatus.error));
+      expect(state.errorMessage, isNull);
+      // …and it must not silently strand the UI either. Refreshing is the
+      // "ceremony in flight" state the MFA path already uses.
+      expect(state.status, AuthStatus.refreshing);
+      // The URL has to actually reach the UI, or the hop cannot be opened.
+      expect(
+        container.read(authProvider.notifier).pendingRedirectUrl,
+        authorizationUrl,
+      );
+    });
+
+    test('a subsequent result clears the pending redirect URL, so a stale hop '
+        'can never be opened after the ceremony moves on', () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _RecordingStrategy(
+        initiate: RedirectRequired(
+          Uri.parse('https://auth.aocyber.ai/oauth/authorize?state=stale'),
+        ),
+        completions: <AuthResult>[const Failed('user abandoned the hop')],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      expect(
+        container.read(authProvider.notifier).pendingRedirectUrl,
+        isNotNull,
+      );
+
+      // A redirect carries no continuation handle, so drive the next result
+      // through initiateLogin again rather than completeLogin.
+      strategy.initiate = const Failed('user abandoned the hop');
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      expect(container.read(authProvider.notifier).pendingRedirectUrl, isNull);
+      expect(container.read(authProvider).status, AuthStatus.error);
+    });
+
+    test('rotation across sequential completeLogin: the SECOND call presents '
+        'the ROTATED handle, not the original (49-06 rotates auth_session on '
+        'every step)', () async {
+      SharedPreferences.setMockInitialValues({});
+      // Hand-built. Records what it is presented so the test can assert the
+      // SECOND completeLogin receives the ROTATED handle, not the original.
+      final strategy = _RecordingStrategy(
+        initiate: const FactorRequired(
+          continuationToken: 'h1',
+          next: 'password',
+          availableMethods: ['password'],
+        ),
+        completions: <AuthResult>[
+          // Step 1 succeeds and the server hands back a NEW handle plus the
+          // methods the identity can use for the next factor.
+          const FactorRequired(
+            continuationToken: 'h2',
+            next: 'mfa',
+            availableMethods: ['totp', 'backup_code'],
+          ),
+          Authenticated(buildSession(userId: 'rotated-done')),
+        ],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      expect(container.read(authProvider.notifier).continuationToken, 'h1');
+
+      await container
+          .read(authProvider.notifier)
+          .completeLogin({'password': 'pw'});
+      expect(container.read(authProvider.notifier).continuationToken, 'h2');
+
+      await container
+          .read(authProvider.notifier)
+          .completeLogin({'totp': '123456'});
+
+      // The SEQUENCE is the assertion. A test that only checked "login
+      // completed" would pass even if the handle never rotated.
+      expect(strategy.presented, ['h1', 'h2']);
+      expect(container.read(authProvider).status, AuthStatus.authenticated);
+      expect(container.read(authProvider).userId, 'rotated-done');
+      expect(container.read(authProvider.notifier).continuationToken, isNull);
+    });
+
+    test('a mid-ceremony FactorRequired surfaces next + availableMethods so '
+        'the UI can render a factor picker (49-07)', () async {
+      SharedPreferences.setMockInitialValues({});
+      const factor = FactorRequired(
+        continuationToken: 'as_2',
+        next: 'mfa',
+        availableMethods: ['totp', 'webauthn'],
+      );
+      final strategy = _FakeStrategy()..initiateResult = factor;
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+
+      expect(container.read(authProvider).status, AuthStatus.refreshing);
+      expect(container.read(authProvider.notifier).continuationToken, 'as_2');
+      // The picker data itself rides on the result, not on AuthState — 50-11's
+      // AoidMfaForm reads it from the FactorRequired the strategy returned.
+      expect(factor.next, 'mfa');
+      expect(factor.availableMethods, ['totp', 'webauthn']);
+    });
+
+    test('a terminal Failed clears the continuation token, so a later '
+        'completeLogin throws StateError rather than replaying a dead handle',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final strategy = _RecordingStrategy(
+        initiate: const FactorRequired(continuationToken: 'h1', next: 'mfa'),
+        completions: <AuthResult>[const Failed('Invalid TOTP code')],
+      );
+      final container = ProviderContainer(
+        overrides: [
+          platformRepositoryProvider.overrideWithValue(repository),
+          authStrategyProvider.overrideWithValue(strategy),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(authProvider.notifier);
+      await settle();
+
+      await container.read(authProvider.notifier).login('a@b.com', 'pass');
+      await container
+          .read(authProvider.notifier)
+          .completeLogin({'totp': '999999'});
+
+      expect(container.read(authProvider).status, AuthStatus.error);
+      expect(container.read(authProvider.notifier).continuationToken, isNull);
+      await expectLater(
+        container.read(authProvider.notifier).completeLogin({'totp': '000000'}),
+        throwsStateError,
+      );
+      // The dead handle was presented exactly once — never replayed.
+      expect(strategy.presented, ['h1']);
+    });
+
     test('legacy email+password flow unchanged when no strategy injected', () async {
       // Backward-compatibility regression: a container with no
       // authStrategyProvider override must still drive the repository.
@@ -425,6 +615,47 @@ void main() {
       expect(repository.loginCalls, 1);
     });
   });
+}
+
+/// Hand-built [AuthStrategy] that RECORDS every continuation token it is
+/// presented and serves a scripted sequence of results, one per
+/// [completeLogin] call. Written out literally rather than generated — the
+/// point is to assert the SEQUENCE of presented handles, which is the only
+/// thing that distinguishes real `auth_session` rotation (49-06) from a
+/// notifier that happens to complete a login.
+class _RecordingStrategy implements AuthStrategy {
+  _RecordingStrategy({
+    required this.initiate,
+    required List<AuthResult> completions,
+  }) : _completions = List<AuthResult>.of(completions);
+
+  AuthResult initiate;
+  final List<AuthResult> _completions;
+
+  /// Every `continuationToken` handed to [completeLogin], in order.
+  final List<String> presented = <String>[];
+
+  @override
+  Future<AuthResult> initiateLogin(Map<String, String> credentials) async =>
+      initiate;
+
+  @override
+  Future<AuthResult> completeLogin(
+    String continuationToken,
+    Map<String, String> proof,
+  ) async {
+    presented.add(continuationToken);
+    if (_completions.isEmpty) {
+      return const Failed('scripted completions exhausted');
+    }
+    return _completions.removeAt(0);
+  }
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<PlatformSession?> restoreSession() async => null;
 }
 
 /// In-memory [AuthStrategy] for unit tests.
