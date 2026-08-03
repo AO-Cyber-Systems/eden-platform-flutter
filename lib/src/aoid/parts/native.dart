@@ -9,5 +9,6 @@
 // test/aoid/riverpod_free_gate_test.dart walks and enforces.
 library;
 
+export '../flow/aoid_native_flow.dart';
 export '../transport/aoid_error.dart';
 export '../transport/aoid_native_client.dart';

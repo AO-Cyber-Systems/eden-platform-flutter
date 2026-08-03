@@ -390,10 +390,38 @@ class FakeAoidEndpoint {
           'step left. Call scriptNativeCeremony([...]) — an unscripted verify '
           'must fail LOUDLY, never fall through to a default success.');
     }
+    // Outcomes that never reach the ceremony service leave the handle ALIVE.
+    //
+    // 49-08's nativeWriteAllowed applies the region write gate BEFORE
+    // r.nativeLogin.Verify is called — its mutation 12 ("the gate let 1
+    // call(s) through") proves that ordering is load-bearing — so a replica's
+    // 503 cannot have burned the handle. A dead socket is modelled the same
+    // way: in this fixture the request never arrived.
+    //
+    // Found by the flow's test 6, which failed with AoidFlowRestartRequired
+    // where a resubmission after a 503 should have completed.
+    final peeked = _nativeScript.first;
+    if (peeked is FakeNativeUnavailable) {
+      _nativeScript.removeAt(0);
+      return _nativeJson(
+        503,
+        {
+          'error': 'temporarily_unavailable',
+          'error_description': 'this region cannot accept writes',
+        },
+        extraHeaders: {'retry-after': '${peeked.retryAfterSeconds}'},
+      );
+    }
+    if (peeked is FakeNativeNetworkFailure) {
+      _nativeScript.removeAt(0);
+      throw http.ClientException('fixture: simulated native socket failure');
+    }
+
     final step = _nativeScript.removeAt(0);
 
-    // The presented handle is consumed either way (49-06: Consume burns it,
-    // then Rotate mints the successor).
+    // Everything below REACHED the service, so the presented handle is
+    // consumed either way (49-06: Consume burns it, then Rotate mints the
+    // successor).
     _liveNativeHandle = null;
 
     switch (step) {
