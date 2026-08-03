@@ -643,14 +643,7 @@ void main() {
           reason: 'a consumer holding a ref.listen on this provider to drop '
               "the previous tenant's cached plan never hears the second "
               'clear — restored by EntitlementsNotifier.updateShouldNotify');
-    },
-        skip: 'PRE-EXISTING DEFECT exposed by this new suite (TRD 50-23 Task '
-            '1): a repeat clear() of entitlementsStateProvider notifies 0 '
-            'listeners, because clear() assigns the canonicalized '
-            '`const EntitlementsState()` and the class has no value ==. '
-            'MEASURED at 0 fires on the unmodified StateNotifier code, so it '
-            'predates the riverpod 3 bump. Un-skipped in Task 2 by '
-            'EntitlementsNotifier.updateShouldNotify => true.');
+    });
 
     test('the no-token early return in load() ALSO notifies on a repeat — so '
         'a de-consted clear() cannot pass for a whole-class fix', () async {
@@ -689,14 +682,7 @@ void main() {
       expect(fires, isNotEmpty,
           reason: "load()'s no-token `state = const EntitlementsState()` must "
               'still notify when the provider already holds that sentinel');
-    },
-        skip: 'PRE-EXISTING DEFECT exposed by this new suite (TRD 50-23 Task '
-            "1): load()'s no-token early return notifies 0 listeners when the "
-            'provider already holds the sentinel. Same root cause as the '
-            'repeat-clear() case above, at a SECOND assignment site — which '
-            'is what makes de-consting clear() a partial fix. MEASURED at 0 '
-            'fires on the unmodified StateNotifier code. Un-skipped in Task 2 '
-            'by EntitlementsNotifier.updateShouldNotify => true.');
+    });
 
     test('the DERIVED providers legitimately stay silent on a repeat clear, '
         'and that is not a bug to chase', () async {
@@ -747,7 +733,90 @@ void main() {
   });
 
   // =========================================================================
-  // 7. Source-level facts.
+  // 7. The port itself: wiring that used to live in the provider closure now
+  //    lives in build(), so it has to survive a rebuild.
+  // =========================================================================
+
+  group('the wiring survives a rebuild', () {
+    test('after an invalidate, ONE company change still produces exactly ONE '
+        'reload — the listeners re-register without duplicating', () async {
+      // riverpod owns re-registration across rebuilds. An "already registered"
+      // flag would leak the first subscription; conversely a double
+      // registration would load twice per switch and race the two responses.
+      final container = await loggedInContainer(
+        companyId: 'c1',
+        companies: [buildCompany(id: 'c1'), buildCompany(id: 'c2')],
+      );
+
+      // CONTROL: one switch, one load, on the ORIGINAL build.
+      var before = entitlementsRepository.calls;
+      await container
+          .read(companyStateProvider.notifier)
+          .setCompany(buildCompany(id: 'c2'));
+      await deepSettle();
+      expect(entitlementsRepository.calls - before, 1,
+          reason: 'CONTROL: one switch is one load before any rebuild');
+
+      container.invalidate(entitlementsStateProvider);
+      subscribeEntitlements(container);
+      await deepSettle();
+
+      before = entitlementsRepository.calls;
+      await container
+          .read(companyStateProvider.notifier)
+          .setCompany(buildCompany(id: 'c1'));
+      await deepSettle();
+
+      expect(entitlementsRepository.calls - before, 1,
+          reason: 'exactly one reload after the rebuild — not zero (a leaked '
+              'subscription) and not two (a duplicated one)');
+    });
+
+    test('a riverpod 3 Notifier instance is REUSED across a rebuild', () async {
+      // Recorded because the TRD body claims the opposite in two places, and
+      // it decides whether fields outside `state` need resetting in build().
+      // This notifier keeps none, so the reuse is currently harmless — but a
+      // future contributor adding one needs to know which way it goes.
+      final container = await loggedInContainer(companyId: 'c1');
+      final first = container.read(entitlementsStateProvider.notifier);
+
+      container.invalidate(entitlementsStateProvider);
+      subscribeEntitlements(container);
+      await deepSettle();
+
+      expect(identical(first, container.read(entitlementsStateProvider.notifier)),
+          true,
+          reason: 'the instance is reused, not reconstructed — unlike the '
+              'StateNotifierProvider this replaced');
+    });
+
+    test('the provider is KEEP-ALIVE: state survives the last listener '
+        'detaching', () async {
+      // `NotifierProvider(..., isAutoDispose: false)` is the default, so a
+      // plain port preserves the lifetime StateNotifierProvider had. Setting
+      // it by accident is invisible to almost every test.
+      //
+      // The pump below is load-bearing: riverpod SCHEDULES disposal rather
+      // than running it inside close(), so a synchronous read after detaching
+      // observes the pre-disposal value and this assertion would pass even
+      // with isAutoDispose: true. 50-22 measured exactly that survival.
+      final container = await loggedInContainer(companyId: 'c1');
+      final sub = container.listen<EntitlementsState>(
+          entitlementsStateProvider, (_, _) {});
+      expect(container.read(entitlementsStateProvider).plan?.id, 'plan-pro',
+          reason: 'premise: loaded before detaching');
+
+      sub.close();
+      await deepSettle(); // <- without this the mutation survives
+
+      expect(container.read(entitlementsStateProvider).plan?.id, 'plan-pro',
+          reason: 'an auto-disposing provider would have reset to the empty '
+              'state here');
+    });
+  });
+
+  // =========================================================================
+  // 8. Source-level facts.
   //
   // A whole-file `grep` cannot tell a DECLARATION from a MENTION, and this
   // file's dartdoc deliberately names the old base class to explain the port.
@@ -792,6 +861,88 @@ void main() {
       ]) {
         expect(code.contains(id), true, reason: 'missing: $id');
       }
+    });
+
+    test('the notifier is on riverpod 3 Notifier, with the Stage A shim gone '
+        'and the Ref field removed', () {
+      // A whole-file grep cannot tell a DECLARATION from a MENTION, and the
+      // dartdoc above deliberately names the old base class to explain the
+      // port. These assertions run against comment-stripped CODE.
+      expect(
+          code.contains('class EntitlementsNotifier extends '
+              'Notifier<EntitlementsState>'),
+          true);
+
+      // Assembled so this source file does not itself contain the banned
+      // token, which would make the assertion self-defeating.
+      final banned = ['State', 'Notifier'].join();
+      expect(code.contains(banned), false,
+          reason: 'no StateNotifier or StateNotifierProvider remains in code');
+
+      final legacyImport = "flutter_riverpod/${'legacy'}.dart";
+      expect(src.contains("import 'package:$legacyImport'"), false,
+          reason: 'the Stage A shim import is removed — this is how 50-24 '
+              'knows this notifier is done');
+
+      expect(RegExp(r'final\s+Ref\s+ref\s*;').hasMatch(code), false,
+          reason: 'Notifier supplies ref; a shadowing field compiles while '
+              'behaving differently across rebuilds');
+      expect(code.contains('EntitlementsNotifier(this.ref)'), false);
+
+      expect(
+          code.contains('NotifierProvider<EntitlementsNotifier, '
+              'EntitlementsState>(\n        EntitlementsNotifier.new)'),
+          true,
+          reason: 'provider converted, identifier unchanged');
+    });
+
+    test('all the wiring moved into build(), listeners before the bootstrap',
+        () {
+      expect('ref.listen'.allMatches(code).length, 2,
+          reason: 'the auth listener AND the company listener');
+      expect('Future.microtask'.allMatches(code).length, 1,
+          reason: 'the single bootstrap');
+      expect(code.indexOf('ref.listen'),
+          lessThan(code.indexOf('Future.microtask')),
+          reason: 'listeners registered before the bootstrap is scheduled');
+
+      // Everything must be inside build(), not left at top level.
+      final build = code.substring(
+        code.indexOf('EntitlementsState build()'),
+        code.indexOf('bool updateShouldNotify'),
+      );
+      expect('ref.listen'.allMatches(build).length, 2);
+      expect('Future.microtask'.allMatches(build).length, 1);
+    });
+
+    test('the const sentinel is assigned from TWO sites, which is why the '
+        'remedy is updateShouldNotify and not a de-consted clear()', () {
+      // If a future contributor "fixes" the notification hazard by dropping
+      // the const from clear(), this pins that the early return is a second
+      // site and would still be suppressed. It also fails loudly if
+      // updateShouldNotify is ever removed.
+      expect('const EntitlementsState()'.allMatches(code).length,
+          greaterThanOrEqualTo(2),
+          reason: 'clear() and load()\'s no-token early return');
+      expect(code.contains('bool updateShouldNotify'), true,
+          reason: 'the whole-class remedy must be present');
+    });
+
+    test('the UI-hinting and billing-axis framing is documented in the file',
+        () {
+      // 50-CONTEXT.md documentation requirements. Both have already caused
+      // real confusion, so they are asserted rather than trusted.
+      expect(RegExp(r'hinting', caseSensitive: false).hasMatch(src), true,
+          reason: 'the file must say these providers are UI hinting');
+      expect(
+          RegExp(r'server\s+always\s+re-verif', caseSensitive: false)
+              .hasMatch(src),
+          true,
+          reason: 'the file must say the server re-verifies');
+      expect(RegExp(r'billing', caseSensitive: false).hasMatch(src), true,
+          reason: 'the file must name the eden-biz plan/billing axis');
+      expect(RegExp(r'`ent`\s+claim', caseSensitive: false).hasMatch(src), true,
+          reason: "the file must distinguish AOID's identity `ent` claim");
     });
 
     test('EntitlementsState is never given a value operator ==', () {
