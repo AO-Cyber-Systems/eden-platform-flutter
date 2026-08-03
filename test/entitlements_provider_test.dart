@@ -521,13 +521,25 @@ void main() {
       expect(entitlementsRepository.lastCompanyId, 'c1');
     });
 
-    test('is a no-op when there is no current company', () async {
+    test('is a no-op when there is no current company, even while the session '
+        'is still valid', () async {
+      // The session is deliberately kept AUTHENTICATED. Signing out to remove
+      // the company would make this assertion pass for the wrong reason: with
+      // no access token, load()'s early return would swallow a wrongly-issued
+      // refresh before it ever reached the repository, so a `refresh` that had
+      // lost its null guard would look like a no-op. MEASURED: mutating
+      // `refresh` to `load(company?.id ?? '')` SURVIVES the sign-out version
+      // of this test and is killed only by this one.
       final container = await loggedInContainer(companyId: 'c1');
 
-      await container.read(authProvider.notifier).logout();
+      container.read(companyStateProvider.notifier).clear();
       await deepSettle();
+
       expect(container.read(currentCompanyProvider), isNull,
-          reason: 'premise: no current company after sign-out');
+          reason: 'premise: no current company');
+      expect(container.read(authProvider).accessToken, isNotNull,
+          reason: 'premise: the session is still valid, so a wrongly-issued '
+              'load WOULD reach the repository');
 
       final callsBefore = entitlementsRepository.calls;
       expect(callsBefore, greaterThan(0),
@@ -586,6 +598,41 @@ void main() {
               'feature access');
       expect(container.read(featureFlagProvider('new-dashboard')), false);
       expect(container.read(featureQuotaProvider('seats')), isNull);
+    });
+
+    test('losing the current company clears entitlements even while the '
+        'session stays valid — the company route is its own route', () async {
+      // The sign-out test CANNOT see this. Entitlements listens to
+      // `authProvider` directly as well, so on a sign-out the auth route
+      // clears the state and the company route's `if (next == null) clear()`
+      // is redundant. MEASURED: deleting that branch SURVIVES the whole suite
+      // except this test.
+      //
+      // It is not redundant in production: a company can go null while the
+      // session is still valid — a tenant switch that resolves to nothing, a
+      // membership revoked underneath the user. Without this branch the
+      // previous company's plan, quotas and feature flags stay on screen, and
+      // that is the multi-tenant residue path this objective targets.
+      final container = await loggedInContainer(companyId: 'c1');
+
+      expect(container.read(entitlementsStateProvider).plan, isNotNull,
+          reason: 'premise: populated for c1');
+      expect(container.read(canUseFeatureProvider('analytics')), true);
+
+      container.read(companyStateProvider.notifier).clear();
+      await deepSettle();
+
+      expect(container.read(authProvider).isAuthenticated, true,
+          reason: 'premise: still signed in — only the company went away, so '
+              'the auth route CANNOT be what clears this');
+      expect(container.read(currentCompanyProvider), isNull);
+
+      final state = container.read(entitlementsStateProvider);
+      expect(state.plan, isNull);
+      expect(state.subscription, isNull);
+      expect(state.entitlements, isEmpty);
+      expect(state.featureFlags, isEmpty);
+      expect(container.read(canUseFeatureProvider('analytics')), false);
     });
 
     test('clearing twice leaves everything clear', () async {
