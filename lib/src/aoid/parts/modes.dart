@@ -9,4 +9,6 @@
 // test/aoid/riverpod_free_gate_test.dart walks and enforces.
 library;
 
+export '../mode/aoid_code_sink.dart';
 export '../mode/aoid_deployment_mode.dart';
+export '../mode/http_bff_code_sink.dart';
