@@ -14,6 +14,161 @@ import 'package:http/testing.dart';
 
 import 'aoid_fixtures.dart';
 
+// ---------------------------------------------------------------------------
+// TRD 50-08 — the /oauth/native/* ceremony fixtures.
+//
+// EVERY value below is a hand-written literal (no_llm_test_data). 50-09, 50-11
+// and 50-12 all extend THIS fixture; a second fake would guarantee drift.
+// ---------------------------------------------------------------------------
+
+/// Issuer origin used by the native-ceremony tests.
+const kFakeAoidIssuer = 'https://auth.fake-aoid.test';
+
+/// The OAuth `client_id` string (not the `oauth_clients.id` UUID — 49-06's
+/// Binding carries both and only the UUID is stored).
+const kFakeNativeClientId = 'aodex-web';
+
+/// Tenant A — the tenant every ceremony below is STARTED under.
+const kFakeTenantA = '11111111-1111-4111-8111-111111111111';
+
+/// Tenant B — a DIFFERENT tenant, used only to present a cross-tenant
+/// continuation. It must be refused indistinguishably from a replay.
+const kFakeTenantB = '22222222-2222-4222-8222-222222222222';
+
+const kFakeRedirectUri = 'https://app.fake-aoid.test/callback';
+const kFakeCodeChallenge = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
+
+/// The handle `/oauth/native/start` mints. Successors are
+/// `native-handle-alpha-0002`, `-0003`, … in order.
+const kFakeHandle1 = 'native-handle-alpha-0001';
+
+/// Where a `redirect_to_web` outcome sends the system browser.
+const kFakeAuthorizationUrl =
+    'https://auth.fake-aoid.test/oauth/authorize?response_type=code'
+    '&client_id=aodex-web&redirect_uri=https%3A%2F%2Fapp.fake-aoid.test'
+    '%2Fcallback&code_challenge_method=S256';
+
+/// One scripted outcome for a single `/oauth/native/verify` call.
+///
+/// The fixture is SCRIPTED rather than clever: a test states the ceremony it
+/// wants and the fake replays it. That keeps every branch reachable without
+/// the fake growing an authentication implementation of its own.
+sealed class FakeNativeStep {
+  const FakeNativeStep();
+}
+
+/// The factor SUCCEEDED and the ceremony advances.
+///
+/// Wire (49-08):
+///
+/// ```
+/// 401 {"error":"insufficient_authorization",
+///      "error_description":"additional authorization required",
+///      "auth_session":"THE-ROTATED-ONE","next":"mfa",
+///      "available_methods":["totp","backup_code"]}
+/// ```
+class FakeNativeAdvance extends FakeNativeStep {
+  const FakeNativeAdvance({
+    required this.next,
+    this.availableMethods = const [],
+    this.webauthnChallenge,
+  });
+
+  final String next;
+  final List<String> availableMethods;
+
+  /// Raw JSON, passed through untouched (49-08 mutation 13).
+  final String? webauthnChallenge;
+}
+
+/// The factor FAILED but the ceremony survives: 49-06's `Consume` burns the
+/// presented handle and `Rotate` issues a successor carrying the attempt
+/// count. The response is byte-identical to [FakeNativeAdvance] except that
+/// `next` and `available_methods` are absent — 49-08's
+/// `a_wrong_password_and_a_correct_password_needing_MFA_share_code_and_status`
+/// pins that the asymmetry lives ONLY there, never in the code or the status.
+class FakeNativeReject extends FakeNativeStep {
+  const FakeNativeReject();
+}
+
+/// Terminal: `200 {"authorization_code":"…"}` and NOTHING else.
+class FakeNativeTerminal extends FakeNativeStep {
+  const FakeNativeTerminal(this.authorizationCode);
+
+  final String authorizationCode;
+}
+
+/// `400 {"error":"redirect_to_web","error_description":"…",
+/// "authorization_url":"…"}` — a NORMAL outcome (social IdP, PIV, or 49-04
+/// gate 7's FedRAMP-High / IL5 tenancy tier), not a failure.
+class FakeNativeRedirect extends FakeNativeStep {
+  const FakeNativeRedirect({this.authorizationUrl = kFakeAuthorizationUrl});
+
+  /// Set to `''` to model the malformed case 50-04 handed to this TRD:
+  /// a `redirect_to_web` whose `authorization_url` is unusable.
+  final String authorizationUrl;
+}
+
+/// 49-06's `MaxAttempts = 5` exhausted: the ceremony is destroyed and NO
+/// successor handle comes back. Indistinguishable from replay / expiry /
+/// unknown-handle / cross-tenant, by design.
+class FakeNativeAttemptCapExceeded extends FakeNativeStep {
+  const FakeNativeAttemptCapExceeded();
+}
+
+/// An arbitrary opaque error from 49-04's taxonomy, e.g. `invalid_client`.
+class FakeNativeErrorStep extends FakeNativeStep {
+  const FakeNativeErrorStep({
+    required this.code,
+    required this.description,
+    required this.status,
+  });
+
+  final String code;
+  final String description;
+  final int status;
+}
+
+/// A replica refusing the write: `503 temporarily_unavailable` with
+/// `Retry-After` and — deliberately (49-08) — no ACAO.
+class FakeNativeUnavailable extends FakeNativeStep {
+  const FakeNativeUnavailable({this.retryAfterSeconds = 30});
+
+  final int retryAfterSeconds;
+}
+
+/// `500 {"error":"server_error","error_description":"internal error"}`.
+class FakeNativeServerError extends FakeNativeStep {
+  const FakeNativeServerError();
+}
+
+/// The socket dies. NOT an authentication outcome.
+class FakeNativeNetworkFailure extends FakeNativeStep {
+  const FakeNativeNetworkFailure();
+}
+
+/// A single recorded native request: what the client actually put on the wire.
+class RecordedNativeRequest {
+  RecordedNativeRequest({
+    required this.path,
+    required this.headers,
+    required this.rawBody,
+    required this.fields,
+  });
+
+  final String path;
+
+  /// The header map as `package:http` handed it to the transport. Item 2 of
+  /// the test list asserts on its KEY SET — that is the whole CORS
+  /// simple-request contract.
+  final Map<String, String> headers;
+
+  final String rawBody;
+
+  /// [rawBody] parsed as `application/x-www-form-urlencoded`.
+  final Map<String, String> fields;
+}
+
 /// A fake AOID OAuth endpoint. Exposes an [http.Client] (`.client`) suitable
 /// for injection into `AoidOidcAuthStrategy`'s `httpClient` parameter.
 class FakeAoidEndpoint {
@@ -55,11 +210,61 @@ class FakeAoidEndpoint {
     _revokeShouldFailNetwork = true;
   }
 
-  /// The fake endpoint's [http.Client]. Routes `POST {issuer}/oauth/token`
-  /// and `POST {issuer}/oauth/revoke`; anything else is 404.
+  // -------------------------------------------------------------------------
+  // TRD 50-08 — /oauth/native/{start,verify}
+  // -------------------------------------------------------------------------
+
+  /// Every native request the fake handled, in order — path, header map, raw
+  /// body and parsed form fields.
+  final List<RecordedNativeRequest> nativeRequests = [];
+
+  /// Every `auth_session` the fake has minted, in order. `[0]` is what `start`
+  /// returned. A test asserts ROTATION against this plus the recorded request
+  /// bodies (test-list item 6).
+  final List<String> mintedNativeHandles = [];
+
+  final List<FakeNativeStep> _nativeScript = [];
+
+  String? _liveNativeHandle;
+  String? _nativeTenantId;
+  String? _nativeClientId;
+  bool _nativeExpired = false;
+  int _handleSeq = 0;
+
+  /// State the `start` response reports. 49-07 makes both STATIC — emitting a
+  /// per-identity list before a factor succeeds would make the endpoint an
+  /// enumeration oracle.
+  String startNext = 'password';
+  List<String>? startAvailableMethods = const [
+    'password',
+    'webauthn_discoverable',
+  ];
+
+  /// Script what each successive `/oauth/native/verify` call does.
+  void scriptNativeCeremony(List<FakeNativeStep> steps) {
+    _nativeScript
+      ..clear()
+      ..addAll(steps);
+  }
+
+  /// Kill the ceremony's absolute deadline (49-01: `ceremony_expires_at` is
+  /// never extended on rotation).
+  void expireNativeCeremony() {
+    _nativeExpired = true;
+  }
+
+  /// The fake endpoint's [http.Client]. Routes `POST {issuer}/oauth/token`,
+  /// `POST {issuer}/oauth/revoke`, `POST {issuer}/oauth/native/start` and
+  /// `POST {issuer}/oauth/native/verify`; anything else is 404.
   http.Client get client => MockClient((request) async {
         capturedRequests.add(request);
 
+        if (request.url.path.endsWith('/oauth/native/start')) {
+          return _handleNative(request, isStart: true);
+        }
+        if (request.url.path.endsWith('/oauth/native/verify')) {
+          return _handleNative(request, isStart: false);
+        }
         if (request.method == 'POST' && request.url.path.endsWith('/oauth/token')) {
           return _handleToken(request);
         }
@@ -69,6 +274,200 @@ class FakeAoidEndpoint {
         }
         return http.Response('{"error":"not_found"}', 404);
       });
+
+  // The ONE function that renders invalid_session. Replay, expiry, unknown
+  // handle, cross-tenant presentation, cross-client presentation and attempt-
+  // cap exhaustion ALL go through it, so byte-identity is structural rather
+  // than six coincidentally-equal literals. 49-04 folds them together on
+  // purpose; a fixture that distinguished them would make the client's own
+  // lossiness test pass vacuously.
+  http.Response _nativeInvalidSession() => _nativeJson(400, {
+        'error': 'invalid_session',
+        'error_description': 'invalid or expired auth_session',
+      });
+
+  http.Response _nativeJson(
+    int status,
+    Map<String, dynamic> body, {
+    Map<String, String> extraHeaders = const {},
+  }) =>
+      http.Response(
+        jsonEncode(body),
+        status,
+        headers: {
+          // 49-08's writeNativeJSON header discipline.
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'pragma': 'no-cache',
+          ...extraHeaders,
+        },
+      );
+
+  String _mintNativeHandle() {
+    _handleSeq += 1;
+    final handle = 'native-handle-alpha-${_handleSeq.toString().padLeft(4, '0')}';
+    mintedNativeHandles.add(handle);
+    return handle;
+  }
+
+  Future<http.Response> _handleNative(
+    http.Request request, {
+    required bool isStart,
+  }) async {
+    final fields = request.body.isEmpty
+        ? <String, String>{}
+        : Uri.splitQueryString(request.body);
+    nativeRequests.add(RecordedNativeRequest(
+      path: request.url.path,
+      headers: Map<String, String>.from(request.headers),
+      rawBody: request.body,
+      fields: fields,
+    ));
+
+    if (request.method != 'POST') {
+      return _nativeJson(405, {
+        'error': 'invalid_request',
+        'error_description': 'method not allowed',
+      });
+    }
+
+    // 49-08 reuses isFormContent, whose comment reads "NEVER accept JSON
+    // request bodies on OAuth endpoints." It splits on ';' so a charset
+    // parameter is fine — which matters, because package:http appends one.
+    final contentType = request.headers['content-type'] ?? '';
+    final mediaType = contentType.split(';').first.trim().toLowerCase();
+    if (mediaType.isNotEmpty && mediaType != 'application/x-www-form-urlencoded') {
+      return _nativeJson(400, {
+        'error': 'invalid_request',
+        'error_description':
+            'Content-Type must be application/x-www-form-urlencoded',
+      });
+    }
+
+    return isStart ? _handleNativeStart(fields) : _handleNativeVerify(fields);
+  }
+
+  Future<http.Response> _handleNativeStart(Map<String, String> fields) async {
+    for (final required in const [
+      'client_id',
+      'tenant_id',
+      'redirect_uri',
+      'code_challenge',
+    ]) {
+      if ((fields[required] ?? '').isEmpty) {
+        return _nativeJson(400, {
+          'error': 'invalid_request',
+          'error_description': 'invalid request',
+        });
+      }
+    }
+
+    _nativeTenantId = fields['tenant_id'];
+    _nativeClientId = fields['client_id'];
+    _nativeExpired = false;
+    _liveNativeHandle = _mintNativeHandle();
+
+    return _nativeJson(200, {
+      'auth_session': _liveNativeHandle,
+      if (startNext.isNotEmpty) 'next': startNext,
+      if (startAvailableMethods != null)
+        'available_methods': startAvailableMethods,
+    });
+  }
+
+  Future<http.Response> _handleNativeVerify(Map<String, String> fields) async {
+    final live = _liveNativeHandle;
+    if (live == null) return _nativeInvalidSession();
+
+    // Handle lifecycle, in 49-06's order. Every branch renders the SAME body.
+    if (fields['auth_session'] != live) return _nativeInvalidSession();
+    if (_nativeExpired) return _nativeInvalidSession();
+    if (fields['tenant_id'] != _nativeTenantId) return _nativeInvalidSession();
+    if (fields['client_id'] != _nativeClientId) return _nativeInvalidSession();
+
+    if (_nativeScript.isEmpty) {
+      fail('FakeAoidEndpoint: /oauth/native/verify was called with no scripted '
+          'step left. Call scriptNativeCeremony([...]) — an unscripted verify '
+          'must fail LOUDLY, never fall through to a default success.');
+    }
+    final step = _nativeScript.removeAt(0);
+
+    // The presented handle is consumed either way (49-06: Consume burns it,
+    // then Rotate mints the successor).
+    _liveNativeHandle = null;
+
+    switch (step) {
+      case FakeNativeAdvance():
+        final successor = _mintNativeHandle();
+        _liveNativeHandle = successor;
+        return _nativeJson(401, {
+          'error': 'insufficient_authorization',
+          'error_description': 'additional authorization required',
+          'auth_session': successor,
+          'next': step.next,
+          if (step.availableMethods.isNotEmpty)
+            'available_methods': step.availableMethods,
+          if (step.webauthnChallenge != null)
+            'webauthn_challenge': jsonDecode(step.webauthnChallenge!),
+        });
+
+      case FakeNativeReject():
+        // 49-08's enumeration-parity reference response: the key set is
+        // EXACTLY [auth_session, error, error_description]. No `next`, no
+        // `available_methods` — that is the ONLY difference between a wrong
+        // password and a correct one that needs MFA.
+        final successor = _mintNativeHandle();
+        _liveNativeHandle = successor;
+        return _nativeJson(401, {
+          'error': 'insufficient_authorization',
+          'error_description': 'additional authorization required',
+          'auth_session': successor,
+        });
+
+      case FakeNativeTerminal():
+        // EXACTLY one key. A spare auth_session would leave a live handle
+        // after the ceremony ended (49-08 mutation 8).
+        return _nativeJson(200, {
+          'authorization_code': step.authorizationCode,
+        });
+
+      case FakeNativeRedirect():
+        return _nativeJson(400, {
+          'error': 'redirect_to_web',
+          'error_description': 'this request must be completed in a web browser',
+          'authorization_url': step.authorizationUrl,
+        });
+
+      case FakeNativeAttemptCapExceeded():
+        // No successor: the ceremony is destroyed.
+        return _nativeInvalidSession();
+
+      case FakeNativeErrorStep():
+        return _nativeJson(step.status, {
+          'error': step.code,
+          'error_description': step.description,
+        });
+
+      case FakeNativeUnavailable():
+        return _nativeJson(
+          503,
+          {
+            'error': 'temporarily_unavailable',
+            'error_description': 'this region cannot accept writes',
+          },
+          extraHeaders: {'retry-after': '${step.retryAfterSeconds}'},
+        );
+
+      case FakeNativeServerError():
+        return _nativeJson(500, {
+          'error': 'server_error',
+          'error_description': 'internal error',
+        });
+
+      case FakeNativeNetworkFailure():
+        throw http.ClientException('fixture: simulated native socket failure');
+    }
+  }
 
   Future<http.Response> _handleToken(http.Request request) async {
     if (_nextTokenStatus != null) {
