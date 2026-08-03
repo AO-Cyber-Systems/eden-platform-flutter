@@ -259,12 +259,17 @@ void main() {
     });
 
     test(
-      'F6 the charset package:http appends still satisfies isFormContent',
+      'F6 a charset parameter would still satisfy isFormContent (49-08 splits on ;)',
       () async {
         // 49-08's isFormContent splits on ';' before comparing, so
-        // "application/x-www-form-urlencoded; charset=utf-8" is accepted. This
-        // matters: package:http's `body` setter APPENDS the charset, so the
-        // client cannot send the bare media type even if it sets it bare.
+        // "application/x-www-form-urlencoded; charset=utf-8" is accepted.
+        //
+        // MEASURED: http ^1.2.0 does NOT append a charset — item 3 pins that
+        // the client sends the bare media type. This test covers the OTHER
+        // direction: if a future http release starts appending one, or a
+        // consumer supplies its own http.Client that does, the contract still
+        // holds. Without it, item 3's exact-value assertion would be the only
+        // thing standing between a library upgrade and a 400 from AOID.
         final res = await postForm(
           '/oauth/native/start',
           _startFields(),
@@ -348,6 +353,9 @@ void main() {
       final ct = fake.nativeRequests.single.headers['content-type']!;
       expect(ct.split(';').first.trim(), 'application/x-www-form-urlencoded');
       expect(ct, isNot(contains('json')));
+      // The EXACT value, recorded for 50-12's browser leg and 50-16's AODex
+      // adapter: http ^1.2.0 appends no charset parameter.
+      expect(ct, 'application/x-www-form-urlencoded');
     });
 
     test('4 verify() POSTs the full field set form-encoded', () async {

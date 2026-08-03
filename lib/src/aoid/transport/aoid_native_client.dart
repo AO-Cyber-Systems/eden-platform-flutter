@@ -142,9 +142,15 @@ class AoidNativeClient {
   /// `TestNativeHandlersReadNoCustomRequestHeader`; client-side by
   /// test-list item 2, which asserts this map's KEY SET.
   ///
-  /// (`package:http` appends `; charset=utf-8` when it encodes the body.
-  /// 49-08's `isFormContent` splits on `;` before comparing, so that is fine,
-  /// and a charset parameter does not disqualify the CORS safelisting.)
+  /// MEASURED, not assumed: with `http: ^1.2.0` the header map that reaches
+  /// the transport is exactly `{content-type: application/x-www-form-urlencoded}`
+  /// — no charset parameter is appended, and no other application header is
+  /// added. (`dart:io` adds `content-length` / `host` / `accept-encoding` at
+  /// the socket layer, and a browser adds its own; all are CORS-safelisted or
+  /// forbidden header names the user agent controls, so none of them
+  /// preflights. On web, `BrowserClient` sends only what is in this map.)
+  /// 49-08's `isFormContent` splits on `;` before comparing, so a charset
+  /// parameter would be tolerated too — but none is sent.
   static const Map<String, String> _formHeaders = {
     'content-type': 'application/x-www-form-urlencoded',
   };
