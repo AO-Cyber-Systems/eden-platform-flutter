@@ -17,11 +17,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          navStateProvider.overrideWith((ref) {
-            final notifier = NavNotifier(ref);
-            // Directly set state by using the notifier
-            return notifier;
-          }),
+          // TRD 50-22 moved NavNotifier from `StateNotifier` to riverpod 3's
+          // `Notifier`, so `overrideWith` now takes a zero-argument factory
+          // rather than a `(ref) => ...` create callback. This override is the
+          // real notifier, exactly as before.
+          navStateProvider.overrideWith(NavNotifier.new),
           // Auth is left as the real AuthNotifier; only its dependencies are
           // faked. Constructor injection is gone in riverpod 3 (TRD 50-21),
           // so the fakes arrive through the providers AuthNotifier.build()
@@ -58,13 +58,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          navStateProvider.overrideWith((ref) {
-            // We need to manually create a notifier with pre-set state
-            return _PresetNavNotifier(ref, NavState(
+          navStateProvider.overrideWith(
+            () => _PresetNavNotifier(NavState(
               items: navItems,
               selectedId: 'home',
-            ));
-          }),
+            )),
+          ),
           authProvider.overrideWith(
             () => _PresetAuthNotifier(AuthState.authenticated(session)),
           ),
@@ -104,8 +103,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          navStateProvider.overrideWith((ref) {
-            navNotifier = _PresetNavNotifier(ref, NavState(
+          navStateProvider.overrideWith(() {
+            navNotifier = _PresetNavNotifier(NavState(
               items: navItems,
               selectedId: 'home',
             ));
@@ -136,10 +135,22 @@ void main() {
 }
 
 /// A NavNotifier that starts with pre-set state instead of empty.
+///
+/// TRD 50-22 moved NavNotifier from `StateNotifier` to riverpod 3's `Notifier`,
+/// which has no constructor injection — the initial state comes from `build()`
+/// rather than a `super(...)` call plus a constructor-body assignment.
+///
+/// `super.build()` is deliberately NOT called: it registers the auth and
+/// current-company subscriptions and schedules the bootstrap microtask, whose
+/// async tail would overwrite the very state this fixture exists to hold. Same
+/// reasoning, and same shape, as [_PresetAuthNotifier] below.
 class _PresetNavNotifier extends NavNotifier {
-  _PresetNavNotifier(super.ref, NavState initialState) {
-    state = initialState;
-  }
+  _PresetNavNotifier(this._initialState);
+
+  final NavState _initialState;
+
+  @override
+  NavState build() => _initialState;
 }
 
 /// Pins [authProvider] at a fixed [AuthState] for widget tests.
