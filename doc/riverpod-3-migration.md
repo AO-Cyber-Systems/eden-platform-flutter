@@ -808,6 +808,94 @@ block, the class header and the provider closure.
 
 ---
 
+### 3.12 Stage C — the entrypoint split retired, and the firewall deleted (TRD 50-24)
+
+Stage C discharges the sentence `networking.dart`'s own header named as the alignment's
+target: *"once auth/company/nav are migrated to the flutter_riverpod 3.x AnnotationNotifier
+API, this separate entrypoint can be reunified with `eden_platform.dart`."* Stage B did the
+migrating; this is where the header stopped lying.
+
+#### 3.12.1 The widget migration was a NO-OP, and that is the finding
+
+**Zero source edits across the nine widget consumers**, proven by an empty `git diff` and by
+content hashes captured before and after. All **24** riverpod call sites in those files are
+`ref.watch(provider)` or `ref.read(provider.notifier).method()`, and both are identical API
+on `NotifierProvider` and `StateNotifierProvider`. Stage B's discipline of preserving every
+provider identifier and method signature is what bought this.
+
+50-06's "11 widget consumers (50-24)" counted files that REFERENCE riverpod, not files that
+needed editing. **This is the fifth time in this objective that a TRD's "N call sites to
+migrate" figure has measured false** (50-21 ×2, 50-22, 50-23, now here). Treat any such
+count as an upper bound on files to LOOK at, never as work to do.
+
+The claim is pinned by `test/widget_noop_test.dart` rather than left as prose: it asserts
+`ref.read(p.notifier)` returns the migrated notifier type for all five providers, and scans
+the nine widget sources for any `StateNotifierProvider`-only API (`.stream`, `.debugState`).
+**For Stage D this is the load-bearing precedent: a consumer whose call sites are all
+`watch`/`read`-notifier needs a version bump, not a rewrite.**
+
+#### 3.12.2 `networking.dart` is KEPT — reunification is not deletion
+
+The split is retired as a *constraint* while surviving as a *supported narrower entrypoint*.
+Two reasons, both external to this repository:
+
+1. **Four consumer packages import only it** — `aodex/flutter` and
+   `aofamily/{ai,connect,browser}`. Deleting it turns a zero-change consumer wave into four
+   broken repositories.
+2. **It re-exports the dio symbols politihub's APP-06 grep gate depends on**
+   (`^import 'package:(http|dio)/`). That gate lives in another repository and **cannot fail
+   here**, so nothing in eden's CI would report the breakage. `test/barrel_surface_test.dart`
+   stands in for it deliberately.
+
+The two entrypoints are **not nested in either direction**, measured rather than eyeballed:
+`networking.dart` has exactly one leaf `eden_platform.dart` lacked (the dio re-export), and
+`eden_platform.dart` carries `connect_cookie_interceptor`, `sentry_init`, the two provider
+base classes, the riverpod snapshot bridge and the whole AOID SDK.
+
+**Correction to carry forward: the dio re-export is ELEVEN symbols, not fourteen.** TRD
+50-24 asserts "fourteen" in five places. The measured list is `Dio, Interceptor,
+RequestOptions, RequestInterceptorHandler, ResponseInterceptorHandler,
+ErrorInterceptorHandler, Response, DioException, HttpClientAdapter, ResponseBody, Options`.
+Anyone restoring this block from the TRD's prose would be looking for three symbols that
+never existed.
+
+That same block was **added to `eden_platform.dart`** (purely additive, nothing removed). A
+consumer on the full barrel previously had to import `package:dio` directly — tripping
+APP-06 — or additionally import `networking.dart` just to borrow type names. eden's own
+`test/networking/auth_interceptor_test.dart` was doing exactly that and now complies.
+
+#### 3.12.3 The AOID barrels were FOLDED IN and the firewall gate DELETED
+
+`lib/aoid.dart` and `lib/aoid_riverpod.dart` are gone; every export they carried now sits in
+`eden_platform.dart`. Verified at leaf level: folding removed exactly two entries — the two
+barrel files themselves — and preserved all 21 leaves they re-exported.
+
+`test/aoid/riverpod_free_gate_test.dart` was **deleted, not weakened**. It asserted that the
+AOID surface never resolves a riverpod symbol — precisely the property D2 rejected. A
+softened version would have kept the firewall's premise alive in the suite after the code
+abandoned it. `lib/networking.dart` IS that same firewall pattern, built earlier for the same
+reason; retiring it correctly is the point, and re-creating it under a new name would reopen
+a decision the user closed twice.
+
+**Finding: that gate file was doing double duty.** Two unrelated source-level gates —
+`aoid_code_sink_test.dart` and `mode_matrix_test.dart`, which assert the BFF sink never posts
+a refresh token and the web branch never reaches a secure store — imported `stripComments`
+from it across 8 call sites. Deleting the gate would have taken those guards with it. The
+helper was **relocated** to `test/aoid/source_utils.dart` carrying nothing riverpod-related.
+Worth a look elsewhere: a gate file that also exports utilities cannot be deleted cleanly.
+
+`lib/src/aoid/**` and `lib/src/aoid_riverpod/**` STAY. The seven part-barrels under
+`lib/src/aoid/parts/` exist so parallel TRDs each own one file instead of colliding on the
+umbrella, and they are still doing that job — three of them (`redirect` → 50-12, `tenant` →
+50-13, `widgets` → 50-11) are still empty placeholders, which is why "one symbol from each of
+the seven part-barrels" is not an assertion anyone can write yet.
+
+**The riverpod-free property is now a preference, not an invariant.** Every header that
+described it as enforced was updated to say so, and to keep the history: a present-tense
+claim that is false must change, but "this existed because…" is accurate and worth keeping.
+
+---
+
 ## 4. The measured consumer table
 
 Generated by `tool/consumer_compat_gate.sh`; the committed before-state lives at
@@ -907,8 +995,62 @@ Largest risk first, so the expensive discovery happens while there is time to re
 | 13 | `aofamily/{ai,connect,browser}/flutter` | 0 (networking only) | 50-26 | Constraint bump only. |
 | 14 | `videoAnalysis/video-analysis-flutter` | 0/0/0 | 50-26 | Constraint bump only; imports nothing. |
 
-Every consumer must additionally be grepped for the §3.1 `AutoDisposeNotifier` /
-`AutoDisposeNotifierProvider` break, which no shim covers.
+### 5.1 STAGE D IS UNBLOCKED — the per-consumer screening checklist
+
+Stages A, B and C are complete: every notifier is on the riverpod 3 API, no `legacy.dart`
+import statement survives in `lib/`, no `StateNotifier` reference survives in
+comment-stripped code, and the entrypoint split is retired as a constraint. **50-25 takes
+row 1; 50-26 takes rows 2-14.** The order above is unchanged — largest risk first.
+
+Apply these **three screening items to every one of the eighteen packages**. They are not
+optional extras; each was produced by a Stage that measured the defect in eden itself.
+
+**1. `AutoDisposeNotifier` / `AutoDisposeNotifierProvider` subclasses (§3.1).** REMOVED in
+riverpod 3 — the one break `legacy.dart` cannot shim. A grep, per consumer, before any bump.
+
+**2. The `AsyncValue.value` null-on-error read path (§3.5).** `AsyncValue.value` no longer
+throws; it returns `null`. This is the **compile-clean** change, which makes it the dangerous
+one: a mutating helper that reads `.value` on a failed load now silently fabricates an empty
+list where it used to throw. Nothing in a build will point at it.
+
+**3. Const-canonicalized state sentinels whose `clear()` may no longer notify (§3.7, §3.8).**
+Four-for-four in eden — `AuthState`, `CompanyState`, `NavState`, `EntitlementsState`. Assume
+it is present in any notifier that assigns a `const` sentinel.
+
+> **This one predates riverpod 3, so upgrading eden does NOT fix it for consumers.** The
+> suppression comes from a state class having no value `operator ==`, which makes riverpod
+> 3's `previous != next` and `StateNotifier`'s `!identical` the *same* predicate. It has been
+> shipping the whole time. There is no bump-diff to find, so it must be enumerated per repo
+> against each consumer's own state classes.
+>
+> **The fix is `updateShouldNotify => true` on the notifier — never de-consting a single
+> assignment site, and never adding `operator ==` to the state class.** De-consting `clear()`
+> is a *partial* fix that passes the entire clear-based logout-chain test while leaving every
+> other sentinel assignment (the no-token early returns) suppressed; it ships green.
+> Measured twice, on two different files: 50-22 mutation N13 and 50-23 mutation E3. Adding
+> `operator ==` changes equality for every consumer in 18+ packages to fix one notification.
+>
+> Two further traps, both from 50-23 §6.1: a notifier with **two independent clear routes**
+> (an auth listener and a scope listener) makes either route deletable in silence, so test
+> each route on its own; and a "nothing happened" assertion needs a fixture where the thing
+> **would** have happened, or another correct guard masks the missing one.
+
+**Two gate hazards Stage D inherits, both already paid for once:**
+
+* **A green gate run proves nothing about a frozen consumer** (§4.2). 10 of the 24 are pinned
+  to a git `ref:` and are blind to `obj50/aoid-module`, which is deliberately unpushed. 50-04
+  already made this mistake — its portal gate analysed a `~/.pub-cache/git/` snapshot and
+  reported "0 new errors" while blind to the change under test. **Re-run the gate after
+  repointing each `ref:`.**
+* **`navigators/navigators-flutter` and `politihub/flutter-navigators` are doubly blocked**
+  by PRE-EXISTING, unrelated dependency conflicts (`flutter_secure_storage` and
+  `sentry_flutter` respectively). Do not schedule them as simple constraint bumps.
+
+**What Stage C says the consumer work should look like:** §3.12.1 measured zero required
+edits across nine widget consumers, because every call site was `ref.watch(p)` or
+`ref.read(p.notifier).method()`. A consumer whose sites are all of that shape needs a
+**constraint bump plus the three screens above**, not a rewrite. Budget the rewrite risk
+where the screens actually fire.
 
 ---
 
