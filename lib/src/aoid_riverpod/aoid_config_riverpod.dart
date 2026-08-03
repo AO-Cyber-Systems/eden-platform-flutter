@@ -19,10 +19,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // return type of buildAoidOverrides below — moved into misc.dart. STAGE A of
 // AOID objective 50's riverpod alignment (50-CONTEXT.md D2, TRD 50-06).
 //
-// This import is TEMPORARY only in the sense that 50-24 (barrel reunification)
-// decides the final import surface; `Override` itself is NOT deprecated and has
-// no Notifier-API replacement, so unlike the legacy.dart shims this one may well
-// survive. See doc/riverpod-3-migration.md.
+// PERMANENT, and deliberately so — resolved by TRD 50-24 (Stage C), which was
+// the ticket this import's old "TEMPORARY" marker pointed at. It is NOT a Stage
+// A shim: `Override` is not deprecated and has no Notifier-API replacement, so
+// there is nothing here to retire. Every actual legacy.dart shim is gone (Stage
+// B), and the marker was removed so the objective-level sweep for surviving
+// Stage A residue — `grep -rn TEMPORARY lib/ | grep -i riverpod` — reports the
+// truth rather than this false positive. See doc/riverpod-3-migration.md §3.12.
 import 'package:flutter_riverpod/misc.dart';
 
 import '../aoid/aoid_config.dart';
