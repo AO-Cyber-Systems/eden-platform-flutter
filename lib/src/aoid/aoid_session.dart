@@ -2,14 +2,27 @@
 //
 // RIVERPOD-FREE BY CONSTRUCTION (see storage/aoid_token_store.dart's header).
 //
-// DELIBERATELY MINIMAL. TRD 50-09 owns the full deployment-mode matrix
-// (lib/src/aoid/parts/modes.dart) and extends this: AoidCodeSink, the Mode A
-// BFF handshake, and the three-way restoreSession outcome all belong there,
-// not here. TRD 50-02 is a security fix and has to stay reviewable on its own.
-// 50-09 extends this.
+// TRD 50-02 built the custody dimension. TRD 50-09 COMPLETED the mode
+// dimension, adding — additively, without changing any 50-02 behaviour — the
+// deployment [mode], the [cookieBound] flag, and the AOID claims as
+// FIRST-CLASS FIELDS.
+//
+// The claims are two fields, not one. `~/dev/aoid/portal/.../aoid_auth_strategy
+// .dart:65,223-226` hangs AOID claims off the session with an `Expando`
+// side-table: invisible to the type system, and it dies with the session
+// object. That pattern is deliberately NOT copied here. Neither is that file's
+// `role: me.aal` overload — an assurance level is not a role, and the shared
+// module must not institutionalise the conflation.
+//
+// There is deliberately no single `claims` field either: 50-03 (D5) keeps
+// AoidAccessClaims and AoidIdClaims apart precisely so the access token's `tnt`
+// (ACTIVE tenant SLUG) and the id_token's `tnt` (HOME tenant UUID) cannot meet
+// at a common type. A unified field here would rebuild that meeting point.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'claims/aoid_claims.dart';
+import 'mode/aoid_deployment_mode.dart';
 import 'storage/aoid_token_store.dart';
 
 /// An AOID session, carrying the one property this TRD exists to make
@@ -34,6 +47,8 @@ class AoidSession {
     required this.accessToken,
     required this.refreshToken,
     required this.isWeb,
+    required this.accessClaims,
+    required this.idClaims,
   });
 
   /// **Mode A — BFF / confidential client.** The app's own backend holds the
@@ -44,20 +59,30 @@ class AoidSession {
   factory AoidSession.backendHeldCookie({
     String? accessToken,
     bool isWeb = kIsWeb,
+    AoidAccessClaims? accessClaims,
+    AoidIdClaims? idClaims,
   }) => AoidSession._(
     posture: AoidRefreshTokenPosture.backendHeldCookie,
     accessToken: accessToken,
     refreshToken: null,
     isWeb: isWeb,
+    accessClaims: accessClaims,
+    idClaims: idClaims,
   );
 
   /// **Mode C — same-origin.** Nothing is held; the session is bound to a
   /// cookie issued by AOID's own origin. Neither token is meaningful.
-  factory AoidSession.sameOriginCookie({bool isWeb = kIsWeb}) => AoidSession._(
+  factory AoidSession.sameOriginCookie({
+    bool isWeb = kIsWeb,
+    AoidAccessClaims? accessClaims,
+    AoidIdClaims? idClaims,
+  }) => AoidSession._(
     posture: AoidRefreshTokenPosture.none,
     accessToken: null,
     refreshToken: null,
     isWeb: isWeb,
+    accessClaims: accessClaims,
+    idClaims: idClaims,
   );
 
   /// **Mode B — public client + PKCE, refresh token in the OS keychain.**
@@ -73,6 +98,8 @@ class AoidSession {
     required String accessToken,
     required String refreshToken,
     bool isWeb = kIsWeb,
+    AoidAccessClaims? accessClaims,
+    AoidIdClaims? idClaims,
   }) {
     if (isWeb) {
       throw UnsupportedError(
@@ -88,6 +115,8 @@ class AoidSession {
       accessToken: accessToken,
       refreshToken: refreshToken,
       isWeb: isWeb,
+      accessClaims: accessClaims,
+      idClaims: idClaims,
     );
   }
 
@@ -107,6 +136,43 @@ class AoidSession {
   /// The platform this session was built for. Recorded so a consumer can
   /// reason about custody without re-deriving it from `kIsWeb`.
   final bool isWeb;
+
+  /// The AOID **access token's** claims, when they have been decoded.
+  ///
+  /// Its `tnt` is the ACTIVE tenant SLUG. Kept separate from [idClaims] on
+  /// purpose — see this file's header and 50-CONTEXT.md D5.
+  final AoidAccessClaims? accessClaims;
+
+  /// The AOID **id_token's** claims, when present and decoded.
+  ///
+  /// Its `tnt` is the HOME tenant UUID and does NOT follow the active tenant.
+  final AoidIdClaims? idClaims;
+
+  /// Which 50-CONTEXT.md **D4 deployment mode** produced this session.
+  ///
+  /// DERIVED from [posture] rather than stored. A stored field would be a
+  /// second source of truth for the same fact, and the two could disagree —
+  /// a session claiming Mode A while holding a keychain refresh token is
+  /// exactly the state D4 exists to make unrepresentable.
+  AoidDeploymentMode get mode => switch (posture) {
+    AoidRefreshTokenPosture.backendHeldCookie => AoidDeploymentMode.bff,
+    AoidRefreshTokenPosture.deviceKeychain => AoidDeploymentMode.publicPkce,
+    AoidRefreshTokenPosture.none => AoidDeploymentMode.sameOrigin,
+  };
+
+  /// True when authentication rides a cookie rather than a client-held token
+  /// pair — Modes A and C, on every platform.
+  ///
+  /// This is the flag that decides which `PlatformSession` constructor a
+  /// session becomes (see `AoidSessionPlatformBridge.toPlatformSession`), and
+  /// therefore whether `AuthNotifier._applyAuthResult` skips `_persistTokens`
+  /// (auth_provider.dart:184-186). Modes A and C ride that existing, tested
+  /// skip; they do not fork session handling.
+  ///
+  /// Derived, for the same reason [mode] is: `cookieBound == true` together
+  /// with a client-held refresh token is a contradiction that must not be
+  /// constructible.
+  bool get cookieBound => posture != AoidRefreshTokenPosture.deviceKeychain;
 
   /// True only when a refresh token is held **by this client**.
   ///
