@@ -74,9 +74,13 @@ Each of these files carries an import marked **TEMPORARY** with its owning TRD:
 |---|---|---:|---|
 | ~~`lib/src/auth/auth_provider.dart`~~ | `AuthNotifier`, `authProvider` | 499 | **50-21 — DONE (§3.8)** |
 | `lib/src/entitlements/entitlements_provider.dart` | `EntitlementsNotifier` (`:80`) | 216 | 50-23 |
-| `lib/src/company/company_provider.dart` | `CompanyNotifier` (`:38`) | 161 | 50-22 |
-| `lib/src/navigation/nav_provider.dart` | `NavNotifier` (`:36`) | 115 | 50-22 |
-| `lib/src/settings/settings_provider.dart` | `SettingsNotifier` (`:32`) | 88 | 50-22 |
+| ~~`lib/src/company/company_provider.dart`~~ | `CompanyNotifier`, `companyStateProvider` | 161 | **50-22 — DONE (§3.10)** |
+| ~~`lib/src/navigation/nav_provider.dart`~~ | `NavNotifier`, `navStateProvider` | 115 | **50-22 — DONE (§3.10)** |
+| ~~`lib/src/settings/settings_provider.dart`~~ | `SettingsNotifier`, `settingsProvider` | 88 | **50-22 — DONE (§3.10)** |
+
+**`lib/src/entitlements/entitlements_provider.dart` is the only shim left.** 50-23 has the
+identical shape to the two wired notifiers finished here and **no test file at all** —
+§3.10 is written specifically as the recipe it copies.
 
 `lib/src/analytics/analytics_provider.dart` is a plain `Provider` and needed no shim.
 `lib/src/providers/paginated_async_notifier.dart` already extended `AsyncNotifier` (a
@@ -539,6 +543,180 @@ each Stage B TRD only because this was caught by a finding-set diff, not by eye 
 
 Related: `unnecessary_underscores` fires on `(_, __)` listener lambdas. riverpod's
 `container.listen` callbacks want `(_, _)` under the current lint set.
+
+---
+
+### 3.10 Provider-closure → `Notifier.build()` — the recipe (TRD 50-22)
+
+**Read this before starting 50-23.** `EntitlementsNotifier` has the same shape as the two
+notifiers migrated here — a `Ref` held by constructor, a `Future.microtask` bootstrap and
+`ref.listen` subscriptions inside the `StateNotifierProvider` closure — and it has **no
+test file at all**. Everything below was measured on `CompanyNotifier`/`NavNotifier`, not
+reasoned about.
+
+#### 3.10.1 The mechanical port
+
+`NotifierProvider` takes a **zero-argument notifier factory, not a create callback**, so
+the closure has nowhere to go except `build()`:
+
+```dart
+// BEFORE
+class NavNotifier extends StateNotifier<NavState> {
+  NavNotifier(this.ref) : super(const NavState());
+  final Ref ref;                                     // ← both go away
+}
+final navStateProvider = StateNotifierProvider<NavNotifier, NavState>((ref) {
+  final notifier = NavNotifier(ref);
+  Future.microtask(() { /* bootstrap */ });
+  ref.listen<AuthState>(authProvider, (p, n) { /* ... */ });
+  return notifier;
+});
+
+// AFTER
+class NavNotifier extends Notifier<NavState> {
+  @override
+  NavState build() {
+    ref.listen<AuthState>(authProvider, (p, n) { /* verbatim */ });
+    unawaited(Future.microtask(() { /* verbatim */ }));
+    return const NavState();
+  }
+}
+final navStateProvider =
+    NotifierProvider<NavNotifier, NavState>(NavNotifier.new);
+```
+
+Signature verified against the **resolved** package, not the changelog:
+`NotifierProvider(this._createNotifier, {name, dependencies, isAutoDispose = false,
+retry})` — riverpod 3.3.2, `lib/src/providers/notifier/orphan.dart:78-94`. `isAutoDispose`
+defaults to `false`, so a plain port preserves the keep-alive lifetime
+`StateNotifierProvider` had. **Setting it by accident is invisible to almost every test** —
+guard it with an explicit "state survives the last listener detaching" control, and note
+that the assertion must pump the event loop first, because riverpod *schedules* disposal
+rather than running it inside `close()`. Without the pump the mutation survives.
+
+Delete the constructor and the `final Ref ref;` field: `Notifier` supplies `ref`, and a
+shadowing field compiles while behaving differently across rebuilds. **No method body
+needs to change** — `ref` still resolves inside every one of them.
+
+#### 3.10.2 Registration ordering — a convention, not an invariant
+
+The planning material insists `ref.listen` be registered **before** the microtask is
+scheduled. **Measured: reordering the two statements changes nothing observable.** The
+mutation was killed only by the source assertion; all 31 behavioural tests passed. The
+reason is that `Future.microtask` only *schedules* — both statements complete
+synchronously inside `build()`, so the callback cannot run before the subscription exists
+whichever order they appear in.
+
+Keep the ordering anyway, because it stops being free the moment the bootstrap stops
+being a microtask — and **do not** make it a direct call: 50-21 measured that a bootstrap
+which reads `state` synchronously throws, since `state` does not exist until `build()`
+**returns**.
+
+Also do **not** wrap registration in an "already registered" flag. riverpod owns
+re-registration; a manual guard leaks the first subscription. Measured on the migrated
+code: after `container.invalidate(...)`, one auth change produces **exactly one** reload,
+and the pre/post-port reload cadence is identical (boot 0, login 1, after invalidate +1,
+one further auth change +0).
+
+#### 3.10.3 The pause rule still applies — `subscribeNav` stays
+
+§3.2.2 predicted that migrating to `Notifier` would not remove the need for a real
+subscription in tests. **Confirmed on the migrated code:** reverting `subscribeNav` to a
+one-shot `container.read(navStateProvider)` breaks **10** tests. Use
+`container.listen(p, (_, _) {})`; `read` opens a subscription and closes it immediately.
+
+#### 3.10.4 Post-`await` guards — and why one of the two is invisible
+
+Every `state` assignment after an `await` needs `if (!ref.mounted) return;`, placed before
+the **whole** assignment (the arguments often read `state`, and reading a disposed element
+throws too). This closes the crash §3.2.4 deferred, latent in production for any consumer
+that lets a provider go unlistened mid-load.
+
+A trap worth inheriting: **the success-path guard and the catch-path guard are not
+independently observable through "the future does not throw."** Measured on
+`loadForCompany`:
+
+| mutation | outcome |
+|---|---|
+| drop **both** guards | KILLED — the catch's own assignment throws and escapes |
+| drop **only the catch-path** guard | KILLED |
+| drop **only the success-path** guard | **SURVIVED** |
+
+Removing only the success guard makes the assignment throw *inside the `try`*, where the
+method's own `catch (error)` swallows it, and the still-present catch guard then returns
+cleanly. Nothing escapes. This is the same shape as 50-21's M15. Close it with a
+source-level assertion that counts **two** guards in the method, and keep the behavioural
+tests for the catch path.
+
+The behavioural tests need a repository that **parks on a `Completer`** — a fake that
+resolves immediately cannot exercise a disposal that happens *during* the await — plus a
+CONTROL proving the same undisposed flow really does write the state, or the
+"nothing happened" assertion proves nothing.
+
+#### 3.10.5 The const-sentinel notification hazard reproduced — twice, in one wave
+
+§3.8 found it on `AuthState`. It reproduces on **both** notifiers migrated here. Two
+independent occurrences make this a **screening item for 50-25 / 50-26**, not a one-off.
+
+Measured on the **pre-migration `StateNotifier` code**, listener fires per link on a
+sign-out:
+
+| link | 1st sign-out | 2nd sign-out (already clear) |
+|---|---:|---:|
+| `authProvider` | 1 | 1 (50-21 had already fixed this one) |
+| `companyStateProvider` | 1 | **0** |
+| `currentCompanyProvider` | 1 | **0** |
+| `navStateProvider` | 1 | **0** |
+| `selectedNavProvider` | 1 | **0** |
+
+After `updateShouldNotify => true` on both notifiers: `companyStateProvider` **1**,
+`navStateProvider` **1**.
+
+**Do not add `operator ==` to the state classes.** That changes equality for every
+consumer in 18+ packages to fix one notification.
+
+**And do not "fix" it by de-consting `clear()`.** That is a plausible-looking
+*partial* fix and it is the trap: `clear()` is not the only place these notifiers assign
+the canonicalized sentinel — the **no-token early returns** do it too
+(`state = const CompanyState(); return;` when there is no access token, and nav's
+equivalent). Measured on the partial fix:
+
+| test | partial fix (de-const `clear()`) |
+|---|---|
+| the full clear-based logout-chain test, *including* the second-order case | **PASSES** |
+| a repeated **no-token early return** | **FAILS** |
+
+So a contributor who de-consts one assignment site ships a silent partial fix with a green
+suite unless the early-return path is covered too. **50-23: `EntitlementsState` has exactly
+this shape — `clear()` *and* a no-token early return in `load()`. Cover both.**
+
+#### 3.10.6 `updateShouldNotify` does NOT punch through a derived `Provider`
+
+The chain is `auth → company → currentCompanyProvider → nav → entitlements`, and the
+middle link is a plain `Provider`. A plain `Provider` runs its **own** `previous != next`
+filter (`riverpod-3.3.2/lib/src/providers/provider.dart:349`), which an upstream
+notifier's `updateShouldNotify` cannot override. So on a repeat sign-out
+`companyStateProvider` now fires while `currentCompanyProvider` correctly stays silent —
+`null → null` is genuinely not a change, and there is nothing stale.
+
+**Consequence, and it is the reason to assert each link rather than the ends:** nav's
+sign-out clear must not depend on the company route alone. It does not — nav listens to
+`authProvider` **directly** as well, an independent second route, and that redundancy is
+what keeps it correct when the company hop goes quiet. A test pins exactly that: company
+parked at the sentinel, nav re-populated, then sign-out.
+
+One behavioural side effect of the remedy, benign but worth knowing: on a **first**
+sign-out nav now notifies **twice**, because both of its routes call `clear()` and the
+second call is no longer filtered out. The assignments are idempotent and no reload is
+triggered; the pre/post reload cadence is byte-identical.
+
+#### 3.10.7 The call-site count claim was false, for the third time
+
+The TRD budgeted "41 + 28 + 7 riverpod call sites" to migrate across the three test files.
+**Zero needed changing.** Every one is `container.read(p)` / `container.read(p.notifier)`,
+which is identical API on `StateNotifierProvider` and `NotifierProvider`. 50-21 measured
+the same thing for `auth_provider_test.dart`'s "25 + 4". Budget the *wiring*, not the call
+sites.
 
 ---
 
