@@ -1,13 +1,36 @@
 // Networking-only entrypoint for `eden_platform_flutter`.
 //
-// Use this import when you only need the dio_client + interceptors and
-// don't want to pull in the auth/company/nav/etc providers (which depend
-// on flutter_riverpod 2.x StateNotifier and are incompatible with
-// flutter_riverpod 3.x consumers).
+// HISTORY: this entrypoint existed because the auth/company/nav providers were
+// built on flutter_riverpod 2.x StateNotifier and were therefore unusable from
+// a riverpod 3.x consumer. AOID objective 50 (50-CONTEXT.md D2) migrated all
+// five notifiers to the 3.x Notifier API, so that incompatibility NO LONGER
+// EXISTS — see doc/riverpod-3-migration.md. This file's old header named that
+// migration as the precondition for reunification; TRD 50-24 is where it came
+// true.
 //
-// Future direction: once auth/company/nav are migrated to the
-// flutter_riverpod 3.x AnnotationNotifier API, this separate entrypoint
-// can be reunified with `eden_platform.dart`.
+// It is KEPT, not deleted, for two reasons:
+//   1. Four consumer packages import only this entrypoint and nothing else —
+//      aodex/flutter and aofamily/{ai,connect,browser}. Deleting it turns a
+//      zero-change consumer wave into four broken repositories.
+//   2. It re-exports the dio symbols that politihub's APP-06 grep gate requires
+//      consumers to obtain HERE rather than from package:dio directly (that
+//      gate inspects file-level imports, not transitive exports). See the
+//      export block below — do not remove it, do not relocate it, and do not
+//      let it become transitive by collapsing this file into a bare re-export.
+//
+// Reunification therefore means "the split is no longer FORCED, and this header
+// no longer lies" — not "a file disappears". What changed is the rationale: the
+// narrower surface is now a deliberate convenience for consumers that want only
+// the transport, rather than a firewall around a version conflict.
+//
+// Prefer `eden_platform.dart` for new code: it is the full surface, and taking
+// it no longer costs you a riverpod version conflict.
+//
+// NOTE for anyone diffing the two entrypoints: they are NOT nested in either
+// direction. This file re-exports dio symbols `eden_platform.dart` does not,
+// and `eden_platform.dart` exports connect_cookie_interceptor, sentry_init, the
+// two provider base classes, the riverpod snapshot bridge and the whole AOID
+// SDK, none of which are here. A "merge" that assumes nesting changes both.
 
 export 'src/networking/api_exception.dart';
 export 'src/networking/auth_audit_interceptor.dart';

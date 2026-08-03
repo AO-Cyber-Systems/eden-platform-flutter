@@ -1,3 +1,18 @@
+// The FULL entrypoint for `eden_platform_flutter` — auth, company, navigation,
+// settings, entitlements, shell, networking, observability and the AOID SDK.
+//
+// Prefer this import. Since AOID objective 50 (50-CONTEXT.md D2) migrated all
+// five notifiers from riverpod 2's StateNotifier to the 3.x Notifier API, taking
+// the full surface no longer costs a riverpod version conflict — which is the
+// reason the narrower entrypoints existed in the first place. See
+// doc/riverpod-3-migration.md.
+//
+// `lib/networking.dart` REMAINS a supported, narrower entrypoint and must not be
+// deleted as redundant: four consumer packages import only it, and it carries
+// the dio re-export that politihub's APP-06 grep gate depends on — a gate that
+// lives in another repository and cannot fail in this one. The two surfaces are
+// NOT nested in either direction; see that file's header.
+
 export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
 // AOID module (AOID objective 50 TRD 50-01). The AOID surface moved from
@@ -57,6 +72,30 @@ export 'src/networking/connect_bearer_interceptor.dart';
 export 'src/networking/connect_cookie_interceptor.dart'
     show connectCookieInterceptor;
 export 'src/networking/proactive_refresh.dart';
+// The same dio re-export `networking.dart` carries, ADDED here by TRD 50-24.
+//
+// Why: before this, a consumer on the FULL barrel that wrote its own
+// `Interceptor` or a fake `HttpClientAdapter` had to either import package:dio
+// directly — which trips politihub's APP-06 grep gate (`^import
+// 'package:(http|dio)/`) — or additionally import `networking.dart` purely to
+// borrow the type names. Neither is a good answer, and the second is the sort of
+// incidental double-import that made the two entrypoints look nested when they
+// are not.
+//
+// This is PURELY ADDITIVE: nothing was removed from this barrel to make room,
+// and it creates no ambiguity for a consumer importing BOTH entrypoints, because
+// both re-export the SAME declarations from package:dio/dio.dart (Dart only
+// reports a conflict when one name resolves to two DIFFERENT declarations).
+//
+// Keep this list in sync with lib/networking.dart. It is duplicated rather than
+// chained deliberately: `export 'networking.dart'` would make the dio symbols
+// transitive for that file's four consumers, and networking.dart's own comment
+// records that the APP-06 gate does not detect transitive exports.
+export 'package:dio/dio.dart'
+    show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
+         ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
+         DioException, HttpClientAdapter, ResponseBody,
+         Options;
 // Riverpod patterns — donated from AODex (pagination + mutation). See
 // src/providers/README.md for usage and migration guide.
 export 'src/providers/paginated_async_notifier.dart';
