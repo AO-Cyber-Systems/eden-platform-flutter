@@ -72,7 +72,7 @@ Each of these files carries an import marked **TEMPORARY** with its owning TRD:
 
 | File | Notifier | Lines | Removed by |
 |---|---|---:|---|
-| `lib/src/auth/auth_provider.dart` | `AuthNotifier` (`:94`), `authProvider` (`:493`) | 499 | **50-21** |
+| ~~`lib/src/auth/auth_provider.dart`~~ | `AuthNotifier`, `authProvider` | 499 | **50-21 — DONE (§3.8)** |
 | `lib/src/entitlements/entitlements_provider.dart` | `EntitlementsNotifier` (`:80`) | 216 | 50-23 |
 | `lib/src/company/company_provider.dart` | `CompanyNotifier` (`:38`) | 161 | 50-22 |
 | `lib/src/navigation/nav_provider.dart` | `NavNotifier` (`:36`) | 115 | 50-22 |
@@ -471,6 +471,74 @@ that produced an equal result, and UIs legitimately re-trigger on a repeated suc
 **For 50-21 / 50-22 / 50-23:** any state class that is `const`-constructed and lacks a
 value `==` inherits this. A notifier that relies on "assign the sentinel again to force a
 rebuild" is broken under riverpod 3.
+
+---
+
+### 3.8 The suppressed sign-out — measured at the epicentre (TRD 50-21)
+
+`AuthNotifier` is the first place §3.7's pattern met a **security-relevant** signal, so it
+was measured rather than reasoned about. The headline is a correction:
+
+> **This is NOT a riverpod 3 regression. The sign-out notification was already being
+> suppressed under `StateNotifier`, and was suppressed under riverpod 2 as well.**
+
+**What was measured.** A probe registered a listener on `authProvider`, let boot settle to
+`unauthenticated`, then called `logout()` twice.
+
+| implementation | listener fires |
+|---|---:|
+| `StateNotifier` (Stage A, riverpod 3) | **0** |
+| `Notifier`, riverpod 3 default `updateShouldNotify` | **0** |
+| `Notifier` + `updateShouldNotify => true` (shipped) | **2** |
+
+**Why the two base classes behave identically.** They use *different* predicates that
+happen to coincide for `AuthState`:
+
+- riverpod 3 `Notifier` → `ProviderElement.defaultUpdateShouldNotify` → `previous != next`
+  (`riverpod-3.3.2/lib/src/core/element.dart:372-374`)
+- legacy `StateNotifier` → `StateNotifier.updateShouldNotify` → `!identical(old, current)`
+  (`state_notifier-1.0.0/lib/state_notifier.dart:203-207`), which `StateNotifierProvider`'s
+  element delegates to (`riverpod-3.3.2/lib/src/providers/legacy/state_notifier_provider.dart:181-185`)
+
+`AuthState` declares **no `operator ==`**, so `!=` degrades to non-identity and the two
+predicates are the same test. Combined with `const AuthState.unauthenticated()` being one
+canonicalized object forever, a repeat sign-out is invisible to listeners either way.
+
+There *is* one real behavioural difference between the two, worth knowing: on a filtered
+assignment `StateNotifier` leaves riverpod's element value **stale** (the setter early-returns
+before publishing), whereas `Notifier` stores the new value and only skips the listener
+notification. So `container.read(authProvider)` reads correctly post-filter under `Notifier`
+and did not under `StateNotifier`.
+
+**The fix, and why it is on the notifier.** `AuthNotifier` overrides
+`updateShouldNotify => true`, which riverpod's own 3.0.0 changelog names as the escape
+hatch. `AuthState` was deliberately **not** given an `operator ==`: that would change
+equality for every consumer in 18+ packages to fix one notification. The override's blast
+radius is one provider.
+
+**Who is exposed to the identical shape — 50-22 and 50-23 must check, not assume.**
+`CompanyState`, `NavState`, `SettingsState` and `EntitlementsState` all have `const`
+constructors and all get assigned `state = const XState()` from their `clear()` methods —
+and `clear()` is exactly what they call on the sign-out signal. So the pattern nests: a
+sign-out that *does* now propagate can still be dropped a second time inside the listener,
+if `clear()` re-assigns a sentinel the provider is already holding. Measure each one the
+way §3.8 measures this one; a `greaterThanOrEqualTo(1)` assertion will not see it.
+
+**For 50-25 / 50-26:** consumer packages that assign a `const` sentinel in their own
+sign-out paths inherit this too. It is not something the eden upgrade fixes for them,
+because it was never introduced by the upgrade.
+
+### 3.9 Two dartdoc lint traps that have now bitten twice
+
+`unintended_html_in_doc_comment` fired in 50-20 and again in 50-21 for the same reason: a
+backtick-wrapped generic (`` `Foo<Bar>` ``) **line-wrapped inside a dartdoc comment**. The
+analyzer does not pair backticks across lines, so the `<Bar>` reads as an HTML tag. Keep
+any backticked generic on one line, or reword. `flutter analyze` is clean before and after
+each Stage B TRD only because this was caught by a finding-set diff, not by eye —
+**50-22 and 50-23 will hit it too.**
+
+Related: `unnecessary_underscores` fires on `(_, __)` listener lambdas. riverpod's
+`container.listen` callbacks want `(_, _)` under the current lint set.
 
 ---
 
