@@ -20,7 +20,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -42,7 +42,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -85,7 +85,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -125,7 +125,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -170,7 +170,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -219,7 +219,7 @@ void main() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(const AuthState.unauthenticated())),
+                () => _PresetAuthNotifier(const AuthState.unauthenticated())),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -246,12 +246,20 @@ void main() {
   });
 }
 
+/// Pins [authProvider] at a fixed [AuthState] for widget tests.
+///
+/// TRD 50-21 moved AuthNotifier from `StateNotifier` to riverpod 3's
+/// `Notifier`, which has no constructor injection — the initial state comes
+/// from `build()` instead of a `super(...)` call plus a constructor body.
+///
+/// `super.build()` is deliberately NOT called: it resolves the real
+/// dependencies and kicks off a session restore whose async tail would
+/// overwrite the very state this fixture exists to hold.
 class _PresetAuthNotifier extends AuthNotifier {
-  _PresetAuthNotifier(AuthState initialState)
-      : super(
-          repository: FakePlatformRepository(),
-          tokenStorage: FakeTokenStorage(),
-        ) {
-    state = initialState;
-  }
+  _PresetAuthNotifier(this._initialState);
+
+  final AuthState _initialState;
+
+  @override
+  AuthState build() => _initialState;
 }

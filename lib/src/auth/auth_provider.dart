@@ -2,16 +2,6 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// riverpod 3.x moved StateNotifier/StateNotifierProvider out of the main barrel
-// into legacy.dart. This import is STAGE A of AOID objective 50's riverpod
-// alignment (50-CONTEXT.md D2, TRD 50-06): it makes the package compile on 3.x
-// with ZERO API change, so the version bump and the per-notifier
-// StateNotifier -> Notifier rewrites stay separately reviewable.
-//
-// This import is TEMPORARY. It is removed by TRD 50-21, which migrates
-// AuthNotifier/authProvider to the 3.x Notifier API.
-// See doc/riverpod-3-migration.md.
-import 'package:flutter_riverpod/legacy.dart';
 
 import '../api/platform_repository.dart';
 import 'auth_strategy.dart';
@@ -90,21 +80,102 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return SecureTokenStorage();
 });
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier({
-    required PlatformRepository repository,
-    required TokenStorage tokenStorage,
-    AuthStrategy? strategy,
-  })  : _repository = repository,
-        _tokenStorage = tokenStorage,
-        _strategy = strategy,
-        super(const AuthState.unknown()) {
-    unawaited(restoreSession());
+class AuthNotifier extends Notifier<AuthState> {
+  // riverpod 3 `Notifier` subclasses must have a zero-argument constructor —
+  // there is no constructor injection. The three dependencies that used to be
+  // constructor parameters are resolved in [build] instead. They are `late`
+  // rather than nullable so that a method reached before [build] fails loudly
+  // with a LateInitializationError instead of silently behaving as though no
+  // strategy/repository were configured.
+  late PlatformRepository _repository;
+  late TokenStorage _tokenStorage;
+  late AuthStrategy? _strategy;
+
+  @override
+  AuthState build() {
+    _repository = ref.watch(platformRepositoryProvider);
+    _tokenStorage = ref.watch(tokenStorageProvider);
+    _strategy = ref.watch(authStrategyProvider);
+
+    // A `Notifier` instance is REUSED across a rebuild. riverpod 3.3.2's own
+    // dartdoc on `Notifier.build` (providers/notifier/orphan.dart:57-60) is
+    // explicit: "If a dependency of this Notifier (when using Ref.watch)
+    // changes, then build will be re-executed. On the other hand, the Notifier
+    // will not be recreated. Its instance will be preserved between executions
+    // of build."
+    //
+    // The `StateNotifierProvider` this replaced did the opposite: its create
+    // callback ran `AuthNotifier(...)` afresh on every rebuild, so every field
+    // outside `state` was discarded. MEASURED on the pre-migration code, a
+    // continuation token captured before `container.invalidate(authProvider)`
+    // read back as null afterwards.
+    //
+    // So these two resets are NOT redundant — they are the only thing that
+    // still clears in-flight ceremony state on a rebuild. Both hold a live
+    // server-side handle:
+    //   * `_continuationToken` is an objective-49 `auth_session` handle, which
+    //     49-06 rotates on EVERY step. A handle surviving the rebuild that was
+    //     meant to discard it lets a later completeLogin present a token from
+    //     an abandoned ceremony.
+    //   * `_pendingRedirectUrl` carries an OAuth authorization URL with its
+    //     `state` parameter. Its own doc below promises a stale hop "can never
+    //     be opened after the ceremony has moved on"; a rebuild is exactly such
+    //     a move.
+    // Pinned by test: "a rebuild clears the in-flight ceremony state".
+    _continuationToken = null;
+    _pendingRedirectUrl = null;
+
+    // The boot-time session restore. This was a CONSTRUCTOR side effect under
+    // `StateNotifier` (`super(const AuthState.unknown())` ran first, so `state`
+    // was already readable by the time the constructor body called it).
+    //
+    // It is deferred by a microtask here because `restoreSession` reads `state`
+    // synchronously on the strategy path (`if (state.isAuthenticated) return;`)
+    // and `state` does not exist until `build` RETURNS. Calling it directly
+    // throws StateError: "Tried to read the state of an uninitialized provider".
+    //
+    // The observable cadence is unchanged: once per build, exactly as the old
+    // StateNotifierProvider — which also rebuilt the notifier whenever any of
+    // the same three watched providers changed. Pinned by test rather than
+    // argued: "restoreSession runs exactly once per provider build".
+    unawaited(Future.microtask(restoreSession));
+
+    return const AuthState.unknown();
   }
 
-  final PlatformRepository _repository;
-  final TokenStorage _tokenStorage;
-  final AuthStrategy? _strategy;
+  /// Restores riverpod 2's notify-on-every-assignment behaviour.
+  ///
+  /// riverpod 3.0.0, breaking change: *"All providers now use `==` to compare
+  /// previous/new values and filter updates. If you want to revert to the old
+  /// behavior, you can override `updateShouldNotify` inside Notifiers."*
+  ///
+  /// [AuthState] declares no `operator ==`, so `==` degrades to identity — and
+  /// every terminal sentinel here is built by a **const** named constructor
+  /// (`AuthState.unauthenticated()`, `AuthState.unknown()`). Dart canonicalizes
+  /// const instances, so `state = const AuthState.unauthenticated()` assigned
+  /// while already unauthenticated is *the identical object*, and the default
+  /// filter drops it.
+  ///
+  /// Three providers clear themselves off that notification —
+  /// `company_provider`, `nav_provider` and `entitlements_provider` all listen
+  /// to this provider and call their own `clear()` when `next.isAuthenticated`
+  /// is false. A dropped sign-out signal leaves the previous tenant's
+  /// companies, navigation and entitlements resident, which in a multi-tenant
+  /// console is a cross-account exposure.
+  ///
+  /// **This is NOT a riverpod 3 regression.** MEASURED both ways: the legacy
+  /// `StateNotifier` suppressed exactly the same assignment, because
+  /// `StateNotifier.updateShouldNotify` defaults to `!identical(old, current)`
+  /// (state_notifier 1.0.0, state_notifier.dart:203-207) and for a class with
+  /// no value `==` that is the same predicate. The defect predates the version
+  /// bump; the migration is merely where it was found. See
+  /// doc/riverpod-3-migration.md §3.8.
+  ///
+  /// Deliberately scoped to this notifier. Giving [AuthState] an `operator ==`
+  /// would change equality semantics for every consumer in 18 packages, which
+  /// is a far larger decision than restoring one notification.
+  @override
+  bool updateShouldNotify(AuthState previous, AuthState next) => true;
 
   /// Last continuation token returned by [_strategy] for a multi-step
   /// login. Held in memory only — the UI passes it back via
@@ -138,15 +209,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
   bool get usesStrategy => _strategy != null;
 
   Future<void> login(String email, String password) async {
+    // Read into a local: `_strategy` is a `late` field now, and Dart does not
+    // type-promote non-final fields, so `_strategy.initiateLogin` after a null
+    // check would not compile. Same reason `initiateStrategyLogin` and
+    // `completeLogin` already did this.
+    final strategy = _strategy;
     state = AuthState.refreshing(session: state.session);
-    if (_strategy != null) {
+    if (strategy != null) {
       try {
-        final result = await _strategy.initiateLogin({
+        final result = await strategy.initiateLogin({
           'email': email,
           'password': password,
         });
+        if (!ref.mounted) return;
         _applyAuthResult(result);
       } catch (error) {
+        if (!ref.mounted) return;
         state = AuthState.error(error.toString(), session: state.session);
       }
       return;
@@ -154,10 +232,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final session = await _repository.login(email, password);
       await _persistTokens(session);
+      if (!ref.mounted) return;
       state = AuthState.authenticated(session);
     } on PlatformError catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.message, session: state.session);
     } catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.toString(), session: state.session);
     }
   }
@@ -174,8 +255,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.refreshing(session: state.session);
     try {
       final result = await strategy.initiateLogin(credentials);
+      if (!ref.mounted) return;
       _applyAuthResult(result);
     } catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.toString(), session: state.session);
     }
   }
@@ -198,8 +281,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.refreshing(session: state.session);
     try {
       final result = await strategy.completeLogin(token, proof);
+      if (!ref.mounted) return;
       _applyAuthResult(result);
     } catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.toString(), session: state.session);
     }
   }
@@ -256,10 +341,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final session = await _repository.signUp(email, password, displayName);
       await _persistTokens(session);
+      if (!ref.mounted) return;
       state = AuthState.authenticated(session);
     } on PlatformError catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.message, session: state.session);
     } catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.toString(), session: state.session);
     }
   }
@@ -268,11 +356,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Strategy path: defer entirely to the injected strategy. Cookie-bound
     // flows have no refresh-token to read, so we skip the secure-storage
     // probe.
-    if (_strategy != null) {
+    final strategy = _strategy;
+    if (strategy != null) {
       if (state.isAuthenticated) return;
       state = AuthState.refreshing(session: state.session);
       try {
-        final session = await _strategy.restoreSession();
+        final session = await strategy.restoreSession();
+        if (!ref.mounted) return;
         if (session != null) {
           state = AuthState.authenticated(session);
         } else {
@@ -280,6 +370,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
       } catch (e) {
         log('Strategy restoreSession failed: $e', name: 'AuthNotifier');
+        if (!ref.mounted) return;
         state = const AuthState.unauthenticated();
       }
       return;
@@ -296,10 +387,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // swallow it, clear any persisted tokens, and fall through to login.
       log('Token storage read failed during session restore: $e', name: 'AuthNotifier');
       await _clearPersistedTokens();
+      if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
       return;
     }
-    // Re-check after async gap — state may have been set externally (dev injection).
+    // Re-check after async gap — state may have been set externally (dev
+    // injection). Reading `state` after disposal throws in riverpod 3 where
+    // riverpod 2 tolerated it, so the liveness check has to come FIRST.
+    if (!ref.mounted) return;
     if (state.isAuthenticated) return;
     if (refreshToken == null || refreshToken.isEmpty) {
       state = const AuthState.unauthenticated();
@@ -310,12 +405,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final session = await _repository.refreshToken(refreshToken);
       await _persistTokens(session);
+      if (!ref.mounted) return;
       state = AuthState.authenticated(session);
     } on AuthError {
       await _clearPersistedTokens();
+      if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
     } on NetworkError catch (e) {
       log('Session restore failed (network): $e', name: 'AuthNotifier');
+      if (!ref.mounted) return;
       state = AuthState.error(
         'Network unavailable. Please check your connection.',
         session: state.session,
@@ -323,6 +421,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       log('Session restore failed: $e', name: 'AuthNotifier');
       await _clearPersistedTokens();
+      if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
     }
   }
@@ -359,10 +458,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       final session = await socialService.authenticate(provider);
       await _persistTokens(session);
+      if (!ref.mounted) return;
       state = AuthState.authenticated(session);
     } on PlatformError catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.message, session: state.session);
     } catch (error) {
+      if (!ref.mounted) return;
       state = AuthState.error(error.toString(), session: state.session);
     }
   }
@@ -399,6 +501,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       role: role ?? state.role,
     );
     await _persistTokens(newSession);
+    if (!ref.mounted) return;
     state = AuthState.authenticated(newSession);
   }
 
@@ -407,6 +510,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (token == null) return;
     try {
       final updatedUser = await _repository.updateProfile(token, displayName, avatarUrl);
+      if (!ref.mounted) return;
       state = AuthState.authenticated(PlatformSession(
         accessToken: state.session!.accessToken,
         refreshToken: state.session!.refreshToken,
@@ -421,9 +525,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    if (_strategy != null) {
+    final strategy = _strategy;
+    if (strategy != null) {
       try {
-        await _strategy.logout();
+        await strategy.logout();
       } catch (e) {
         log('Strategy logout failed (non-blocking): $e', name: 'AuthNotifier');
       }
@@ -431,6 +536,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Best-effort: clear any stale tokens that might still be persisted
       // from a pre-strategy boot.
       await _clearPersistedTokens();
+      if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
       return;
     }
@@ -443,6 +549,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     }
     await _clearPersistedTokens();
+    if (!ref.mounted) return;
     state = const AuthState.unauthenticated();
   }
 
@@ -469,6 +576,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       role: current.role,
     );
     await _persistTokens(updated);
+    if (!ref.mounted) return;
     state = AuthState.authenticated(updated);
   }
 
@@ -488,10 +596,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 /// against [PlatformRepository].
 final authStrategyProvider = Provider<AuthStrategy?>((ref) => null);
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(
-    repository: ref.watch(platformRepositoryProvider),
-    tokenStorage: ref.watch(tokenStorageProvider),
-    strategy: ref.watch(authStrategyProvider),
-  );
-});
+// Signature verified against the RESOLVED riverpod 3.3.2 rather than the
+// changelog: `NotifierProvider(this._createNotifier, {name, dependencies,
+// isAutoDispose = false, retry})` — riverpod-3.3.2/lib/src/providers/notifier/
+// orphan.dart:78-94. Keep-alive (no `isAutoDispose`), matching the lifetime the
+// StateNotifierProvider had.
+//
+// The IDENTIFIER `authProvider` and the state type `AuthState` are a contract
+// with 50-22 and 50-23, which run in the same wave and consume both by name.
+final authProvider =
+    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

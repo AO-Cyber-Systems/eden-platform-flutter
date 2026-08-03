@@ -22,13 +22,13 @@ void main() {
             // Directly set state by using the notifier
             return notifier;
           }),
-          // Override auth with a simple authenticated state
-          authProvider.overrideWith((ref) {
-            return AuthNotifier(
-              repository: FakePlatformRepository(),
-              tokenStorage: FakeTokenStorage(),
-            );
-          }),
+          // Auth is left as the real AuthNotifier; only its dependencies are
+          // faked. Constructor injection is gone in riverpod 3 (TRD 50-21),
+          // so the fakes arrive through the providers AuthNotifier.build()
+          // watches rather than through `AuthNotifier(...)`.
+          platformRepositoryProvider
+              .overrideWithValue(FakePlatformRepository()),
+          tokenStorageProvider.overrideWithValue(FakeTokenStorage()),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -65,11 +65,9 @@ void main() {
               selectedId: 'home',
             ));
           }),
-          authProvider.overrideWith((ref) {
-            return _PresetAuthNotifier(
-              AuthState.authenticated(session),
-            );
-          }),
+          authProvider.overrideWith(
+            () => _PresetAuthNotifier(AuthState.authenticated(session)),
+          ),
           platformRepositoryProvider
               .overrideWithValue(FakePlatformRepository()),
         ],
@@ -113,11 +111,9 @@ void main() {
             ));
             return navNotifier;
           }),
-          authProvider.overrideWith((ref) {
-            return _PresetAuthNotifier(
-              AuthState.authenticated(session),
-            );
-          }),
+          authProvider.overrideWith(
+            () => _PresetAuthNotifier(AuthState.authenticated(session)),
+          ),
           platformRepositoryProvider
               .overrideWithValue(FakePlatformRepository()),
         ],
@@ -146,15 +142,26 @@ class _PresetNavNotifier extends NavNotifier {
   }
 }
 
-/// An AuthNotifier that starts with a pre-set state.
+/// Pins [authProvider] at a fixed [AuthState] for widget tests.
+///
+/// TRD 50-21 moved AuthNotifier from `StateNotifier` to riverpod 3's
+/// `Notifier`, which has no constructor injection — the initial state comes
+/// from `build()` instead of a `super(...)` call plus a constructor body.
+///
+/// `super.build()` is deliberately NOT called: it resolves the real
+/// dependencies and kicks off a session restore whose async tail would
+/// overwrite the very state this fixture exists to hold. Not calling it also
+/// leaves the parent's `late` dependency fields unassigned, which is safe
+/// here because these tests only READ state — any auth method reached from a
+/// widget would fail loudly with a LateInitializationError rather than
+/// silently using a half-built notifier.
 class _PresetAuthNotifier extends AuthNotifier {
-  _PresetAuthNotifier(AuthState initialState)
-      : super(
-          repository: FakePlatformRepository(),
-          tokenStorage: FakeTokenStorage(),
-        ) {
-    state = initialState;
-  }
+  _PresetAuthNotifier(this._initialState);
+
+  final AuthState _initialState;
+
+  @override
+  AuthState build() => _initialState;
 }
 
 void _itemsOverrideTests() {
@@ -169,7 +176,7 @@ void _itemsOverrideTests() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider.overrideWithValue(fakeRepo),
           ],
           child: MaterialApp(
@@ -216,7 +223,7 @@ void _itemsOverrideTests() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
@@ -268,7 +275,7 @@ void _itemsOverrideTests() {
         ProviderScope(
           overrides: [
             authProvider.overrideWith(
-                (ref) => _PresetAuthNotifier(AuthState.authenticated(session))),
+                () => _PresetAuthNotifier(AuthState.authenticated(session))),
             platformRepositoryProvider
                 .overrideWithValue(FakePlatformRepository()),
           ],
