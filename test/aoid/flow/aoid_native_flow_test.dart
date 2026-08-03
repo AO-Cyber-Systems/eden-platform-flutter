@@ -27,7 +27,7 @@
 
 import 'dart:io';
 
-import 'package:eden_platform_flutter/aoid.dart';
+import 'package:eden_platform_flutter/eden_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../auth/fixtures/fake_aoid_endpoint.dart';

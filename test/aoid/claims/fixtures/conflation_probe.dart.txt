@@ -15,7 +15,7 @@
 // a count-based check while proving nothing. That is what the positiveControl
 // region is for.
 
-import 'package:eden_platform_flutter/aoid.dart';
+import 'package:eden_platform_flutter/eden_platform.dart';
 
 /// Consumes a value so the positive-control region has no unused locals.
 /// Takes `String` rather than `Object?` deliberately: an extension type is not

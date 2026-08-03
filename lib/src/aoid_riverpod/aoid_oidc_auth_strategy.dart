@@ -13,13 +13,17 @@
 // implementation. See docs/aoid-console-oauth-client.md in that repo for the
 // frozen contract this strategy implements.
 //
-// Lives on the ADAPTER side of the riverpod split (AOID obj-50 TRD 50-01)
-// because it `implements AuthStrategy`, the interface AuthNotifier — a
-// riverpod-2 StateNotifier — drives. Reachable via
-// `package:eden_platform_flutter/aoid_riverpod.dart`, never from aoid.dart.
-// (Its own import closure happens to be riverpod-free today; the placement is
-// a layering decision about where AuthStrategy belongs, not a present
-// technical necessity. 50-04 owns auth_strategy.dart.)
+// Reachable via `package:eden_platform_flutter/eden_platform.dart`.
+//
+// HISTORY: this file was placed on the ADAPTER side of a riverpod split (AOID
+// obj-50 TRD 50-01) because it `implements AuthStrategy`, the interface
+// AuthNotifier drives — and AuthNotifier was then a riverpod-2 StateNotifier,
+// so a riverpod-3 consumer could not reach this class through a riverpod-2
+// barrel. AuthNotifier is now a riverpod 3 `Notifier` (TRD 50-21) and TRD 50-24
+// folded both top-level AOID barrels into the single entrypoint, so the split
+// no longer has a boundary to defend. The `lib/src/aoid_riverpod/` DIRECTORY
+// stays as a layering marker — 50-04 owns auth_strategy.dart — but it is now
+// only that. (Its own import closure happens to be riverpod-free even so.)
 
 import 'dart:convert';
 

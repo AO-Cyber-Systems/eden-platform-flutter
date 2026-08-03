@@ -7,7 +7,7 @@
 // ANALYZER: it copies `fixtures/conflation_probe.dart.txt` into a dot-directory
 // inside the package (skipped by `flutter analyze`'s default sweep, but still
 // covered by `.dart_tool/package_config.json`, so
-// `package:eden_platform_flutter/aoid.dart` resolves), runs
+// `package:eden_platform_flutter/eden_platform.dart` resolves), runs
 // `dart analyze --format=json` over it, and asserts on the diagnostics.
 //
 // TWO RULES, both learned the hard way:
@@ -221,7 +221,8 @@ void main() {
         resolutionFailures,
         isEmpty,
         reason:
-            'the probe could not see package:eden_platform_flutter/aoid.dart. '
+            'the probe could not see '
+            'package:eden_platform_flutter/eden_platform.dart. '
             'Every reference would then be an error, and the "MUST NOT '
             'COMPILE" regions below would pass for entirely the wrong reason.\n'
             '${resolutionFailures.join('\n')}',

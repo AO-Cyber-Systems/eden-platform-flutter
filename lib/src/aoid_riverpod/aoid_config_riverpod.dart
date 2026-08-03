@@ -1,15 +1,20 @@
 // Riverpod-2 wiring for AoidConfig — the half of the old
 // lib/src/auth/aoid_config.dart that names providers.
 //
-// Split out by AOID objective 50 TRD 50-01. The plain [AoidConfig] value class
-// stayed riverpod-free in lib/src/aoid/aoid_config.dart so that
-// `package:eden_platform_flutter/aoid.dart` can be imported by a
-// flutter_riverpod 3.x consumer; everything here needs flutter_riverpod 2.x
-// and therefore lives behind `package:eden_platform_flutter/aoid_riverpod.dart`.
+// Split out by AOID objective 50 TRD 50-01, when the plain [AoidConfig] value
+// class had to stay riverpod-free in lib/src/aoid/aoid_config.dart so that a
+// riverpod-3 consumer could import it across a version boundary, while
+// everything here needed riverpod 2. Both halves now ship from the single
+// `package:eden_platform_flutter/eden_platform.dart` entrypoint: TRD 50-24
+// folded the two top-level AOID barrels in and deleted them, because the
+// boundary they routed around was removed by the riverpod 3 alignment
+// (50-CONTEXT.md D2). The directory split remains as a LAYERING marker only.
 //
-// Nothing under lib/src/aoid/ may import this file — the core must not depend
-// on the adapter layer. test/aoid/riverpod_free_gate_test.dart enforces both
-// directions.
+// Nothing under lib/src/aoid/ should import this file — the core should not
+// depend on the adapter layer. That was previously enforced by
+// test/aoid/riverpod_free_gate_test.dart, which TRD 50-24 deleted along with
+// the firewall it guarded; the layering is now a convention. See
+// doc/riverpod-3-migration.md §3.12.
 //
 // Behaviour is unchanged from the pre-split file; only the location moved.
 

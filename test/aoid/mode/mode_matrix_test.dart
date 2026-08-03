@@ -43,7 +43,10 @@ import 'package:eden_platform_flutter/src/models/platform_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../claims/fixtures/aoid_claim_fixtures.dart' as claim_fixtures;
-import '../riverpod_free_gate_test.dart' show stripComments;
+// Was '../riverpod_free_gate_test.dart' until TRD 50-24 deleted that file (it
+// asserted the property 50-CONTEXT.md D2 rejected). The helper itself has
+// nothing to do with riverpod and was relocated, not resurrected.
+import '../source_utils.dart' show stripComments;
 import '../storage/web_never_holds_refresh_token_test.dart'
     show SpyTokenStorage;
 

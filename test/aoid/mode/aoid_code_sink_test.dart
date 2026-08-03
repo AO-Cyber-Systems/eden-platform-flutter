@@ -25,7 +25,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import '../riverpod_free_gate_test.dart' show stripComments;
+// Was '../riverpod_free_gate_test.dart' until TRD 50-24 deleted that file (it
+// asserted the property 50-CONTEXT.md D2 rejected). The helper itself has
+// nothing to do with riverpod and was relocated, not resurrected.
+import '../source_utils.dart' show stripComments;
 
 /// The AOID issuer. The sink must NEVER post here — see this file's header.
 const kAoidIssuer = 'https://auth.aocyber.ai';

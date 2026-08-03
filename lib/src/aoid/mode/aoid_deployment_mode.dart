@@ -1,9 +1,15 @@
 // THE THREE AOID DEPLOYMENT MODES (50-CONTEXT.md D4), and the ONE selector.
 //
-// RIVERPOD-FREE BY CONSTRUCTION. Reachable from
-// `package:eden_platform_flutter/aoid.dart` via lib/src/aoid/parts/modes.dart,
-// whose transitive closure test/aoid/riverpod_free_gate_test.dart walks. Do not
-// add an import here that reaches flutter_riverpod.
+// Reachable from `package:eden_platform_flutter/eden_platform.dart` via
+// lib/src/aoid/parts/modes.dart.
+//
+// HISTORY: this file was riverpod-free by ENFORCED invariant, because
+// `lib/aoid.dart` was a riverpod-free barrel that a riverpod-3 consumer had to
+// be able to import while this package was still on riverpod 2. That version
+// boundary is gone (50-CONTEXT.md D2), the barrel was folded into
+// eden_platform.dart by TRD 50-24, and the closure-walking gate that enforced
+// it was deleted with it. The file still names no riverpod symbol, which is
+// worth keeping on its own merits — but it is now a preference, not a gate.
 //
 // ## Where the web refusal lives — READ BEFORE EDITING
 //

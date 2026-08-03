@@ -15,18 +15,46 @@
 
 export 'src/platform_config.dart';
 export 'src/analytics/analytics_provider.dart';
-// AOID module (AOID objective 50 TRD 50-01). The AOID surface moved from
-// src/auth/{pkce_generator,aoid_config,aoid_oidc_auth_strategy}.dart into
-// lib/src/aoid{,_riverpod}/ and is re-exported here through its two barrels,
-// so this file's exported SYMBOL SET is unchanged — every existing consumer
-// compiles untouched. Verified by test/aoid/eden_platform_surface_test.dart,
-// which names each relocated symbol; a diffstat cannot prove this.
+// ─── The AOID SDK ────────────────────────────────────────────────────────────
 //
-// aoid.dart is the riverpod-FREE half (importable by a flutter_riverpod 3.x
-// consumer such as AODex); aoid_riverpod.dart is the riverpod-2 adapter.
-// Consumers of THIS barrel are riverpod-2 already, so they get both.
-export 'aoid.dart';
-export 'aoid_riverpod.dart';
+// The AOID surface is part of this single entrypoint. It used to sit behind two
+// top-level barrels — `lib/aoid.dart` (riverpod-FREE) and `lib/aoid_riverpod.dart`
+// (the riverpod-2 adapter) — which TRD 50-24 FOLDED IN HERE and deleted.
+//
+// That split had exactly one cause: `AoidOidcAuthStrategy` depends on riverpod,
+// and while this package pinned riverpod 2 a riverpod-3 consumer (AODex) could
+// not reach the AOID client through a riverpod-2 barrel. It was a VERSION
+// BOUNDARY, not a layering decision, and 50-01's own headers said so — both
+// barrels were labelled TRANSITIONAL and named 50-24 as the TRD that would
+// retire them. Stages A–C removed the boundary (50-CONTEXT.md D2), so the split
+// was left defending nothing while still taxing every consumer with a choice of
+// entrypoint. See doc/riverpod-3-migration.md §3.12.
+//
+// `lib/src/aoid/**` and `lib/src/aoid_riverpod/**` STAY — only the two
+// top-level barrels went. In particular the seven part-barrels under
+// `lib/src/aoid/parts/` exist so that TRDs running in PARALLEL each own one
+// file instead of colliding on this one, and they are still doing that job.
+//
+// The full AOID surface resolving from this file alone is asserted by
+// test/aoid/eden_platform_surface_test.dart; a diffstat cannot prove it.
+export 'src/aoid/aoid_config.dart';
+export 'src/aoid/pkce.dart';
+export 'src/aoid/transport/aoid_endpoints.dart';
+// ONE PART-BARREL PER DOWNSTREAM TRD (carried over from lib/aoid.dart):
+//   storage  -> 50-02   claims  -> 50-03   native   -> 50-08
+//   modes    -> 50-09   widgets -> 50-11   redirect -> 50-12
+//   tenant   -> 50-13
+export 'src/aoid/parts/claims.dart';
+export 'src/aoid/parts/modes.dart';
+export 'src/aoid/parts/native.dart';
+export 'src/aoid/parts/redirect.dart';
+export 'src/aoid/parts/storage.dart';
+export 'src/aoid/parts/tenant.dart';
+export 'src/aoid/parts/widgets.dart';
+// The riverpod-facing half. Formerly lib/aoid_riverpod.dart.
+export 'src/aoid_riverpod/aoid_config_riverpod.dart';
+export 'src/aoid_riverpod/aoid_oidc_auth_strategy.dart';
+// ─────────────────────────────────────────────────────────────────────────────
 export 'src/auth/auth_provider.dart';
 export 'src/auth/auth_strategy.dart';
 export 'src/auth/login_screen.dart';

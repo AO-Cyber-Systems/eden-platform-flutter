@@ -56,8 +56,11 @@
 
 import 'dart:convert';
 
-import 'package:eden_platform_flutter/aoid.dart';
-import 'package:eden_platform_flutter/eden_platform.dart' show RedirectRequired;
+// This file used to take the AOID surface from `aoid.dart` and `RedirectRequired`
+// from `eden_platform.dart`. TRD 50-24 folded the two AOID barrels into
+// eden_platform.dart, so both now arrive through one import — which is the
+// single-entrypoint outcome the fold exists to produce.
+import 'package:eden_platform_flutter/eden_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 

@@ -1,10 +1,15 @@
 // AoidTokenStore — the AOID module's token-persistence seam, and the
 // refresh-token custody vocabulary the rest of the module speaks.
 //
-// RIVERPOD-FREE BY CONSTRUCTION. Reachable from
-// `package:eden_platform_flutter/aoid.dart` via lib/src/aoid/parts/storage.dart,
-// whose transitive closure test/aoid/riverpod_free_gate_test.dart walks. Do not
-// add an import here that reaches flutter_riverpod.
+// Reachable from `package:eden_platform_flutter/eden_platform.dart` via
+// lib/src/aoid/parts/storage.dart.
+//
+// HISTORY: this file was riverpod-free by ENFORCED invariant, because
+// `lib/aoid.dart` was a riverpod-free barrel a riverpod-3 consumer had to be
+// able to import while this package was still on riverpod 2. That version
+// boundary is gone (50-CONTEXT.md D2), the barrel was folded into
+// eden_platform.dart by TRD 50-24, and the closure-walking gate went with it.
+// The file still names no riverpod symbol; that is now a preference, not a gate.
 //
 // NO DEPENDENCY ON flutter_secure_storage — deliberately. This package pins
 // that plugin to 9.2.4 EXACTLY (pubspec.yaml: "DO NOT bump to 10.x, upstream

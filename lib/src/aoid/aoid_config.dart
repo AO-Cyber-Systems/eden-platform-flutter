@@ -1,16 +1,21 @@
 // R-ACL-04 AoidConfig — env-driven config for wiring AoidOidcAuthStrategy
 // into a consumer app.
 //
-// RIVERPOD-FREE BY CONSTRUCTION. This file is reachable from
-// `package:eden_platform_flutter/aoid.dart`, which a flutter_riverpod 3.x
-// consumer must be able to import (see lib/aoid.dart). The provider wiring
-// that used to live here — aoidConfigProvider, buildAoidStrategy,
-// buildAoidOverrides — now lives in
-// lib/src/aoid_riverpod/aoid_config_riverpod.dart and is re-exported from
-// lib/aoid_riverpod.dart. Both remain reachable from lib/eden_platform.dart,
-// so existing consumers are unaffected.
-// Enforced by test/aoid/riverpod_free_gate_test.dart — do not add an import
-// here that reaches riverpod.
+// Reachable from `package:eden_platform_flutter/eden_platform.dart`. The
+// provider wiring that used to live here — aoidConfigProvider,
+// buildAoidStrategy, buildAoidOverrides — lives in
+// lib/src/aoid_riverpod/aoid_config_riverpod.dart. Both are exported from the
+// single entrypoint, so existing consumers are unaffected.
+//
+// This file happens to name no riverpod symbol, and that is fine, but it is NO
+// LONGER AN ENFORCED INVARIANT. It was one while `lib/aoid.dart` existed as a
+// riverpod-free barrel for a riverpod-3 consumer to import across a version
+// boundary. AOID objective 50 (50-CONTEXT.md D2) removed that boundary by
+// migrating the package to riverpod 3, TRD 50-24 folded the barrel into
+// eden_platform.dart, and the gate that enforced the property was DELETED
+// rather than weakened — it asserted precisely what D2 rejected. Adding a
+// riverpod import here is a design choice to argue on its merits now, not a
+// gate violation. See doc/riverpod-3-migration.md §3.12.
 //
 // `bool.fromEnvironment`/`String.fromEnvironment` are COMPILE-TIME constants
 // — a widget/provider test cannot set them per test case. This value class

@@ -16,7 +16,7 @@
 
 import 'dart:io';
 
-import 'package:eden_platform_flutter/aoid.dart';
+import 'package:eden_platform_flutter/eden_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _sourcePath = 'lib/src/aoid/claims/tenant_ref.dart';
