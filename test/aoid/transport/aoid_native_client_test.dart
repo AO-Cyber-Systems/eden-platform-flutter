@@ -862,6 +862,87 @@ void main() {
         );
       },
     );
+
+    test('20 the message is a PURE FUNCTION of the code — the server\'s '
+        'error_description is never reflected', () async {
+      // ADDED AFTER MUTATION M6 SURVIVED. M6 made AoidError.message fall
+      // back to the server's error_description — the realistic "show the
+      // user what the server actually said" refactor — and all 25 tests
+      // stayed GREEN.
+      //
+      // Item 8 could not see it: it compares four causes that the SERVER
+      // already answers with identical descriptions, so a client reflecting
+      // that string produces four identical messages too. It asserts exactly
+      // what the broken implementation also produces (49-08's lesson).
+      // Item 11 could not see it either: the fixture's description carried
+      // no secret, so a reflected description leaked nothing (the nil-only-
+      // fixture trap).
+      //
+      // The property is that the client's rendering does not DEPEND on the
+      // server's string at all. So: vary the string, including embedding
+      // request input in it, and require the client's output to be constant.
+      Future<AoidError> errorWithDescription(String description) async {
+        final f = FakeAoidEndpoint(issuer: kFakeAoidIssuer);
+        f.scriptNativeCeremony([
+          FakeNativeErrorStep(
+            code: 'invalid_session',
+            description: description,
+            status: 400,
+          ),
+        ]);
+        final c = AoidNativeClient(
+          endpoints: AoidEndpoints.parse(kFakeAoidIssuer),
+          httpClient: f.client,
+        );
+        await c.start(
+          clientId: kFakeNativeClientId,
+          tenantId: kFakeTenantA,
+          redirectUri: kFakeRedirectUri,
+          codeChallenge: kFakeCodeChallenge,
+        );
+        try {
+          await c.verify(
+            authSession: kFakeHandle1,
+            clientId: kFakeNativeClientId,
+            tenantId: kFakeTenantA,
+            method: 'password',
+            factorFields: const {'password': 'SERVER-ECHO-PROBE-PASSWORD'},
+          );
+          fail('expected an AoidError');
+        } on AoidError catch (e) {
+          return e;
+        }
+      }
+
+      const canonical = AoidError(AoidErrorCode.invalidSession);
+      // A future server that starts distinguishing causes...
+      final replayish = await errorWithDescription('auth_session replayed');
+      final expiryish = await errorWithDescription('auth_session expired');
+      // ...and one that echoes request input into its description.
+      final echoing = await errorWithDescription(
+        'rejected SERVER-ECHO-PROBE-PASSWORD for native-handle-alpha-0001',
+      );
+
+      for (final e in [replayish, expiryish, echoing]) {
+        expect(
+          e.message,
+          canonical.message,
+          reason:
+              'the message must come from the fixed vocabulary in '
+              'aoid_error.dart, never from the wire',
+        );
+        expect(e.toString(), canonical.toString());
+      }
+      expect(replayish.message, expiryish.message);
+      expect(
+        echoing.toString(),
+        isNot(contains('SERVER-ECHO-PROBE-PASSWORD')),
+        reason:
+            'reflecting the server string is how request input reaches '
+            'a client message the day the server changes',
+      );
+      expect(echoing.toString(), isNot(contains(kFakeHandle1)));
+    });
   });
 }
 
