@@ -20,7 +20,7 @@ The alignment is split into four stages that land separately:
 | Stage | What | Owning TRD(s) | State |
 |---|---|---|---|
 | **Stage A** | **Version axis only.** `flutter_riverpod ^2.6.1 → ^3.0.0`, every moved symbol re-imported from `legacy.dart` / `misc.dart`. No API rewritten. | **50-06** | **DONE** |
-| **Stage B** | Per-notifier `StateNotifier → Notifier` rewrites, one notifier per TRD. | 50-20, 50-21, 50-22, 50-23 | TODO |
+| **Stage B** | Per-notifier `StateNotifier → Notifier` rewrites, one notifier per TRD. | 50-20, 50-21, 50-22, 50-23 | **DONE (§3.11)** |
 | **Stage C** | Barrel reunification — fold `networking.dart` back into `eden_platform.dart`. | 50-24 | TODO |
 | **Stage D** | Consumer migrations. | 50-25 (eden-biz/flutter), 50-26 (the rest) | TODO |
 
@@ -73,14 +73,15 @@ Each of these files carries an import marked **TEMPORARY** with its owning TRD:
 | File | Notifier | Lines | Removed by |
 |---|---|---:|---|
 | ~~`lib/src/auth/auth_provider.dart`~~ | `AuthNotifier`, `authProvider` | 499 | **50-21 — DONE (§3.8)** |
-| `lib/src/entitlements/entitlements_provider.dart` | `EntitlementsNotifier` (`:80`) | 216 | 50-23 |
+| ~~`lib/src/entitlements/entitlements_provider.dart`~~ | `EntitlementsNotifier` | 216 | **50-23 — DONE (§3.11)** |
 | ~~`lib/src/company/company_provider.dart`~~ | `CompanyNotifier`, `companyStateProvider` | 161 | **50-22 — DONE (§3.10)** |
 | ~~`lib/src/navigation/nav_provider.dart`~~ | `NavNotifier`, `navStateProvider` | 115 | **50-22 — DONE (§3.10)** |
 | ~~`lib/src/settings/settings_provider.dart`~~ | `SettingsNotifier`, `settingsProvider` | 88 | **50-22 — DONE (§3.10)** |
 
-**`lib/src/entitlements/entitlements_provider.dart` is the only shim left.** 50-23 has the
-identical shape to the two wired notifiers finished here and **no test file at all** —
-§3.10 is written specifically as the recipe it copies.
+**Every shim is now gone — there is no `legacy.dart` import anywhere in `lib/`.** 50-23
+took the last one; it had the identical shape to the two wired notifiers above and **no
+test file at all**, so it wrote the characterization suite first and applied §3.10 as the
+recipe. See §3.11, including the two pre-existing defects that suite exposed.
 
 `lib/src/analytics/analytics_provider.dart` is a plain `Provider` and needed no shim.
 `lib/src/providers/paginated_async_notifier.dart` already extended `AsyncNotifier` (a
@@ -717,6 +718,93 @@ The TRD budgeted "41 + 28 + 7 riverpod call sites" to migrate across the three t
 which is identical API on `StateNotifierProvider` and `NotifierProvider`. 50-21 measured
 the same thing for `auth_provider_test.dart`'s "25 + 4". Budget the *wiring*, not the call
 sites.
+
+---
+
+### 3.11 Stage B is COMPLETE — and the notifier that had no tests (TRD 50-23)
+
+`EntitlementsNotifier` was the last `legacy.dart` shim in `lib/`. It is on `Notifier`,
+with both `ref.listen` subscriptions and the bootstrap microtask inside `build()`, applied
+from §3.10 rather than re-derived. **Every notifier in the package is now on the riverpod 3
+API**, which is what 50-24's barrel reunification was gated on.
+
+#### 3.11.1 The finding that matters more than the port
+
+`test/entitlements_provider_test.dart` **did not exist**. A 208-line notifier and five
+derived providers — including `canUseFeatureProvider`, the deny-by-default gate every
+entitlements widget reads — had **zero** coverage, while all four sibling notifiers had
+test files. The suite was therefore written FIRST and made green against the unmodified
+`StateNotifier` code, so it functions as a control group rather than a description of
+whatever the code happened to do.
+
+That ordering paid for itself immediately: **the new tests exposed two defects that had
+been shipping unnoticed**, and being written pre-migration is what proves they are
+pre-existing rather than introduced by the port. Both were left `skip:`ped with the defect
+named for the duration of Task 1 — fixing behaviour and migrating a base class in one
+change destroys the attribution D2's staging exists to preserve.
+
+**Writing the characterization suite is not overhead on a migration of untested code. It
+is the only thing that makes the migration's central claim checkable, and on this file it
+found more than the migration did.**
+
+#### 3.11.2 The const-sentinel hazard, fourth occurrence — it is now a rule
+
+Measured on the **pre-migration `StateNotifier`** code, listener fires on a sign-out:
+
+| link | 1st sign-out | 2nd sign-out (already clear) | after this TRD |
+|---|---:|---:|---:|
+| `entitlementsStateProvider`   | 1 | **0** | **1** |
+| `currentPlanProvider`         | 1 | **0** | 0 — *correct, §3.10.6* |
+| `currentSubscriptionProvider` | 1 | **0** | 0 — *correct* |
+| `canUseFeatureProvider`       | 1 | **0** | 0 — *correct* |
+
+With `AuthState` (50-21) and `CompanyState`/`NavState` (50-22) that is **four independent
+occurrences in four files**. It is no longer a curiosity to screen for — assume it is
+present in **any** notifier that assigns a `const` sentinel, and check it by default.
+Remedy as before: `updateShouldNotify => true` on the notifier, never `operator ==` on the
+state class.
+
+The derived providers legitimately stay silent on a repeat, exactly as §3.10.6 predicted,
+and there is now an explicit test saying so, so nobody chases it.
+
+#### 3.11.3 The partial-fix distinguisher, confirmed on a second file
+
+§3.10.5 warned that de-consting `clear()` is a plausible-looking partial fix because the
+**no-token early return** assigns the sentinel too. `EntitlementsState` has both sites, and
+the mutation was run here: applying the partial fix **passes** the entire clear-based
+logout-chain test and fails **only** the repeated-early-return test. Cover both sites or a
+contributor ships a silent partial fix with a green suite.
+
+#### 3.11.4 Deny-by-default survived the bump — measured, not assumed
+
+`canUseFeatureProvider` returns `false` while `isLoading`. It behaves identically before
+and after the port. This was worth pinning rather than assuming: it is a **security
+posture**, and riverpod 3 changed when rebuilds happen, so a version bump could have
+altered it with no compile error. The test loads the fixture FIRST, so `analytics` is
+present *and allowed* at the moment of assertion — "returns false" therefore cannot pass
+because the list is empty, only because `isLoading` masks it.
+
+#### 3.11.5 Two independent clear routes make either one deletable in silence
+
+Entitlements clears from **both** the auth listener and the company listener. Deleting the
+company route's `if (next == null) clear()` **survived the entire suite**, because on a
+sign-out the auth route does the clearing. The branch is not redundant in production — a
+company can go null while the session is still valid (a tenant switch resolving to
+nothing, a membership revoked underneath the user), and without it the previous company's
+plan, quotas and flags stay on screen.
+
+Same shape as nav's redundancy in §3.10.6, and the same lesson: **test each route on its
+own, with the other route disabled.** The generalisation for 50-25/50-26 is that a
+"nothing happened" assertion must run against a fixture where the thing genuinely *would*
+have happened — signing out to remove the company also removes the token, and load()'s
+early return then swallows the very call the test is trying to detect.
+
+#### 3.11.6 What did NOT need changing
+
+Zero riverpod call sites in tests, for the third measurement in a row (§3.10.7): every one
+is `container.read(p)` / `.notifier`, identical on both provider types. `load`, `refresh`
+and `clear` bodies are byte-identical across the port — the diff removes only the import
+block, the class header and the provider closure.
 
 ---
 
