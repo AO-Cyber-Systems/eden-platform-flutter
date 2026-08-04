@@ -8,6 +8,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Used by example/aoid_quickstart/main.dart: Mode A needs an http.Client for
+  # both AoidNativeClient and HttpBffCodeSink, neither of which constructs its
+  # own transport (the consumer must be able to pass BrowserClient with
+  # withCredentials on a cross-origin BFF).
+  http: ^1.2.0
   # STAGE A of AOID objective 50's riverpod alignment (TRD 50-06). This must
   # track the parent package's constraint: `example` depends on
   # eden_platform_flutter by path, so a 2.x pin here makes `flutter pub get`
