@@ -147,11 +147,15 @@ void main() {
 
     test('one symbol from each POPULATED part-barrel', () {
       // NOTE — the TRD asks for "one symbol from each of the seven
-      // part-barrels". That is UNSATISFIABLE as written: three of the seven
-      // (redirect -> 50-12, tenant -> 50-13, widgets -> 50-11) are deliberately
-      // EMPTY placeholders whose owning TRDs have not run yet. They export
-      // nothing, so no symbol from them can be named. The next test asserts
-      // their emptiness is by design rather than breakage.
+      // part-barrels". That was UNSATISFIABLE when written: three of the seven
+      // (redirect -> 50-12, tenant -> 50-13, widgets -> 50-11) were deliberately
+      // EMPTY placeholders whose owning TRDs had not run yet. They exported
+      // nothing, so no symbol from them could be named. The next test asserts
+      // the REMAINING placeholders' emptiness is by design rather than breakage.
+      //
+      // 50-12 has since run and filled parts/redirect.dart, so it is named
+      // here now and dropped from the pending list below — exactly the handoff
+      // that test's failure message prescribes.
       final byPartBarrel = <String, Object?>{
         'parts/claims.dart  -> claims/aoid_claims.dart': AoidAccessClaims,
         'parts/claims.dart  -> claims/tenant_ref.dart': AoidIdClaims,
@@ -164,8 +168,13 @@ void main() {
             AoidNativeClient,
         'parts/native.dart  -> transport/aoid_error.dart': AoidError,
         'parts/native.dart  -> flow/aoid_native_flow.dart': AoidNativeFlow,
+        'parts/redirect.dart -> flow/aoid_redirect_options.dart':
+            AoidRedirectOptions,
+        'parts/redirect.dart -> flow/aoid_redirect_flow.dart': AoidRedirectFlow,
+        'parts/redirect.dart -> flow/aoid_verifier_stash.dart':
+            AoidVerifierStash,
       };
-      expect(byPartBarrel.length, greaterThanOrEqualTo(9));
+      expect(byPartBarrel.length, greaterThanOrEqualTo(12));
       byPartBarrel.forEach((where, symbol) {
         expect(symbol, isNotNull, reason: '$where no longer resolves');
       });
@@ -199,11 +208,14 @@ void main() {
       }
     });
 
-    test('the three unfilled part-barrels are empty BY DESIGN, each naming its '
+    test('the unfilled part-barrels are empty BY DESIGN, each naming its '
         'owning TRD', () {
-      // Without this, "redirect.dart exports nothing" is indistinguishable from
+      // Without this, "tenant.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
-      const pending = {'redirect': '50-12', 'tenant': '50-13', 'widgets': '50-11'};
+      //
+      // `redirect` was here until 50-12 filled it; it is now named in the
+      // populated-barrel test above instead.
+      const pending = {'tenant': '50-13', 'widgets': '50-11'};
       pending.forEach((name, trd) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(

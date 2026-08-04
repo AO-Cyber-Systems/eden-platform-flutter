@@ -18,4 +18,6 @@
 // header on riverpod 3's automatic provider retry.
 library;
 
+export '../flow/aoid_redirect_flow.dart';
 export '../flow/aoid_redirect_options.dart';
+export '../flow/aoid_verifier_stash.dart';
