@@ -148,12 +148,18 @@ void main() {
 
     test('one symbol from each POPULATED part-barrel', () {
       // NOTE — the TRD asks for "one symbol from each of the seven
-      // part-barrels". That is UNSATISFIABLE as written: two of the seven
-      // (redirect -> 50-12, tenant -> 50-13) are still deliberately EMPTY
-      // placeholders whose owning TRDs have not run yet. They export
-      // nothing, so no symbol from them can be named. The next test asserts
-      // their emptiness is by design rather than breakage.
-      // `widgets` (50-11) has since landed and is named below.
+      // part-barrels". That was UNSATISFIABLE when written: three of the seven
+      // (widgets -> 50-11, redirect -> 50-12, tenant -> 50-13) were deliberately
+      // EMPTY placeholders whose owning TRDs had not run yet. They exported
+      // nothing, so no symbol from them could be named. The next test asserts
+      // the REMAINING placeholders' emptiness is by design rather than breakage.
+      //
+      // 50-11 and 50-12 have both since run and filled parts/widgets.dart and
+      // parts/redirect.dart, so both are named here now and dropped from the
+      // pending list below — exactly the handoff that test's failure message
+      // prescribes. NOTE for whoever merges the next parallel TRD: this map is
+      // ADDITIVE and the pending list is SUBTRACTIVE. Resolving a conflict here
+      // by taking one side wholesale silently un-ships the other side's barrel.
       final byPartBarrel = <String, Object?>{
         'parts/claims.dart  -> claims/aoid_claims.dart': AoidAccessClaims,
         'parts/claims.dart  -> claims/tenant_ref.dart': AoidIdClaims,
@@ -173,8 +179,14 @@ void main() {
         'parts/widgets.dart -> widgets/aoid_mfa_form.dart': AoidMfaForm,
         'parts/widgets.dart -> widgets/aoid_login_theme.dart':
             const AoidLoginTheme(),
+        // Filled by TRD 50-12.
+        'parts/redirect.dart -> flow/aoid_redirect_options.dart':
+            AoidRedirectOptions,
+        'parts/redirect.dart -> flow/aoid_redirect_flow.dart': AoidRedirectFlow,
+        'parts/redirect.dart -> flow/aoid_verifier_stash.dart':
+            AoidVerifierStash,
       };
-      expect(byPartBarrel.length, greaterThanOrEqualTo(9));
+      expect(byPartBarrel.length, greaterThanOrEqualTo(12));
       byPartBarrel.forEach((where, symbol) {
         expect(symbol, isNotNull, reason: '$where no longer resolves');
       });
@@ -217,14 +229,16 @@ void main() {
 
     test('the remaining unfilled part-barrels are empty BY DESIGN, each naming '
         'its owning TRD', () {
-      // Without this, "redirect.dart exports nothing" is indistinguishable from
+      // Without this, "tenant.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
       //
-      // `widgets` (50-11) has LANDED and was dropped from this list — its
-      // symbols are named in `byPartBarrel` above instead, which is the
-      // handoff this test's failure message asks for. Do the same when 50-12
-      // and 50-13 land; do not weaken the assertion to keep the list intact.
-      const pending = {'redirect': '50-12', 'tenant': '50-13'};
+      // `widgets` (50-11) and `redirect` (50-12) have both LANDED and were both
+      // dropped from this list — their symbols are named in `byPartBarrel`
+      // above instead, which is the handoff this test's failure message asks
+      // for. Do the same when 50-13 lands; do not weaken the assertion to keep
+      // the list intact, and when merging parallel TRDs keep EVERY branch's
+      // removal — restoring one to resolve a conflict silently un-ships it.
+      const pending = {'tenant': '50-13'};
       pending.forEach((name, trd) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(
