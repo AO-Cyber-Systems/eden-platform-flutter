@@ -228,17 +228,17 @@ void main() {
     });
 
     test('the remaining unfilled part-barrels are empty BY DESIGN, each naming '
-        'its owning TRD', () {
+        'its owning TRD — and as of 50-14 there are none left', () {
       // Without this, "tenant.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
       //
-      // `widgets` (50-11) and `redirect` (50-12) have both LANDED and were both
-      // dropped from this list — their symbols are named in `byPartBarrel`
-      // above instead, which is the handoff this test's failure message asks
-      // for. Do the same when 50-13 lands; do not weaken the assertion to keep
-      // the list intact, and when merging parallel TRDs keep EVERY branch's
-      // removal — restoring one to resolve a conflict silently un-ships it.
-      const pending = {'tenant': '50-13'};
+      // 50-11 (widgets), 50-12 (redirect) and 50-13 (tenant) each ran in its own
+      // worktree off origin/main and each removed ITS OWN key from this map.
+      // TRD 50-14 merged all three; the three removals compose to an EMPTY map.
+      // Resolving that merge by taking any one branch wholesale would have
+      // restored another TRD's key and silently un-shipped a barrel that had in
+      // fact landed — so all three removals are kept here deliberately.
+      const pending = <String, String>{};
       pending.forEach((name, trd) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(
@@ -254,6 +254,33 @@ void main() {
           reason: 'parts/$name.dart must name its owning TRD ($trd)',
         );
       });
+
+      // An empty `pending` makes the loop above vacuous, which would read as a
+      // green while proving nothing. The complement is what carries the weight
+      // now: if nothing is pending then EVERY barrel must actually export
+      // something. This is what would fail if a merge resolution dropped one of
+      // the three branches' work while still emptying the pending list.
+      const allBarrels = <String>[
+        'storage',
+        'claims',
+        'native',
+        'modes',
+        'widgets',
+        'redirect',
+        'tenant',
+      ];
+      for (final name in allBarrels) {
+        if (pending.containsKey(name)) continue;
+        final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
+        expect(
+          RegExp(r"^\s*export\s+'", multiLine: true).hasMatch(src),
+          isTrue,
+          reason:
+              'parts/$name.dart is not in the pending list yet exports '
+              'nothing — either its owning TRD was un-shipped by a bad merge '
+              'resolution, or it belongs back in `pending`',
+        );
+      }
     });
   });
 
