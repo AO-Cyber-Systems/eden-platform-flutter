@@ -203,7 +203,11 @@ void main() {
         'owning TRD', () {
       // Without this, "redirect.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
-      const pending = {'redirect': '50-12', 'tenant': '50-13', 'widgets': '50-11'};
+      // 'tenant' left this list when TRD 50-13 filled parts/tenant.dart. Its
+      // surface is pinned by test/aoid/tenant/*, through this same barrel,
+      // rather than by another entry above — deliberately, to keep this
+      // shared file's diff to ONE line while 50-11 and 50-12 run concurrently.
+      const pending = {'redirect': '50-12', 'widgets': '50-11'};
       pending.forEach((name, trd) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(
