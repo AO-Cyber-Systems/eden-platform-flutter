@@ -44,7 +44,11 @@ dependencies:
   eden_platform_api_dart:
     git:
       url: https://github.com/AO-Cyber-Systems/eden-platform-api-dart.git
-      ref: main
+      # SHA-pinned, NOT `main`: a moving ref makes every consumer non-reproducible,
+      # and pub caches its resolution — TRD 50-16 hit a cached `main` that predated
+      # initiateSocialLogin and could not compile eden_platform.dart. 624eacfb is
+      # standalone main at the time of pinning.
+      ref: 624eacfb10de61a12cef20bf33c626ca2d3f8f3d
   go_router: ^14.0.0
   eden_ui_flutter:
     git:
