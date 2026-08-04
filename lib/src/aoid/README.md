@@ -59,9 +59,37 @@ one cookie in the response carries both `HttpOnly` and `SameSite` and refuses th
 otherwise — but that check **cannot fire on web**, because an httpOnly cookie is invisible to
 script by definition. It is a development-time and native-time check, not a guarantee.
 
-Mode A's wire contract (`POST` to your backend, `application/x-www-form-urlencoded`, fields `code`
-and `code_verifier`, success is any 2xx and the body is not read) is specified in full in
+Mode A's seam is `AoidCodeSink` — the one method (`submit`) that hands the authorization code and
+the PKCE verifier to *your* backend and gets a session back. `HttpBffCodeSink` is the supplied
+implementation; implement the interface yourself if your backend's shape differs. Its wire contract
+(`POST` to your backend, `application/x-www-form-urlencoded`, fields `code` and `code_verifier`,
+success is any 2xx and the body is not read) is specified in full in
 `lib/src/aoid/mode/aoid_code_sink.dart` and `http_bff_code_sink.dart`.
+
+> **An `AoidCodeSink` MUST NOT auto-retry `submit`.** An authorization code is single-use, and a
+> retry re-presents one that may already have been spent successfully. Failures surface as
+> `AoidBffExchangeError`, never `AoidError`: a broken app backend is not a rejected credential, and
+> collapsing the two makes every outage look to users like a wrong password.
+
+## The sealed credential widgets
+
+`AoidLoginForm` (password) and `AoidMfaForm` (second factor) own their own text controllers and post
+the credential **directly to the AOID issuer over TLS**. The plaintext never enters app-owned Dart.
+
+**The containment mechanism is the ABSENCE of API**, not a runtime guard. There is no per-keystroke
+callback, no value-bearing submit callback, no caller-supplied `TextEditingController` or
+`FocusNode`, no input formatters, no builder, and no public `State` — a widget cannot leak a value it
+never hands out. The `State` classes are private specifically because a public one can be named by an
+app-declared `GlobalKey`, whose `.currentState` reaches every private member on it, including the
+controller holding the password.
+
+The whole constructor surface is `{key, controller, theme}`. `controller` is an `AoidNativeFlow`,
+which exposes step / next / availableMethods / outcome and never the credential. `AoidLoginTheme` is
+**input-only** and carries no function-typed field, so it cannot become a side channel either.
+
+> **Do not add a "convenience" API letting an app supply its own password field.** It defeats the
+> containment guarantee entirely. `test/aoid/widgets/sealed_form_no_leak_test.dart` is a *source-level*
+> gate, because the property is the absence of a member and no runtime assertion can observe one.
 
 ## `EdenFeatureGate` is UI hinting ONLY
 
@@ -113,17 +141,18 @@ Reference implementation of the last hop, server-side:
 `eden-biz/go/internal/aoidverify/direct_verifier.go` and `internal/middleware/attested.go`.
 
 > **The client cannot verify an AOID token.** JWKS fetch, algorithm pinning and clock-skew tolerance
-> all belong on a server. The Dart decoders are named `decodeUnverified` for exactly that reason —
-> they read claims for UI purposes and prove nothing. Never make a trust decision on their output.
+> all belong on a server. The two Dart decoders — `AoidAccessClaims.decodeUnverified` and
+> `AoidIdClaims.decodeUnverified` — are named for exactly that reason: they read claims for UI
+> purposes and prove nothing. Never make a trust decision on their output.
 
 ## The `tnt` trap
 
 AOID emits a claim named `tnt` on **both** tokens, with different types and different meanings.
 
-| Token | `tnt` is | Changes on a tenant switch? | Dart type |
-| --- | --- | --- | --- |
-| **access token** | the **ACTIVE** tenant's **SLUG** (e.g. `acme`) | **yes** — it follows the switch | `AoidActiveTenantSlug` |
-| **id_token** | the **HOME** tenant's **UUID** | no — stable across switches | `AoidHomeTenantId` |
+| Token | `tnt` is | Changes on a tenant switch? | Dart type | Read it from |
+| --- | --- | --- | --- | --- |
+| **access token** | the **ACTIVE** tenant's **SLUG** (e.g. `acme`) | **yes** — it follows the switch | `AoidActiveTenantSlug` | `AoidAccessClaims.activeTenant` |
+| **id_token** | the **HOME** tenant's **UUID** | no — stable across switches | `AoidHomeTenantId` | `AoidIdClaims.homeTenant` |
 
 When nothing is selected, the access token's `tnt` equals the home tenant's **slug** — so the two
 values still differ in *type*, and code that compares them as strings is wrong even in the simple
