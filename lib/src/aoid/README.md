@@ -181,12 +181,21 @@ request with no useful error.
 
 The registered values, read from `aoid/config/oauth-clients.yaml`:
 
-| Client | Platform | Registered redirect URI | `callbackScheme` |
-| --- | --- | --- | --- |
-| `eden-biz` | web (backend RP) | `https://api.biz.aocyber.ai/auth/oidc/callback` | n/a — confidential |
-| `eden-biz-companion` | mobile | `edenbiz://auth` | `edenbiz` |
-| `aodex` | mobile | `aodex://auth-callback` | `aodex` |
-| `aodex` | web | `https://dex.aocyber.ai/auth.html` | `https` |
+| `client_id` (the literal value) | App | Platform | Registered redirect URI | `callbackScheme` |
+| --- | --- | --- | --- | --- |
+| `eden-biz` | Eden Biz | web (backend RP) | `https://api.biz.aocyber.ai/auth/oidc/callback` | n/a — confidential |
+| `eden-biz-companion` | Eden Biz Companion | mobile | `edenbiz://auth` | `edenbiz` |
+| `pY28TzI1IUO8WOkD5o8jPQ` | AODex | mobile | `aodex://auth-callback` | `aodex` |
+| `pY28TzI1IUO8WOkD5o8jPQ` | AODex | web | `https://dex.aocyber.ai/auth.html` | `https` |
+
+> **AODex's `client_id` is `pY28TzI1IUO8WOkD5o8jPQ`, not `aodex`.** The opaque value is the
+> registered one; `AODex` is only the `client_name`, and `aodex-pilot` (aodex/go's `envDefault`) is
+> deliberately *not* it either. `aodex` is the URL **scheme**, which is a different field. Sending
+> `client_id=aodex` to the authorize endpoint fails. AODex is also a **confidential** client
+> (`client_secret_basic`) — its Go BFF holds the secret — so the mobile leg is Mode A, not Mode B.
+
+None of the four registered URIs has a trailing slash. Verified against `aoid/config/oauth-clients.yaml`
+by TRD 50-14; `test/aoid/readme_claims_gate_test.dart` asserts the slashed variants never appear here.
 
 Where the scheme is registered on the device:
 
