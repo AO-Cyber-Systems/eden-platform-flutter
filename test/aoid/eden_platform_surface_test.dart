@@ -127,11 +127,12 @@ void main() {
   // makes that a contract rather than a claim: every symbol below arrives
   // through the single entrypoint imported at the top of this file, so a
   // half-applied fold is a compile error here.
-  group('item 8 — the whole AOID SDK resolves from eden_platform.dart alone',
-      () {
+  group('item 8 — the whole AOID SDK resolves from eden_platform.dart alone', () {
     test('client, config, endpoints and strategy — the four the TRD names', () {
-      expect(PkceGenerator.generate().codeVerifier.length,
-          greaterThanOrEqualTo(43));
+      expect(
+        PkceGenerator.generate().codeVerifier.length,
+        greaterThanOrEqualTo(43),
+      );
       expect(PkcePair, isNotNull);
       expect(AoidConfig, isNotNull);
       expect(AoidEndpoints.parse('https://x.example').issuer.host, 'x.example');
@@ -147,11 +148,12 @@ void main() {
 
     test('one symbol from each POPULATED part-barrel', () {
       // NOTE — the TRD asks for "one symbol from each of the seven
-      // part-barrels". That is UNSATISFIABLE as written: three of the seven
-      // (redirect -> 50-12, tenant -> 50-13, widgets -> 50-11) are deliberately
-      // EMPTY placeholders whose owning TRDs have not run yet. They export
+      // part-barrels". That is UNSATISFIABLE as written: two of the seven
+      // (redirect -> 50-12, tenant -> 50-13) are still deliberately EMPTY
+      // placeholders whose owning TRDs have not run yet. They export
       // nothing, so no symbol from them can be named. The next test asserts
       // their emptiness is by design rather than breakage.
+      // `widgets` (50-11) has since landed and is named below.
       final byPartBarrel = <String, Object?>{
         'parts/claims.dart  -> claims/aoid_claims.dart': AoidAccessClaims,
         'parts/claims.dart  -> claims/tenant_ref.dart': AoidIdClaims,
@@ -164,6 +166,13 @@ void main() {
             AoidNativeClient,
         'parts/native.dart  -> transport/aoid_error.dart': AoidError,
         'parts/native.dart  -> flow/aoid_native_flow.dart': AoidNativeFlow,
+        // Filled by TRD 50-11. The sealed forms are only useful if a consuming
+        // app can actually name them from the one import, so this entry is the
+        // reason the barrel export exists at all.
+        'parts/widgets.dart -> widgets/aoid_login_form.dart': AoidLoginForm,
+        'parts/widgets.dart -> widgets/aoid_mfa_form.dart': AoidMfaForm,
+        'parts/widgets.dart -> widgets/aoid_login_theme.dart':
+            const AoidLoginTheme(),
       };
       expect(byPartBarrel.length, greaterThanOrEqualTo(9));
       byPartBarrel.forEach((where, symbol) {
@@ -179,7 +188,13 @@ void main() {
       // parallel from clobbering each other on one shared barrel file — so it
       // is carried forward here rather than deleted with the firewall.
       const partBarrels = <String>[
-        'storage', 'claims', 'native', 'modes', 'widgets', 'redirect', 'tenant',
+        'storage',
+        'claims',
+        'native',
+        'modes',
+        'widgets',
+        'redirect',
+        'tenant',
       ];
       expect(partBarrels.length, 7);
 
@@ -188,7 +203,8 @@ void main() {
         expect(
           File('lib/src/aoid/parts/$name.dart').existsSync(),
           isTrue,
-          reason: 'missing part-barrel lib/src/aoid/parts/$name.dart — a '
+          reason:
+              'missing part-barrel lib/src/aoid/parts/$name.dart — a '
               'downstream TRD has nowhere to write',
         );
         expect(
@@ -199,38 +215,56 @@ void main() {
       }
     });
 
-    test('the three unfilled part-barrels are empty BY DESIGN, each naming its '
-        'owning TRD', () {
+    test('the remaining unfilled part-barrels are empty BY DESIGN, each naming '
+        'its owning TRD', () {
       // Without this, "redirect.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
-      const pending = {'redirect': '50-12', 'tenant': '50-13', 'widgets': '50-11'};
+      //
+      // `widgets` (50-11) has LANDED and was dropped from this list — its
+      // symbols are named in `byPartBarrel` above instead, which is the
+      // handoff this test's failure message asks for. Do the same when 50-12
+      // and 50-13 land; do not weaken the assertion to keep the list intact.
+      const pending = {'redirect': '50-12', 'tenant': '50-13'};
       pending.forEach((name, trd) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(
           RegExp(r"^\s*export\s+'", multiLine: true).hasMatch(src),
           isFalse,
-          reason: 'parts/$name.dart now has exports — update the test above to '
+          reason:
+              'parts/$name.dart now has exports — update the test above to '
               'name one of its symbols, and drop it from this list',
         );
-        expect(src, contains(trd),
-            reason: 'parts/$name.dart must name its owning TRD ($trd)');
+        expect(
+          src,
+          contains(trd),
+          reason: 'parts/$name.dart must name its owning TRD ($trd)',
+        );
       });
     });
   });
 
   group('item 9 — the fold is complete, not half-applied', () {
     test('neither lib/aoid.dart nor lib/aoid_riverpod.dart exists', () {
-      expect(File('lib/aoid.dart').existsSync(), isFalse,
-          reason: 'lib/aoid.dart was folded into eden_platform.dart by 50-24');
-      expect(File('lib/aoid_riverpod.dart').existsSync(), isFalse,
-          reason: 'lib/aoid_riverpod.dart was folded in by 50-24');
+      expect(
+        File('lib/aoid.dart').existsSync(),
+        isFalse,
+        reason: 'lib/aoid.dart was folded into eden_platform.dart by 50-24',
+      );
+      expect(
+        File('lib/aoid_riverpod.dart').existsSync(),
+        isFalse,
+        reason: 'lib/aoid_riverpod.dart was folded in by 50-24',
+      );
       // ...and the firewall gate that guarded the split went with it. It
       // asserted that the AOID surface never resolves a riverpod symbol —
       // precisely the property 50-CONTEXT.md D2 rejected — so it was DELETED
       // rather than weakened. A softened version would have kept the firewall's
       // premise alive in the suite after the code abandoned it.
-      expect(File('test/aoid/riverpod_free_gate_test.dart').existsSync(), isFalse,
-          reason: 'the riverpod firewall gate asserts what D2 rejected');
+      expect(
+        File('test/aoid/riverpod_free_gate_test.dart').existsSync(),
+        isFalse,
+        reason: 'the riverpod firewall gate asserts what D2 rejected',
+      );
     });
 
     test('nothing anywhere in the repository still imports either barrel', () {
@@ -263,11 +297,18 @@ void main() {
         }
       }
       // Non-vacuity: a broken walk that scanned nothing would pass silently.
-      expect(scanned, greaterThan(100),
-          reason: 'only $scanned files scanned — the walk is broken, so the '
-              'emptiness assertion below would prove nothing');
-      expect(offenders, isEmpty,
-          reason: 'these still import a deleted barrel: $offenders');
+      expect(
+        scanned,
+        greaterThan(100),
+        reason:
+            'only $scanned files scanned — the walk is broken, so the '
+            'emptiness assertion below would prove nothing',
+      );
+      expect(
+        offenders,
+        isEmpty,
+        reason: 'these still import a deleted barrel: $offenders',
+      );
     });
 
     test('POSITIVE CONTROL: that scan really does detect a dangling import', () {
@@ -278,10 +319,14 @@ void main() {
         r"aoid(?:_riverpod)?\.dart'",
         multiLine: true,
       );
-      expect(re.hasMatch("import 'package:eden_platform_flutter/aoid.dart';"),
-          isTrue);
       expect(
-        re.hasMatch("import 'package:eden_platform_flutter/aoid_riverpod.dart';"),
+        re.hasMatch("import 'package:eden_platform_flutter/aoid.dart';"),
+        isTrue,
+      );
+      expect(
+        re.hasMatch(
+          "import 'package:eden_platform_flutter/aoid_riverpod.dart';",
+        ),
         isTrue,
       );
       expect(
@@ -297,7 +342,9 @@ void main() {
       );
       // The surviving entrypoint must not be caught by the pattern.
       expect(
-        re.hasMatch("import 'package:eden_platform_flutter/eden_platform.dart';"),
+        re.hasMatch(
+          "import 'package:eden_platform_flutter/eden_platform.dart';",
+        ),
         isFalse,
       );
     });
