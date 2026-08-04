@@ -332,8 +332,9 @@ class _LiveSession {
     container.read(authProvider);
     for (var i = 0; i < 20; i++) {
       await Future<void>.delayed(Duration.zero);
-      if (container.read(authProvider).status == AuthStatus.authenticated)
+      if (container.read(authProvider).status == AuthStatus.authenticated) {
         break;
+      }
     }
     return _LiveSession._(container, storage);
   }
@@ -669,7 +670,8 @@ void main() {
         } catch (e) {
           thrown = e;
         }
-        final rendered = '${thrown!} ${(thrown as AoidTenantDenied).message}';
+        final denial = thrown! as AoidTenantDenied;
+        final rendered = '$denial ${denial.message}';
 
         // The target slug would tell an attacker WHICH probe failed.
         expect(rendered, isNot(contains(_outsiderSlug)));
@@ -680,7 +682,7 @@ void main() {
         expect(rendered, isNot(contains('invalid_grant')));
         expect(rendered, isNot(contains('invalid or expired refresh token')));
         // ...and it must still say something a human can read.
-        expect((thrown as AoidTenantDenied).message, isNotEmpty);
+        expect(denial.message, isNotEmpty);
       },
     );
 

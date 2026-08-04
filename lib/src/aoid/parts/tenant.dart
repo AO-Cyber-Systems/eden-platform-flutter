@@ -20,5 +20,7 @@
 // `aoidTenantSwitchRetry` in tenant/aoid_tenant_error.dart).
 library;
 
+export '../tenant/aoid_refresh_single_flight.dart';
+export '../tenant/aoid_tenant_controller.dart';
 export '../tenant/aoid_tenant_error.dart';
 export '../transport/aoid_token_client.dart';
