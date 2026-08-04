@@ -372,6 +372,56 @@ void main() {
       expect(h.fake.calls.last['active_tenant'], tenantBSlug);
       expect(h.controller.activeTenant?.slug, tenantBSlug);
     });
+
+    test(
+      'item 6c — a REAL ProactiveRefresh collapses onto the switch: the slot '
+      'is shared IN FACT, not merely by convention',
+      () async {
+        final h = _modeB();
+        // The wiring this module documents, built for real rather than
+        // simulated. ProactiveRefresh's `restoreSession` seam IS the
+        // composition point, so both callers land in the controller's slot.
+        //
+        // Without this test "shares the single-flight slot" would rest on a
+        // doc comment. Two slots that do not collapse rotate the refresh token
+        // twice, and the second rotation invalidates the first — the user is
+        // signed out by the very mechanism meant to keep them signed in.
+        final proactive = ProactiveRefresh(
+          // Expiring in 30s, inside ProactiveRefresh's default 2-minute
+          // threshold, so refreshIfNeeded actually fires instead of no-opping.
+          getAccessToken: () => buildJwt({
+            'exp':
+                DateTime.now()
+                    .toUtc()
+                    .add(const Duration(seconds: 30))
+                    .millisecondsSinceEpoch ~/
+                1000,
+          }),
+          restoreSession: h.controller.refreshSession,
+        );
+
+        final gate = Completer<void>();
+        h.fake.gate = gate;
+
+        final switching = h.controller.switchTo(
+          const AoidActiveTenantSlug(tenantBSlug),
+        );
+        final refreshing = proactive.refreshIfNeeded();
+
+        gate.complete();
+        await Future.wait([switching, refreshing]);
+
+        expect(
+          h.fake.calls,
+          hasLength(1),
+          reason:
+              'ProactiveRefresh must not mint a second rotation while a '
+              'switch is in flight',
+        );
+        expect(h.fake.calls.single['active_tenant'], tenantBSlug);
+        expect(h.controller.activeTenant?.slug, tenantBSlug);
+      },
+    );
   });
 
   group('modes A and C — the caller does not branch', () {
