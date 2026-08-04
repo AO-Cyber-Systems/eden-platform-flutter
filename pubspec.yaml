@@ -49,7 +49,7 @@ dependencies:
   eden_ui_flutter:
     git:
       url: https://github.com/AO-Cyber-Systems/eden-ui-flutter.git
-      ref: c50bc165e136f528ee3874e434da671c96018019
+      ref: 603eda879214a890c0ad0e906fabc3c6146a7e2f
   # JWT exp-claim decoding for ProactiveRefresh (upstream from eden-biz).
   dart_jsonwebtoken: ^2.0.0
   # Networking — gold-standard dio_client donated from AODex.
