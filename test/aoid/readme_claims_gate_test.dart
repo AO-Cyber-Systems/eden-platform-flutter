@@ -419,6 +419,188 @@ void main() {
     });
   });
 
+  // ── anti-rot, part 2: BEHAVIOURAL claims ─────────────────────────────────
+  //
+  // The group above binds NAMES and PATHS. That is necessary and not
+  // sufficient: it was FALSIFIED during 50-14 by a break that left every
+  // documented symbol resolving and every cited file in place, while the
+  // source silently contradicted the document.
+  //
+  // The break: giving `AoidRedirectOptions.callbackScheme` a default value of
+  // `'edenbiz'`. The README states it is "REQUIRED and has no default" because
+  // this package ONCE SHIPPED a hardcoded personal scheme to every consumer.
+  // Every test in this file stayed green. That is precisely the drift a README
+  // gate exists to catch, and name-resolution cannot see it.
+  //
+  // So these bind the CONTRACT rather than the identifier. They fire on a
+  // source edit with the README untouched.
+  group('anti-rot — the README\'s BEHAVIOURAL claims bind to the source', () {
+    /// Reads a source file, failing loudly rather than vacuously if it moved.
+    String source(String path) {
+      final f = File(path);
+      expect(
+        f.existsSync(),
+        isTrue,
+        reason:
+            'MISSING $path. This predicate inspects that file\'s TEXT; an '
+            'absent file would read as empty and pass a negative assertion.',
+      );
+      return f.readAsStringSync();
+    }
+
+    test('`AoidRedirectOptions.callbackScheme` is still REQUIRED with NO '
+        'default', () {
+      const path = 'lib/src/aoid/flow/aoid_redirect_options.dart';
+      final src = source(path);
+
+      // Anchor first: if the constructor is renamed away, the two assertions
+      // below would both hold on an unrelated file and prove nothing.
+      expect(
+        src.contains('AoidRedirectOptions({'),
+        isTrue,
+        reason:
+            'The AoidRedirectOptions constructor is no longer declared in the '
+            'shape this test inspects, so the assertions below are unanchored.',
+      );
+      expect(
+        RegExp(r'required\s+this\.callbackScheme\s*,').hasMatch(src),
+        isTrue,
+        reason:
+            'The README states `AoidRedirectOptions.callbackScheme` is '
+            'REQUIRED and has no default, and `callbackScheme` is no longer a '
+            'required parameter. A shared library CANNOT guess a per-app '
+            'bundle identifier: this package previously shipped ONE hardcoded '
+            'personal scheme to every consumer, and every app that did not '
+            'override it sent its users to somebody else\'s callback.',
+      );
+      // The complement, and the half that catches the real drift: `required`
+      // being present somewhere does not mean a default was not added.
+      expect(
+        RegExp(r'this\.callbackScheme\s*=').hasMatch(src),
+        isFalse,
+        reason:
+            '`callbackScheme` has been given a DEFAULT VALUE. The README says '
+            'it has none, and the default silently re-introduces exactly the '
+            'defect the "Redirect URI registration" section documents — a '
+            'consumer who never sets it now compiles, ships, and sends its '
+            'users to a scheme registered to a different application. AOID '
+            'exact-matches redirect URIs, so this fails at the authorize '
+            'endpoint with no useful error.',
+      );
+    });
+
+    test('the TWO RETRY POSTURES are still structurally different — the '
+        'README\'s "Known limitations" table describes a real seam', () {
+      // 50-12 returns a SEALED VALUE and never throws, so riverpod 3's
+      // automatic retry is structurally unreachable. 50-13 THROWS, defended by
+      // an opt-in policy. The README contrasts them explicitly and calls the
+      // sealed form the stronger of the two. If 50-15's recorded follow-up
+      // converts the tenant switch to a sealed return, THIS TEST GOES RED and
+      // the table must be rewritten — which is the intended handoff, not a
+      // breakage.
+
+      // Posture 1 — sealed value. `AoidRedirectOutcome` is a sealed supertype,
+      // and it is NOT an Exception: there is nothing for a retry to catch.
+      expect(
+        const AoidRedirectCancelled(),
+        isA<AoidRedirectOutcome>(),
+        reason:
+            'AoidRedirectCancelled is no longer an AoidRedirectOutcome, so '
+            'the sealed-return posture the README documents has changed.',
+      );
+      expect(
+        const AoidRedirectCancelled(),
+        isNot(isA<Exception>()),
+        reason:
+            'A redirect outcome is now an Exception. The README states '
+            '`AoidRedirectFlow.start()` returns a sealed value for every '
+            'EXPECTED outcome and never throws — which is why riverpod\'s '
+            '10-attempt / ~38s retry window is structurally unreachable for '
+            'every consumer, including ones not yet written. If outcomes can '
+            'be thrown, that guarantee is gone and the table is wrong.',
+      );
+      expect(
+        RegExp(r'Future<AoidRedirectOutcome>\s+start\s*\(').hasMatch(
+          source('lib/src/aoid/flow/aoid_redirect_flow.dart'),
+        ),
+        isTrue,
+        reason:
+            '`start()` no longer returns Future<AoidRedirectOutcome>. The '
+            'README\'s retry-posture table names that return type as the '
+            'reason riverpod retry cannot engage.',
+      );
+
+      // Posture 2 — a throw, defended by an opt-in policy. Deliberately NOT
+      // the sealed form: 50-13's contract mandated the throw in three places
+      // whose gates were already proven.
+      expect(
+        const AoidTenantDenied(),
+        isA<Exception>(),
+        reason:
+            'AoidTenantDenied is no longer an Exception. The README documents '
+            'TWO postures and says the tenant switch THROWS, defended by '
+            '`aoidTenantSwitchRetry`. If this became a sealed value, the seam '
+            'the table describes has closed — rewrite that table (this is '
+            '50-15\'s recorded follow-up landing), do not delete this test.',
+      );
+      expect(
+        const AoidTenantDenied(),
+        isNot(isA<Error>()),
+        reason:
+            'AoidTenantDenied became an Error. riverpod 3 declines Error and '
+            'retries every ordinary Exception — that asymmetry is the entire '
+            'reason `aoidTenantSwitchRetry` exists. Making it an Error would '
+            'silently make the policy redundant and the README misleading.',
+      );
+      expect(
+        aoidTenantSwitchRetry(0, const AoidTenantDenied()),
+        isNull,
+        reason:
+            '`aoidTenantSwitchRetry` no longer DECLINES to retry a denial. A '
+            'tenant denial is a permission answer, not a transient fault: '
+            'retrying it re-asks a question already answered, and the README '
+            'presents this policy as the defence that makes the throwing '
+            'posture safe.',
+      );
+      expect(
+        RegExp(r'Future<AoidActiveTenantSlug>\s+switchTo\s*\(').hasMatch(
+          source('lib/src/aoid/tenant/aoid_tenant_controller.dart'),
+        ),
+        isTrue,
+        reason:
+            '`AoidTenantController.switchTo` no longer returns a bare '
+            'Future<AoidActiveTenantSlug>. The README contrasts this with '
+            '`start()`\'s sealed return; if switchTo now returns a sealed '
+            'result, the two postures have converged and the table is stale.',
+      );
+    });
+
+    test('SDK-07 stays OPEN — no authenticated "list my tenants" surface has '
+        'appeared', () {
+      // The README states plainly that this SDK can PERFORM a switch but
+      // cannot POPULATE a picker, because AOID has no authenticated tenant-list
+      // RPC. If one is added, the "Known limitations" entry becomes false — and
+      // a stale limitation is worse than none, because a reader who works
+      // around it is doing unnecessary work.
+      final controller = source(
+        'lib/src/aoid/tenant/aoid_tenant_controller.dart',
+      );
+      expect(
+        RegExp(
+          r'(listTenants|availableTenants|myTenants|tenantList)',
+        ).hasMatch(controller),
+        isFalse,
+        reason:
+            'Something tenant-LIST shaped now exists on the tenant controller. '
+            'The README\'s SDK-07 entry says the host application must supply '
+            'the list because AOID exposes no authenticated way to fetch it '
+            '(ResolveWorkspacesByEmail is pre-login and enumeration-safe, '
+            'ListTenants is an admin surface, ResolveMembership resolves '
+            'exactly one). If that changed, close SDK-07 in the README.',
+      );
+    });
+  });
+
   // ── item 9 — THE POSITIVE CONTROL ────────────────────────────────────────
   //
   // Without this, every test above passes whenever its predicate is broken,
