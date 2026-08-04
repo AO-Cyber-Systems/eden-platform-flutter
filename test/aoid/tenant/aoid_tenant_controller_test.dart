@@ -424,6 +424,58 @@ void main() {
     );
   });
 
+  group('a RETRIED switch cannot stomp state mid-flight', () {
+    // 50-12 found that its start() mints fresh PKCE and OVERWRITES the stored
+    // verifier, so a silent riverpod retry would clobber an in-flight same-tab
+    // fallback — breaking a login the user could still have completed. The
+    // analogous hazard here is the refresh token: a successful grant has
+    // ALREADY rotated it server-side, so a retry that re-presents the OLD
+    // value gets invalid_grant and, because the call carried active_tenant,
+    // that surfaces as a spurious AoidTenantDenied — a phantom "you have no
+    // access" for a switch that actually succeeded.
+    //
+    // Persist-first is what defuses it: the rotated pair is in the store
+    // before anything can fail, so a retry re-reads the CURRENT token.
+    test(
+      'a second attempt after a rotation re-reads the ROTATED token, so it is '
+      'not a phantom denial',
+      () async {
+        final h = _modeB();
+        // First switch succeeds and rotates.
+        await h.controller.switchTo(const AoidActiveTenantSlug(tenantBSlug));
+        final rotated = h.fake.liveRefreshToken;
+        expect(rotated, isNot('refresh-token-0001'));
+
+        // A retry — whatever drives it — must not present the dead token.
+        final again = await h.controller.switchTo(
+          const AoidActiveTenantSlug(_tenantCSlug),
+        );
+        expect(again.slug, _tenantCSlug);
+        expect(h.fake.calls.last['refresh_token'], rotated);
+      },
+    );
+
+    test(
+      'the R4 case too: a switch whose verification FAILED still leaves the '
+      'store holding the live token, so the next attempt is not a denial',
+      () async {
+        final h = _modeB();
+        h.fake.lieWithSlug = homeTenantSlug;
+        await expectLater(
+          h.controller.switchTo(const AoidActiveTenantSlug(tenantBSlug)),
+          throwsA(isA<AoidTransportError>()),
+        );
+        // The rotation happened server-side and was persisted despite the
+        // failure. A retry therefore succeeds rather than reporting a denial
+        // the user cannot act on.
+        final landed = await h.controller.switchTo(
+          const AoidActiveTenantSlug(tenantBSlug),
+        );
+        expect(landed.slug, tenantBSlug);
+      },
+    );
+  });
+
   group('modes A and C — the caller does not branch', () {
     test('item 7 — replaceSession is NOT called when the cookie is swapped '
         'server-side, and the switch still completes', () async {
