@@ -43,13 +43,39 @@ import 'aoid_code_sink.dart';
 /// native client, and the same house style as the backend's `active_tenant` form
 /// field.
 ///
-/// ## Cookies and credentials on web
+/// ## Cookies and credentials on web — REQUIRED, and it must be ORIGIN-SCOPED
 ///
 /// If the app's frontend and backend are on DIFFERENT origins, the browser will
 /// not store the response cookie unless the request is made with credentials.
 /// This class does not construct its transport, so that is the consumer's
-/// choice: pass a `BrowserClient()..withCredentials = true`. Same-origin —
-/// the common case, and AODex's — needs nothing.
+/// choice: pass a `BrowserClient()..withCredentials = true`.
+///
+/// **AODex — the reference consumer — IS cross-origin, in every environment**
+/// (`https://dex.aocyber.ai` -> `https://api.dex.aocyber.ai`; devcluster
+/// `dex.aocyber.localhost:8445` -> `api.dex.aocyber.localhost:8445`), as is any
+/// deployment that puts its API on its own host. This doc previously claimed
+/// the opposite, and that claim is what shipped the bug: the exchange returned
+/// 204 with a valid session cookie, the default `credentials: 'same-origin'`
+/// mode discarded it, and the user authenticated successfully and landed back
+/// on the login screen. The cookie was never rejected — it was never offered
+/// for storage.
+///
+/// **Do NOT set `withCredentials` on a client shared across origins.** The
+/// transport a consumer injects here is typically the same one it injects into
+/// `AoidNativeClient`, and those two legs have OPPOSITE CORS contracts: AOID's
+/// own `/oauth/native/*` deliberately NEVER sends
+/// `Access-Control-Allow-Credentials` (`aoid/internal/oauth/http/cors_native.go`
+/// — there is no cookie on that path, and setting the header would be
+/// incompatible with the design). Per the Fetch CORS check a credentialed
+/// request whose response lacks that header is rejected BY THE BROWSER, so a
+/// blanket flip turns every password / OTP / WebAuthn submission into a
+/// transport failure — a worse outcome than the lost cookie it was meant to
+/// fix.
+///
+/// Scope credentials to the BFF origin alone. AODex's
+/// `lib/src/features/auth/application/aoid_native_http_client.dart` is the
+/// worked example: an `http.BaseClient` that routes to a credentialed client
+/// for exactly one origin and a plain client for everything else.
 ///
 /// On native, `ConnectCookieInterceptor` is a no-op on web
 /// (connect_cookie_interceptor.dart:44-49) because the browser owns the jar;
