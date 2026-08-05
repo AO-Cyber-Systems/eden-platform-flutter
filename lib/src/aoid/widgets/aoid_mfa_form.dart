@@ -146,83 +146,94 @@ class _AoidMfaFormState extends State<AoidMfaForm> {
     final canType = _codeMethods.contains(active);
     final notice = _notice();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (copy.showGoldAccentRule) ...[
-          // Ambient accent, as in AoidLoginForm — read from the theme, never
-          // hardcoded.
-          Container(
-            key: kAoidMfaAccentRuleKey,
-            width: 140,
-            height: 3,
-            color: colors.primary,
-          ),
-          const SizedBox(height: 16),
-        ],
-        Text(copy.mfaHeadline, style: theme.textTheme.headlineSmall),
-        const SizedBox(height: 24),
-
-        // Only render a picker when there is a CHOICE to make. An empty list is
-        // the normal early state (49-07), and a single offered method is not a
-        // choice — showing either as a picker is chrome pretending to be a
-        // decision.
-        if (methods.length > 1) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final method in methods)
-                ChoiceChip(
-                  label: Text(_methodLabels[method] ?? method),
-                  selected: method == active,
-                  onSelected: _submitting
-                      ? null
-                      : (_) => setState(() => _selected = method),
-                ),
-            ],
-          ),
+    // `AutofillHints.oneTimeCode` below is inert without an enclosing
+    // AutofillGroup — the group is what commits the scope to the platform, and
+    // AoidLoginForm has had one since it was written. This form did not, so the
+    // OTP field advertised a hint nothing ever acted on.
+    //
+    // NO-LEAK CONTRACT: AutofillGroup is contract-compatible. It takes no
+    // callback, exposes no value to app Dart, and adds nothing to this widget's
+    // public surface — it only scopes the OS autofill sink, exactly as it does
+    // in AoidLoginForm. The code still reaches the issuer only via `_submit`.
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (copy.showGoldAccentRule) ...[
+            // Ambient accent, as in AoidLoginForm — read from the theme, never
+            // hardcoded.
+            Container(
+              key: kAoidMfaAccentRuleKey,
+              width: 140,
+              height: 3,
+              color: colors.primary,
+            ),
+            const SizedBox(height: 16),
+          ],
+          Text(copy.mfaHeadline, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 24),
-        ],
 
-        if (canType)
-          EdenInput(
-            controller: _otpCtrl,
-            label: copy.otpLabel,
-            keyboardType: TextInputType.number,
-            // A one-time code is an OS autofill sink too, and on iOS this is
-            // what lifts the code out of the incoming message.
-            autofillHints: const [AutofillHints.oneTimeCode],
-            enabled: !_submitting,
-            // Value DISCARDED — this only reports the return key. See the same
-            // note in AoidLoginForm.
-            onSubmitted: (_) => _submit(),
-          )
-        else
-          Text(
-            'Use your security key to continue.',
-            style: theme.textTheme.bodyMedium,
-          ),
+          // Only render a picker when there is a CHOICE to make. An empty list is
+          // the normal early state (49-07), and a single offered method is not a
+          // choice — showing either as a picker is chrome pretending to be a
+          // decision.
+          if (methods.length > 1) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final method in methods)
+                  ChoiceChip(
+                    label: Text(_methodLabels[method] ?? method),
+                    selected: method == active,
+                    onSelected: _submitting
+                        ? null
+                        : (_) => setState(() => _selected = method),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
 
-        if (notice != null) ...[
-          const SizedBox(height: 16),
-          Text(
-            notice,
-            style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
-          ),
-        ],
+          if (canType)
+            EdenInput(
+              controller: _otpCtrl,
+              label: copy.otpLabel,
+              keyboardType: TextInputType.number,
+              // A one-time code is an OS autofill sink too, and on iOS this is
+              // what lifts the code out of the incoming message.
+              autofillHints: const [AutofillHints.oneTimeCode],
+              enabled: !_submitting,
+              // Value DISCARDED — this only reports the return key. See the same
+              // note in AoidLoginForm.
+              onSubmitted: (_) => _submit(),
+            )
+          else
+            Text(
+              'Use your security key to continue.',
+              style: theme.textTheme.bodyMedium,
+            ),
 
-        if (canType) ...[
-          const SizedBox(height: 24),
-          EdenButton(
-            label: copy.mfaSubmitLabel,
-            onPressed: _submitting ? null : _submit,
-            loading: _submitting,
-            fullWidth: true,
-          ),
+          if (notice != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              notice,
+              style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
+            ),
+          ],
+
+          if (canType) ...[
+            const SizedBox(height: 24),
+            EdenButton(
+              label: copy.mfaSubmitLabel,
+              onPressed: _submitting ? null : _submit,
+              loading: _submitting,
+              fullWidth: true,
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
