@@ -386,7 +386,7 @@ class AuthNotifier extends Notifier<AuthState> {
       // in `unknown` forever, hanging every gated route behind a spinner — so
       // swallow it, clear any persisted tokens, and fall through to login.
       log('Token storage read failed during session restore: $e', name: 'AuthNotifier');
-      await _clearPersistedTokens();
+      await _clearPersistedTokensBestEffort();
       if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
       return;
@@ -408,7 +408,7 @@ class AuthNotifier extends Notifier<AuthState> {
       if (!ref.mounted) return;
       state = AuthState.authenticated(session);
     } on AuthError {
-      await _clearPersistedTokens();
+      await _clearPersistedTokensBestEffort();
       if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
     } on NetworkError catch (e) {
@@ -420,7 +420,7 @@ class AuthNotifier extends Notifier<AuthState> {
       );
     } catch (e) {
       log('Session restore failed: $e', name: 'AuthNotifier');
-      await _clearPersistedTokens();
+      await _clearPersistedTokensBestEffort();
       if (!ref.mounted) return;
       state = const AuthState.unauthenticated();
     }
@@ -587,6 +587,46 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> _clearPersistedTokens() async {
     await _tokenStorage.clear();
+  }
+
+  /// Clears persisted tokens without ever throwing.
+  ///
+  /// Used only from [restoreSession]'s failure branches, which are already
+  /// handling one failure — the cleanup must not raise a second one on top of
+  /// it. This matters because the constructor fires
+  /// `unawaited(restoreSession())`: there is no caller to catch anything that
+  /// escapes, so a throw here becomes an unhandled async zone error and, worse,
+  /// skips the `state = unauthenticated` assignment that follows every call
+  /// site — leaving the notifier stranded on a stale `authenticated` session or
+  /// pinned in `unknown`, which is the exact "gated routes hang behind a
+  /// spinner" failure the read-branch comment above set out to prevent.
+  ///
+  /// The failure is real on web, where `flutter_secure_storage` has no
+  /// implementation and [SecureTokenStorage] falls through to
+  /// `shared_preferences`, whose `getAll` then throws MissingPluginException.
+  ///
+  /// Logged rather than reported: the storage failure is a *consequence* of the
+  /// restore failure already logged by the caller, and it is not independently
+  /// actionable — the user-visible outcome is identical either way (signed
+  /// out). Routing it to Sentry from here would add an observability coupling
+  /// to a code path that handles raw tokens, and genuinely unexpected errors
+  /// still reach the app's zone handler through other routes. `log` keeps it
+  /// diagnosable, consistent with the sibling "non-blocking" failures in
+  /// [logout].
+  ///
+  /// Deliberately NOT applied to [logout]'s clear calls: those are awaited by a
+  /// caller that can surface the failure, so they keep their throwing
+  /// behaviour.
+  Future<void> _clearPersistedTokensBestEffort() async {
+    try {
+      await _clearPersistedTokens();
+    } catch (e) {
+      // Tokens may survive on disk, but they are already known-unusable
+      // (unreadable, or rejected by refresh). Signing out is still the correct
+      // and coherent end state; the next restore attempt will retry the clear.
+      log('Token storage clear failed during session restore cleanup: $e',
+          name: 'AuthNotifier');
+    }
   }
 }
 
