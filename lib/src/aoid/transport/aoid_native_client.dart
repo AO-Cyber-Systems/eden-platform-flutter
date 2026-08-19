@@ -46,8 +46,8 @@ final class AoidNativeCode extends AoidNativeResponse {
 ///
 /// * `200 {"auth_session","next","available_methods"}` — the `start` response.
 /// * `401 {"error":"insufficient_authorization","auth_session":"<NEW>", …}` —
-///   every intermediate `verify`. the spec `Verify` returns BOTH a response and
-///   a non-nil error mid-ceremony, and the spec renders both at once. Treating
+///   every intermediate `verify`. The issuer's `Verify` returns BOTH a response
+///   and a non-nil error mid-ceremony, and both arrive together. Treating
 ///   that 401 as a failure throws away the successor handle and breaks the
 ///   ceremony at step two.
 ///
@@ -67,7 +67,7 @@ final class AoidNativeContinue extends AoidNativeResponse {
   });
 
   /// The ROTATED handle. **Present THIS on the next step, never the previous
-  /// one.** the spec consumes the presented handle with a conditional UPDATE and
+  /// one.** The issuer consumes the presented handle with a conditional UPDATE and
   /// inserts a successor, so re-presenting the old value returns zero rows and
   /// answers `invalid_session` — which looks exactly like a server bug.
   final String authSession;
@@ -76,7 +76,7 @@ final class AoidNativeContinue extends AoidNativeResponse {
   /// EMPTY when the submitted factor did not advance the ceremony.
   final String next;
 
-  /// Factors the identity can satisfy for [next]. May be EMPTY: the spec refuses
+  /// Factors the identity can satisfy for [next]. May be EMPTY: the issuer refuses
   /// to emit `available_methods` before a factor has succeeded, because doing
   /// so makes the endpoint an enumeration oracle. Render a picker only when it
   /// is non-empty; an empty list is correct, not an error.

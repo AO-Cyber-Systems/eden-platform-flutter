@@ -487,7 +487,7 @@ void main() {
     });
 
     test('rotation across sequential completeLogin: the SECOND call presents '
-        'the ROTATED handle, not the original (the spec rotates auth_session on '
+        'the ROTATED handle, not the original (the issuer rotates auth_session on '
         'every step)', () async {
       SharedPreferences.setMockInitialValues({});
       // Hand-built. Records what it is presented so the test can assert the

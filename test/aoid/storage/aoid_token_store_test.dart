@@ -268,7 +268,7 @@ void main() {
   //     reaching flutter_secure_storage through `../auth/…` passes it. That is
   //     the exact hole the spec found in the equivalent riverpod grep.
   // The closure walk below is the real invariant. It is scoped to this file's
-  // part-barrel so it does not touch a file another wave-2 the spec owns.
+  // part-barrel so it does not touch a file another wave-2 change owns.
   group('dependency footprint (the pin conflict this design sidesteps)', () {
     const root = 'lib/src/aoid/parts/storage.dart';
 

@@ -149,14 +149,14 @@ class AoidNativeFlow {
   final String _redirectUri;
 
   /// The CURRENT handle. Private, and there is no accessor: nothing outside
-  /// this class needs it, and every response replaces it. the spec consumes the
+  /// this class needs it, and every response replaces it. The issuer consumes the
   /// presented handle with a conditional UPDATE and inserts a successor, so a
   /// caller holding its own copy would present a dead value.
   String? _handle;
 
   AoidFlowState _state = const AoidFlowIdle();
 
-  /// Where the ceremony stands. the spec renders from this and nothing else.
+  /// Where the ceremony stands. The login form renders from this and nothing else.
   AoidFlowState get state => _state;
 
   /// The terminal authorization code, once there is one. the spec Mode A sink
@@ -222,7 +222,7 @@ class AoidNativeFlow {
       _state = const AoidFlowRestartRequired();
       return;
     }
-    // The handle is cleared BEFORE the call: the spec consumes it server-side, so
+    // The handle is cleared BEFORE the call: the issuer consumes it server-side, so
     // it is dead the moment it leaves. Only a response can install a successor.
     _handle = null;
     await _step(
