@@ -48,7 +48,7 @@ class AoidConfig {
     // AOID login is OPT-IN: off unless a build explicitly passes
     // --dart-define=AOID_CONSOLE_LOGIN_ENABLED=true.
     //
-    // THE POLARITY WAS FLIPPED BY AOID obj-50 the spec, and the flip is
+    // THE POLARITY WAS FLIPPED BY later work, and the flip is
     // part of the security fix, not tidying. This defaulted to TRUE, with
     // issuer/clientId defaulting to the PRODUCTION eden-biz web console —
     // so every build that did not opt OUT ran AOID login against prod, on

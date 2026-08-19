@@ -1,6 +1,6 @@
 // THE OBJECTIVE'S REQUIRED MULTI-TENANT ISOLATION GATE (wrong_tenant_assertion).
 //
-// the spec test-list items 9-11, plus four extra regions that close holes the
+// the test list items 9-11, plus four extra regions that close holes the
 // three named items leave open.
 //
 // A running test cannot observe "this does not compile", so this drives the

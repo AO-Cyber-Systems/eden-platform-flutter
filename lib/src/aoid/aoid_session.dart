@@ -2,7 +2,7 @@
 //
 // RIVERPOD-FREE BY CONSTRUCTION (see storage/aoid_token_store.dart's header).
 //
-// the spec built the custody dimension. the spec COMPLETED the mode
+// Earlier work built the custody dimension; later work completed the mode
 // dimension, adding — additively, without changing any the spec behaviour — the
 // deployment [mode], the [cookieBound] flag, and the AOID claims as
 // FIRST-CLASS FIELDS.
@@ -25,7 +25,7 @@ import 'claims/aoid_claims.dart';
 import 'mode/aoid_deployment_mode.dart';
 import 'storage/aoid_token_store.dart';
 
-/// An AOID session, carrying the one property this the spec exists to make
+/// An AOID session, carrying the one property this work exists to make
 /// observable: [hasClientHeldRefreshToken].
 ///
 /// There is **no public unnamed constructor**. A session can only be built

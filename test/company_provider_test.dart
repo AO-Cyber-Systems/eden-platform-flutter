@@ -15,7 +15,7 @@ void main() {
 
   setUp(() {
     repository = FakePlatformRepository();
-    // SecureTokenStorage (default backing for AuthNotifier in the spec)
+    // SecureTokenStorage (default backing for AuthNotifier)
     // calls flutter_secure_storage which has no native side in unit tests —
     // install a MethodChannel mock to avoid MissingPluginException.
     installSecureStorageChannelMock();
@@ -612,8 +612,8 @@ void main() {
               'scheduled, so a bootstrap-driven state change cannot land '
               'before the subscription exists');
 
-      // The derived providers keep their identifiers: the spec migrates the
-      // widgets that read them and the spec/the spec cite them.
+      // The derived providers keep their identifiers: the migration moves the
+      // widgets that read them, and the specs cite them.
       expect(code.contains('final currentCompanyProvider = Provider<PlatformCompany?>'),
           true);
       expect(code.contains('final companiesProvider = Provider<List<PlatformCompany>>'),

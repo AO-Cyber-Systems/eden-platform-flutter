@@ -229,7 +229,7 @@ void main() {
       'a login on WEB CLEARS a legacy refresh token already in storage',
       () async {
         // Escalation item 1 (tokens already in real users' localStorage) is not
-        // closed by this the spec, but a web login must at least not leave the stale
+        // closed by this work, but a web login must at least not leave the stale
         // one behind.
         final fake = FakeAoidEndpoint(issuer: _issuer);
         final storage = RecordingTokenStorage()

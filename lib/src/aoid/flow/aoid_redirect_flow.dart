@@ -56,7 +56,7 @@ import 'aoid_verifier_stash.dart';
 /// `options` is REQUIRED here, unlike the older `AuthorizeFn` next door, which
 /// omits it entirely. That is the point: a `FlutterWebAuth2Options` that is
 /// built but never threaded through is the common failure mode for exactly the
-/// settings this the spec exists to force, and `required` makes forgetting it a
+/// settings this work exists to force, and `required` makes forgetting it a
 /// compile error. `FlutterWebAuth2.authenticate` remains assignable because its
 /// own `options` parameter is optional.
 typedef AoidAuthorizeFn =

@@ -47,7 +47,7 @@ import '../transport/aoid_error.dart';
 /// been. That self-corrects — the next ORDINARY refresh carries no
 /// `active_tenant`, so it surfaces as `AoidError` and the normal sign-out
 /// happens. Failing the other way would sign people out of a live session,
-/// which is the defect this whole the spec exists to prevent.
+/// which is the defect this contract exists to prevent.
 final class AoidTenantDenied implements Exception {
   const AoidTenantDenied();
 

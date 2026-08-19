@@ -1,6 +1,7 @@
 // aoidTokenStoreFor — the ONE place the AOID module decides which token store
 // a deployment gets. Kept in its own file so aoid_token_store.dart (the
-// interface the spec and the spec import) stays dependency-free.
+// interface the deployment-mode and tenant-switch layers import) stays
+// dependency-free.
 //
 // RIVERPOD-FREE BY CONSTRUCTION (see aoid_token_store.dart's header).
 

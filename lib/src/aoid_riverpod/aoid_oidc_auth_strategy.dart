@@ -16,7 +16,7 @@
 // Reachable via `package:eden_platform_flutter/eden_platform.dart`.
 //
 // HISTORY: this file was placed on the ADAPTER side of a riverpod split (AOID
-// obj-50 the spec) because it `implements AuthStrategy`, the interface
+// later work) because it `implements AuthStrategy`, the interface
 // AuthNotifier drives — and AuthNotifier was then a riverpod-2 StateNotifier,
 // so a riverpod-3 consumer could not reach this class through a riverpod-2
 // barrel. AuthNotifier is now a riverpod 3 `Notifier` and the spec

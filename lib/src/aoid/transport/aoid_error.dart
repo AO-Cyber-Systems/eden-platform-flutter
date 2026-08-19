@@ -51,7 +51,7 @@ enum AoidErrorCode {
 /// so the endpoint cannot be used as an account-existence or
 /// tenancy-membership oracle. **Do not widen this.** If you find yourself
 /// adding a `reason`, a `cause`, or a second message per branch, you are
-/// rebuilding the oracle that the issuer spent a whole the spec removing.
+/// rebuilding the oracle that the issuer spent a whole contract removing.
 ///
 /// Messages are built from a FIXED VOCABULARY held in this file. Request
 /// input — passwords, TOTP codes, backup codes, emails, `auth_session`

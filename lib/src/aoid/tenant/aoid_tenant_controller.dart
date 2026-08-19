@@ -66,7 +66,7 @@ final class AoidTenantSwitchOutcome {
 }
 
 /// HOW a deployment performs the switch. One implementation per D4 posture, so
-/// the CALLER never branches on mode (the spec test-list item 7).
+/// the CALLER never branches on mode (the test list item 7).
 abstract class AoidTenantSwitchBackend {
   /// The D4 mode this backend implements.
   AoidDeploymentMode get mode;

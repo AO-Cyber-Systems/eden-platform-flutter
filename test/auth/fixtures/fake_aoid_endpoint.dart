@@ -104,7 +104,7 @@ class FakeNativeTerminal extends FakeNativeStep {
 class FakeNativeRedirect extends FakeNativeStep {
   const FakeNativeRedirect({this.authorizationUrl = kFakeAuthorizationUrl});
 
-  /// Set to `''` to model the malformed case the spec handed to this the spec:
+  /// Set to `''` to model the malformed case handed to this layer:
   /// a `redirect_to_web` whose `authorization_url` is unusable.
   final String authorizationUrl;
 }

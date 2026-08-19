@@ -1,4 +1,4 @@
-// the spec test-list items 4-8 — the two unverified decoders, and the
+// the test list items 4-8 — the two unverified decoders, and the
 // EMPIRICAL half of the `tnt` proof.
 //
 // The type-level proof (conflation is a compile error) lives in
@@ -290,7 +290,7 @@ void main() {
 
     test('a `tnt` of the wrong JSON type is rejected rather than coerced', () {
       // Coercing 42 to "42" would produce an AoidActiveTenantSlug that is not a
-      // slug — precisely the class of silent wrongness this the spec exists to stop.
+      // slug — precisely the class of silent wrongness this work exists to stop.
       expect(
         () => AoidAccessClaims.decodeUnverified(
           fx.accessTokenWithNonStringTenant,

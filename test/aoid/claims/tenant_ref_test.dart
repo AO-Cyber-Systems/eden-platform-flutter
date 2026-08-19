@@ -1,4 +1,4 @@
-// the spec test-list items 1-3 — the shape of the two `tnt` types.
+// the test list items 1-3 — the shape of the two `tnt` types.
 //
 // The COMPILE-error property (assigning one where the other is expected) cannot
 // be observed from a running test, so it is proven separately by an analyzer run

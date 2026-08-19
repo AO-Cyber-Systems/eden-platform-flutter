@@ -1,8 +1,8 @@
 // The widget no-op, made executable.
 //
-// Stage B (the spec/the spec/the spec) moved all five notifiers from riverpod 2's
+// Stage B moved all five notifiers from riverpod 2's
 // `StateNotifier` to riverpod 3's `Notifier`, preserving every provider
-// identifier and every method signature. The claim this the spec has to discharge is
+// identifier and every method signature. The claim to discharge is
 // that the NINE widget consumers therefore need ZERO source edits.
 //
 // "We ran flutter analyze and it was fine" is not that proof — it holds only
@@ -49,7 +49,7 @@ const _widgetFiles = <String>[
 
 /// Strips `//` line comments and `/* */` block comments, so prose naming a
 /// forbidden API is never mistaken for code using it. Same stripper shape the
-/// Stage B source gates use (the spec §5, the spec §6, the spec §7).
+/// Stage B source gates use.
 String stripComments(String src) => src
     .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
     .replaceAll(RegExp(r'//[^\n]*'), '');

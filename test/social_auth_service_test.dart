@@ -3,7 +3,7 @@
 // AOID, the spec (SDK-08 / D6). This file previously asserted the
 // opposite contract — that `sessionFromCallbackUrl` parsed `access_token` and
 // `refresh_token` out of the callback query string. That contract was the
-// vulnerability. eden-platform-go the spec stopped the server sending tokens;
+// vulnerability. eden-platform-go stopped the server sending tokens;
 // these tests pin the client to the replacement.
 //
 // Wire contract consumed VERBATIM from 50-the design notes:
@@ -472,7 +472,7 @@ void main() {
     );
   });
 
-  // A NAME-based gate is insufficient: eden-platform-go the spec proved a token
+  // A NAME-based gate is insufficient: eden-platform-go proved a token
   // can ship under a benign parameter name while a `grep access_token=` gate
   // passes. These assert on the token VALUE, wherever in the URL it hides.
   group('no token VALUE from the callback URL ever reaches the session', () {

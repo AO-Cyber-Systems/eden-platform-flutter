@@ -110,7 +110,7 @@ class SecureTokenStorage implements TokenStorage {
     final legacy = prefs.getString(key);
     if (legacy == null) return null;
 
-    // AOID obj-50 / D4: on web, do NOT create a second persisted copy of the
+    // On web: on web, do NOT create a second persisted copy of the
     // refresh token. Migrating it means writing it into secure storage, which
     // on web is window.localStorage with the AES key alongside — the state D4
     // forbids. The pre-existing prefs value is deliberately left ALONE and
@@ -182,7 +182,7 @@ class SecureTokenStorage implements TokenStorage {
       // key and the ciphertext in localStorage side by side). Persisting a
       // refresh token to either makes it readable by any XSS. That is the
       // configuration AOID / the design notes forbids, and it is
-      // what this package shipped until obj-50. Deleting (value == null, or an
+      // what this package shipped until that change. Deleting (value == null, or an
       // empty string — a cookie-bound/web session clobbering a stale value)
       // still falls through to both backends: clearing must always be
       // best-effort, or a logout can strand a token.

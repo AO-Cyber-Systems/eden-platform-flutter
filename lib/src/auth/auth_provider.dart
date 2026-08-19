@@ -323,8 +323,8 @@ class AuthNotifier extends Notifier<AuthState> {
       case RedirectRequired(:final authorizationUrl):
         // NOT an error. The user merely needs a browser
         // hop — social IdP, PIV/CAC, or a tenancy tier that forbids native
-        // login. Mapping this onto AuthState.error is the exact defect the spec
-        // the spec exists to remove: it shows "login failed" to a user whose
+        // login. Mapping this onto AuthState.error is the exact defect this
+        // contract exists to remove: it shows "login failed" to a user whose
         // credentials are fine. Pinned by test/auth_provider_test.dart
         // "RedirectRequired does not put the notifier into an error state".
         _pendingRedirectUrl = authorizationUrl;
@@ -643,6 +643,6 @@ final authStrategyProvider = Provider<AuthStrategy?>((ref) => null);
 // StateNotifierProvider had.
 //
 // The IDENTIFIER `authProvider` and the state type `AuthState` are a contract
-// with the spec and the spec, which run in the same wave and consume both by name.
+// with concurrent work that consumes both by name.
 final authProvider =
     NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

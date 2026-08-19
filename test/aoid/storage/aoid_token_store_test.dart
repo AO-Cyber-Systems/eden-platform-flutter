@@ -11,8 +11,8 @@
 //   DO NOT read these passes as "verified on a real browser" — they verify the
 //   branch, not the platform.
 //
-// Fixtures are hand-written literals (no_llm_test_data is in force for the spec
-// the spec): every token string below is spelled out here.
+// Fixtures are hand-written literals (no_llm_test_data is in force here):
+// every token string below is spelled out here.
 //
 // ignore_for_file: avoid_relative_lib_imports
 
@@ -267,7 +267,7 @@ void main() {
   //   - and it only looks at one directory, so a file under lib/src/aoid/
   //     reaching flutter_secure_storage through `../auth/…` passes it. That is
   //     the exact hole the spec found in the equivalent riverpod grep.
-  // The closure walk below is the real invariant. It is scoped to this the spec's
+  // The closure walk below is the real invariant. It is scoped to this file's
   // part-barrel so it does not touch a file another wave-2 the spec owns.
   group('dependency footprint (the pin conflict this design sidesteps)', () {
     const root = 'lib/src/aoid/parts/storage.dart';

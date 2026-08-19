@@ -1,4 +1,4 @@
-// the spec test-list items 5-12 — the code-only browser hop.
+// the test list items 5-12 — the code-only browser hop.
 //
 // Item 6 is written first and deliberately: it is the D6 invariant for this
 // new callback handler. the spec repo-wide gate covers the SOURCE of this file
@@ -829,14 +829,14 @@ void main() {
 
     test('the flow adds no provider — the firewall holds over flow/', () {
       // Stated as a test so the DECISION is visible where the behaviour is:
-      // this the spec introduces no provider at all, which is why there is no
+      // this work introduces no provider at all, which is why there is no
       // per-provider `retry:` override to review.
       //
       // Comments are stripped first. These files deliberately NAME the retry
       // behaviour in order to explain why the flow is built to make it
       // unreachable, and a whole-file `contains` cannot tell a DECLARATION
-      // from a MENTION — the same problem every Stage B the spec hit (the spec §5,
-      // the spec §6, the spec §7). The positive control below is what keeps the
+      // from a MENTION — the same problem every Stage B change hit. The positive
+      // control below is what keeps the
       // stripper honest.
       final files = Directory('lib/src/aoid/flow')
           .listSync(recursive: true)

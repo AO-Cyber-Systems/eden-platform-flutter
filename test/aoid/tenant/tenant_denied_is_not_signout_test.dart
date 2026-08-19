@@ -65,8 +65,8 @@
 // decoded claims are trustworthy and the slug/UUID pairing cannot drift.
 //
 // The shared test/auth/fixtures/fake_aoid_endpoint.dart is deliberately NOT
-// extended here: the spec and the spec are running against it concurrently, and this
-// the spec's fake models a DIFFERENT contract (the refresh grant's membership gate,
+// extended here: concurrent work is running against it, and this
+// file's fake models a DIFFERENT contract (the refresh grant's membership gate,
 // not the native ceremony).
 
 import 'dart:convert';
@@ -230,7 +230,7 @@ AoidTokenClient _clientFor(_FakeAoidTokenEndpoint fake) => AoidTokenClient(
 //
 // Item 9 is worthless without something that COULD sign the user out. The
 // handler below is that something: it reproduces the two real sign-out paths
-// this the spec exists to route around, and item 9c proves it genuinely bites.
+// this work exists to route around, and item 9c proves it genuinely bites.
 // ---------------------------------------------------------------------------
 
 const _seedRefreshToken = 'refresh-token-0001';

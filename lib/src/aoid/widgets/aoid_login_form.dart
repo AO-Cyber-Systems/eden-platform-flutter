@@ -132,7 +132,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// unknown email, a wrong password, an account with no password credential
   /// and a locked account BYTE-IDENTICALLY (the spec, re-proved over real HTTP by
   /// the spec). Manufacturing a richer reason in UI copy would reconstruct the
-  /// account-existence oracle the issuer spent a the spec removing.
+  /// account-existence oracle the issuer spent real effort removing.
   String? _notice() {
     final state = widget.controller.state;
     if (state is AoidFlowAwaitingFactor && state.lastAttemptRejected) {

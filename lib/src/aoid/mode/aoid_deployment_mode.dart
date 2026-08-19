@@ -78,7 +78,7 @@ enum AoidDeploymentMode {
 extension AoidDeploymentModeCustody on AoidDeploymentMode {
   /// Where this mode's refresh token lives.
   ///
-  /// the spec MAPS onto the spec [AoidRefreshTokenPosture] rather than replacing
+  /// This MAPS onto [AoidRefreshTokenPosture] rather than replacing
   /// it, so there is one custody vocabulary in the module, not two.
   AoidRefreshTokenPosture get posture => switch (this) {
     AoidDeploymentMode.bff => AoidRefreshTokenPosture.backendHeldCookie,

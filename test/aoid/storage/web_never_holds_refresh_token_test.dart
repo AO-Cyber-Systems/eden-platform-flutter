@@ -223,7 +223,7 @@ void main() {
       });
     }
 
-    // Exhaustiveness guard: if a later the spec (the spec owns the full mode matrix)
+    // Exhaustiveness guard: if later work (the full mode matrix lives elsewhere)
     // adds a fourth posture, the loop above covers it automatically and the
     // switch stops being exhaustive at compile time. This asserts the set we
     // believe we are covering, so a silent widening is caught here too.

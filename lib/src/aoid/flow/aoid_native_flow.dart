@@ -31,7 +31,7 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   final String next;
 
   /// Factors the identity can satisfy. MAY BE EMPTY; render a picker only when
-  /// it is not. the spec refuses to emit this before a factor has succeeded
+  /// it is not. the issuer refuses to emit this before a factor has succeeded
   /// because doing so makes the endpoint an enumeration oracle.
   final List<String> availableMethods;
 
@@ -46,7 +46,7 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   /// locked account **byte-identically** (the spec, re-proved over real HTTP by
   /// the spec). There is no richer reason to surface, and manufacturing one —
   /// even in UI copy — reconstructs the account-existence oracle the issuer
-  /// spent a the spec removing.
+  /// spent real effort removing.
   final bool lastAttemptRejected;
 }
 

@@ -421,7 +421,7 @@ void main() {
 
     testWidgets('14b. AoidMfaForm renders sensibly when availableMethods is '
         'EMPTY — the normal early state', (tester) async {
-      // the spec refuses to emit a per-identity method list before a factor has
+      // the issuer refuses to emit a per-identity method list before a factor has
       // succeeded, because that turns the endpoint into an enumeration oracle.
       // So the empty list is the COMMON path, not an edge case, and a picker
       // that rendered empty chrome (or threw) would be a bug in the common path.

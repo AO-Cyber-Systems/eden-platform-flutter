@@ -22,7 +22,7 @@
 /// Source-level gates need this because a whole-file `contains` cannot tell a
 /// DECLARATION from a MENTION, and these files deliberately name the things they
 /// forbid in order to explain why they are forbidden. Every Stage B the spec hit the
-/// same problem (the spec §5, the spec §6, the spec §7).
+/// same problem.
 ///
 /// Block comments are removed first: doing it the other way round lets a `//`
 /// inside a `/*... */` truncate the block's terminator.

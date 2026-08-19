@@ -25,7 +25,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // This import is what makes proof (1) above work. It is NOT a temporary shim —
 // this file's whole job is to assert the 3.x layout, so it stays after
-// the spec..the spec remove the shims from lib/.
+// Later stages remove the shims from lib/.
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -182,7 +182,7 @@ void main() {
   group('legacy.dart still ships the symbols Stage A depends on', () {
     // If any of these stopped resolving, the `legacy.dart` shim strategy that
     // makes the version bump separable from the API migration would be dead,
-    // and the spec..the spec would have to be merged back into this the spec.
+    // and those stages would have to be merged back here.
     test('StateController still holds and mutates state', () {
       final controller = StateController<int>(1);
       addTearDown(controller.dispose);

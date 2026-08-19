@@ -15,7 +15,7 @@
 //
 // THE PICKER MUST TOLERATE AN EMPTY LIST, AND USUALLY GETS ONE.
 // `AoidFlowAwaitingFactor.availableMethods` is empty until a factor has already
-// succeeded: the spec refuses to emit a per-identity method list before that,
+// succeeded: the issuer refuses to emit a per-identity method list before that,
 // because doing so turns the endpoint into an enumeration oracle — ask for any
 // address and the response tells you whether the account exists and how it is
 // protected. So "no methods offered" is the NORMAL early state, not a

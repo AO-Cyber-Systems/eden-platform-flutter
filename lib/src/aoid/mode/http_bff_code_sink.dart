@@ -5,7 +5,7 @@
 // Uses `package:http` with an injected client, matching AoidNativeClient
 // and the existing fixture suite. Do NOT introduce `dio` into the aoid
 // module even though it is in the pubspec: mixing transports forks the fakes
-// that the spec and the spec all extend.
+// that the mode, widget and redirect layers all extend.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;

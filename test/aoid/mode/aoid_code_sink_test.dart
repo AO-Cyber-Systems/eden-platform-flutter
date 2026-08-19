@@ -9,7 +9,7 @@
 //
 // WHAT THIS FILE DOES **NOT** PROVE.
 //   No real backend is contacted. The cookie attributes asserted below are
-//   asserted against the FIXTURE, which is this the spec's statement of the contract
+//   asserted against the FIXTURE, which is this file's statement of the contract
 //   the spec Go endpoint must implement — not proof that it does. Live coverage
 //   is the spec.
 //
@@ -272,7 +272,7 @@ void main() {
           session.accessToken,
           isNull,
           reason:
-              'this the spec ships the NARROWEST Mode A contract: 2xx + Set-Cookie. '
+              'this work ships the NARROWEST Mode A contract: 2xx + Set-Cookie. '
               'Adopting tokens from the body is a widening the spec has not agreed '
               'to.',
         );

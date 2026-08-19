@@ -14,7 +14,7 @@
 //
 // WHAT THIS GATE CANNOT DO (read before trusting it):
 // A name-based grep cannot catch a token smuggled under a benign parameter
-// name — eden-platform-go the spec proved exactly that (its D6-M2/D6-M4
+// name — eden-platform-go proved exactly that (its D6-M2/D6-M4
 // mutations shipped the token as `?tok=<access>` while a `grep access_token=`
 // gate stayed green). That class of defect is covered instead by the
 // VALUE-based assertions in test/social_auth_service_test.dart

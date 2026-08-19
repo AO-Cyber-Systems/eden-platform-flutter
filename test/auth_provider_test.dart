@@ -438,7 +438,7 @@ void main() {
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
 
       final state = container.read(authProvider);
-      // The defect this the spec removes: a user who merely needs a browser hop
+      // The defect this work removes: a user who merely needs a browser hop
       // being shown "login failed".
       expect(state.status, isNot(AuthStatus.error));
       expect(state.errorMessage, isNull);
@@ -746,7 +746,7 @@ void main() {
       repository.loginResult = buildSession();
       final c = createContainer();
       // Replicated INLINE. company_provider, nav_provider and
-      // entitlements_provider are owned by the spec/the spec in this same wave, so
+      // entitlements_provider are owned by other work in this same wave, so
       // this must not import them — but this is their exact listener shape.
       var clears = 0;
       c.listen<AuthState>(authProvider, (previous, next) {

@@ -1,6 +1,6 @@
 // Part-barrel OWNED BY the spec — the deny-by-default tenant switch.
 //
-// It is exported from lib/eden_platform.dart. Add exports for that the spec's
+// It is exported from lib/eden_platform.dart. Add exports for that area's
 // files HERE, never to lib/eden_platform.dart: TRDs run in PARALLEL and
 // would clobber each other's edits to the shared umbrella barrel.
 // (Until the spec this part-barrel hung off lib/aoid.dart, which was
@@ -15,7 +15,7 @@
 //
 // Nothing below it uses riverpod, though, and that is deliberate rather than
 // vestigial: `AoidTenantController` is a plain `ChangeNotifier` so a consumer
-// on any state-management stack — and the spec AODex BFF mirror — can drive the
+// on any state-management stack — and the AODex BFF mirror — can drive the
 // switch without inheriting riverpod 3's automatic provider retry (see
 // `aoidTenantSwitchRetry` in tenant/aoid_tenant_error.dart).
 library;

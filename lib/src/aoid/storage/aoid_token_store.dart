@@ -22,7 +22,7 @@
 /// WHERE a session's refresh token lives.
 ///
 /// This is the narrow custody question the design notes **D4** answers, and it is
-/// deliberately narrower than "deployment mode": the spec owns the full mode
+/// deliberately narrower than "deployment mode": the mode layer owns the full mode
 /// matrix (`lib/src/aoid/parts/modes.dart`) and will map its deployment modes
 /// onto these three postures rather than replacing them.
 ///
@@ -59,7 +59,7 @@ enum AoidRefreshTokenPosture {
 /// structural — see the design notes and premise correction C3.
 ///
 /// Pick an implementation with `aoidTokenStoreFor` rather than by hand; it is
-/// the single seam the spec (deployment modes) and the spec (tenant switch)
+/// the single seam the deployment-mode and tenant-switch layers
 /// extend.
 abstract class AoidTokenStore {
   /// The persisted access token, or `null` if none.

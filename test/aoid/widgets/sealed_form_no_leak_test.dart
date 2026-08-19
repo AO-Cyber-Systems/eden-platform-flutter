@@ -346,7 +346,7 @@ void main() {
               'on this struct is an INPUT. A function-typed field — '
               '`String Function()`, a WidgetBuilder, any *Callback — is how a '
               'presentation struct grows a member that RETURNS user input, '
-              'which is the leak this whole the spec exists to prevent. brandMark is '
+              'which is the leak this contract exists to prevent. brandMark is '
               'a Widget for exactly this reason: the app constructs it before '
               'the form exists, so it can close over nothing the form knows.',
         );

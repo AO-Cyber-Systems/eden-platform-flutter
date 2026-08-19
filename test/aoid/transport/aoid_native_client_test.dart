@@ -52,7 +52,7 @@
 //       AoidError, so the flow can offer "start again"
 //   19  a redirect_to_web with a missing/unusable authorization_url is a
 //       failure, not a RedirectRequired carrying an unusable Uri
-//       (the spec deferred item 1, owner the spec)
+//       (deferred item 1)
 
 import 'dart:convert';
 
@@ -247,7 +247,7 @@ void main() {
 
     test('F5 package:http STRUCTURALLY refuses a Map body under a non-form '
         'content type — the anti-JSON rule is enforced by the library', () {
-      // Recorded because it is load-bearing for the spec AODex adapter and for
+      // Recorded because it is load-bearing for the AODex adapter and for
       // any future maintainer tempted to "just send JSON": as long as the
       // client passes a Map<String,String> body, sending JSON is not a bug
       // that can be introduced quietly — it throws at the call site.
@@ -356,7 +356,7 @@ void main() {
       final ct = fake.nativeRequests.single.headers['content-type']!;
       expect(ct.split(';').first.trim(), 'application/x-www-form-urlencoded');
       expect(ct, isNot(contains('json')));
-      // The EXACT value, recorded for the spec browser leg and the spec AODex
+      // The EXACT value, recorded for the browser leg and the AODex
       // adapter: http ^1.2.0 appends no charset parameter.
       expect(ct, 'application/x-www-form-urlencoded');
     });
@@ -820,7 +820,7 @@ void main() {
       final cont = res as AoidNativeContinue;
       // the spec: a wrong password costs ONE attempt and yields a fresh handle.
       // Returning Failed here would clear the continuation token and destroy
-      // a recoverable ceremony (the spec deferred item 2, owner the spec).
+      // a recoverable ceremony (deferred item 2).
       expect(cont.advanced, isFalse);
       expect(cont.next, isEmpty);
       expect(cont.availableMethods, isEmpty);
@@ -855,7 +855,7 @@ void main() {
       '19 a redirect_to_web with an unusable authorization_url is a failure, '
       'not a RedirectRequired carrying an unusable Uri',
       () async {
-        // the spec deferred item 1, owner the spec: RedirectRequired cannot prevent
+        // Deferred item 1: RedirectRequired cannot prevent
         // an empty/relative Uri, so the notifier would sit in `refreshing`
         // with nothing to open and no error ever surfacing.
         fake.scriptNativeCeremony([

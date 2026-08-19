@@ -18,7 +18,7 @@
 //     tenantSlug, err := s.lookupTenantSlug(ctx, activeTenantID)
 //
 // Read the field comment and service.go, not the struct header. (Correcting the
-// Go comment is the spec the spec job.)
+// Go comment is a separate job.)
 //
 // So the hazard is not hypothetical: the authoritative source contradicts
 // itself in adjacent lines, and a reader who trusts the wrong half builds a

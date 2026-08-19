@@ -1,9 +1,9 @@
 // The SINGLE source of AOID URL construction for this module.
 //
-// the spec (native ceremony) and the spec (tenant switch) both build on this; two
+// The native ceremony and the tenant switch both build on this; two
 // URL builders would guarantee drift. AoidOidcAuthStrategy still has its own
 // inline `Uri.parse('$issuer/oauth/authorize')` getters — those predate this
-// type and are left alone here because this the spec changes no behaviour; folding
+// type and are left alone here because this work changes no behaviour; folding
 // them onto AoidEndpoints belongs to the spec that next touches that file.
 //
 // Paths are AOID's, per the issuer router.

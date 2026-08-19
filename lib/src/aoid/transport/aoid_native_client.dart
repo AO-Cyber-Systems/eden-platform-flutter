@@ -5,7 +5,7 @@
 // RIVERPOD-FREE and Flutter-free. It imports lib/src/auth/auth_strategy.dart
 // for RedirectRequired; that file imports only platform_models.dart, which
 // imports nothing, so lib/aoid.dart's closure stays clean (the spec verified this
-// and handed the note to this the spec).
+// and handed the note to this work).
 
 import 'dart:convert';
 import 'dart:io' show SocketException;
@@ -102,7 +102,7 @@ final class AoidNativeContinue extends AoidNativeResponse {
 final class AoidNativeRedirect extends AoidNativeResponse {
   const AoidNativeRedirect(this.result);
 
-  /// the spec `AuthResult` variant, ready for `AuthNotifier` and for the spec
+  /// The `AuthResult` variant, ready for `AuthNotifier` and for the redirect
   /// browser hop. Its `reason` is TELEMETRY ONLY — never UI copy.
   final RedirectRequired result;
 }
@@ -266,7 +266,7 @@ class AoidNativeClient {
     if (error == 'redirect_to_web') {
       final raw = body['authorization_url'];
       final url = raw is String ? Uri.tryParse(raw) : null;
-      // the spec deferred item 1, owner THIS the spec: RedirectRequired cannot refuse
+      // Deferred item 1, owned here: RedirectRequired cannot refuse
       // an empty or relative Uri, and one would park AuthNotifier in
       // `refreshing` with nothing to open and no error ever surfacing. Refuse
       // it here instead.

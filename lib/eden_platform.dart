@@ -19,7 +19,7 @@ export 'src/analytics/analytics_provider.dart';
 //
 // The AOID surface is part of this single entrypoint. It used to sit behind two
 // top-level barrels — `lib/aoid.dart` (riverpod-FREE) and `lib/aoid_riverpod.dart`
-// (the riverpod-2 adapter) — which the spec FOLDED IN HERE and deleted.
+// (the riverpod-2 adapter) — which later work FOLDED IN HERE and deleted.
 //
 // That split had exactly one cause: `AoidOidcAuthStrategy` depends on riverpod,
 // and while this package pinned riverpod 2 a riverpod-3 consumer (AODex) could
@@ -128,7 +128,7 @@ export 'src/providers/mutation_notifier.dart';
 // Riverpod ↔ eden-ui-flutter bridge helpers.
 export 'src/widgets/eden_async_snapshot_riverpod.dart';
 
-// Shared Sentry init + PII scrubbers (opsCluster obj-31 the spec / TELE-03).
+// Shared Sentry init + PII scrubbers (opsCluster).
 // Every AOCyber Flutter app calls initSentry from here so the scrubbers exist
 // in exactly ONE place — four copies of a privacy control is the failure mode
 // this replaces.

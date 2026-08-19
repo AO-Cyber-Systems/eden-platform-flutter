@@ -38,10 +38,10 @@ class SocialCallback {
 ///
 /// It used to receive `access_token` + `refresh_token` as query parameters.
 /// That leaked tokens into browser history, Referer headers and proxy logs.
-/// See AOID (SDK-08 / D6) and eden-platform-go the spec.
+/// See AOID (SDK-08 / D6) and eden-platform-go.
 /// Gate: test/aoid/no_tokens_in_callback_gate_test.dart.
 ///
-/// Wire contract, taken verbatim from eden-platform-go the spec:
+/// Wire contract, taken verbatim from eden-platform-go:
 ///
 /// - callback: `<redirect_uri>?code=<handoff>&state=<state>`
 /// - exchange: `POST /auth/social/exchange`,
@@ -73,7 +73,7 @@ class SocialAuthService {
   /// The dart-define that supplies [callbackScheme].
   static const String schemeEnvVar = 'SOCIAL_CALLBACK_SCHEME';
 
-  /// Path of the exchange endpoint added by eden-platform-go the spec.
+  /// Path of the exchange endpoint added by eden-platform-go.
   static const String exchangePath = '/auth/social/exchange';
 
   /// Reads the custom URL scheme from the compile-time environment, mirroring

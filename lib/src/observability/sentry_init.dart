@@ -1,6 +1,6 @@
 // Shared Sentry initialisation + PII scrubbing for every AOCyber Flutter app.
 //
-// opsCluster obj-31 the spec (TELE-03). Promoted from eden-biz's
+// opsCluster. Promoted from eden-biz's
 // lib/core/security/sentry_init.dart, which was the only
 // app that scrubbed anything. Before this, aodex and aocore-admin shipped
 // `SentryFlutter.init` with nothing but a DSN and `tracesSampleRate = 1.0` — no
@@ -160,7 +160,7 @@ void applyTracePropagationTargets(
 ///
 /// [tracePropagationTargets] controls which outbound origins receive the
 /// `sentry-trace` and `baggage` headers that let a Flutter error be joined to
-/// the Go span that served it (opsCluster obj-31 the spec / TELE-15).
+/// the Go span that served it (opsCluster).
 ///
 /// The SDK default is `['.*']` — attach to EVERYTHING, including third-party
 /// origins. That leaks internal trace ids to anyone the app talks to, so pass

@@ -62,7 +62,7 @@ bool _has(String src, String needle) =>
 /// misspelling a consumer cannot compile or register.
 bool _hasExact(String src, String needle) => normalize(src).contains(needle);
 
-/// The claims, in the order the spec's test list names them (items 2-8).
+/// The claims, in the order the test list names them (items 2-8).
 ///
 /// Each predicate demands the claim's SUBSTANCE, not one phrasing: where a
 /// single sentence could be reworded harmlessly, the predicate accepts any of

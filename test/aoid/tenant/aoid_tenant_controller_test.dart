@@ -26,7 +26,7 @@
 //   8   a transport failure mid-switch leaves the session intact and
 //       `switching` back to false
 //
-// RESIDUE / SIGN-OUT (the shape this the spec is named after). A→B alone cannot
+// RESIDUE / SIGN-OUT (the shape this work is named after). A→B alone cannot
 // prove these; the RETURN LEG is where a `==`-filtered update or a cached
 // belief bites:
 //   R1  A -> B -> A: the return leg is NOT suppressed. activeTenant ends at A,
@@ -555,7 +555,7 @@ void main() {
     );
   });
 
-  group('RESIDUE — the sign-out bug this the spec is named after', () {
+  group('RESIDUE — the sign-out bug this work is named after', () {
     test('R1 — A -> B -> A: the RETURN LEG is not suppressed. Three switches, '
         'three notifications, and the belief ends where it started', () async {
       final h = _modeB();

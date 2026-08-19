@@ -1,6 +1,6 @@
 // Part-barrel OWNED BY the spec — the sealed AoidLoginForm widgets (D3 — app code never sees the password).
 //
-// It is exported from lib/eden_platform.dart. Add exports for that the spec's
+// It is exported from lib/eden_platform.dart. Add exports for that area's
 // files HERE, never to lib/eden_platform.dart: TRDs run in PARALLEL and
 // would clobber each other's edits to the shared umbrella barrel.
 // (Until the spec this part-barrel hung off lib/aoid.dart, which was

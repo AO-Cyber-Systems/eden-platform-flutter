@@ -32,7 +32,7 @@ import 'test_helpers.dart';
 
 // ---------------------------------------------------------------------------
 // Local fake. Deliberately NOT in test_helpers.dart: that file is shared and
-// was being edited concurrently by the spec and the spec in this same wave.
+// was being edited concurrently in this same wave.
 // ---------------------------------------------------------------------------
 
 /// [EntitlementsRepository] with a configurable result, a configurable error,
@@ -820,7 +820,7 @@ void main() {
     });
 
     test('a riverpod 3 Notifier instance is REUSED across a rebuild', () async {
-      // Recorded because the spec body claims the opposite in two places, and
+      // Recorded because the plan body claims the opposite in two places, and
       // it decides whether fields outside `state` need resetting in build().
       // This notifier keeps none, so the reuse is currently harmless — but a
       // future contributor adding one needs to know which way it goes.

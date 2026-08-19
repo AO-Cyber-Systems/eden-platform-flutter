@@ -3,13 +3,13 @@
 // depend on that surface; the relocation must be invisible to all of them.
 //
 // Why this file exists instead of the diffstat check the spec specified:
-//   The the spec's gate was
+//   The gate was
 //       git diff --stat origin/main -- lib/eden_platform.dart
 //     -> "insertions only, zero deletions"
 //   which is a proxy for "no symbol removed", and a bad one in both
 //   directions. Moving a file forces its `export` LINE to change path, so the
 //   proxy reports a deletion while every symbol is still exported (exactly
-//   this the spec's situation). Conversely you can add lines while narrowing an
+//   this situation). Conversely you can add lines while narrowing an
 //   export with `show` and the proxy stays green. Line counts do not measure
 //   API surface.
 //
@@ -79,7 +79,7 @@ void main() {
         expect(probe, isNull);
       });
 
-      // --- new in this the spec, reachable through the same barrel ---
+      // --- new in this work, reachable through the same barrel ---
       test(
         'AoidEndpoints is exported and derives AOID paths from the issuer',
         () {
@@ -149,12 +149,12 @@ void main() {
     test('one symbol from each POPULATED part-barrel', () {
       // NOTE — the spec asks for "one symbol from each of the seven
       // part-barrels". That was UNSATISFIABLE when written: three of the seven
-      // (widgets -> the spec, redirect -> the spec, tenant -> the spec) were deliberately
+      // (widgets, redirect and tenant) were deliberately
       // EMPTY placeholders whose owning TRDs had not run yet. They exported
       // nothing, so no symbol from them could be named. The next test asserts
       // the REMAINING placeholders' emptiness is by design rather than breakage.
       //
-      // the spec and the spec have both since run and filled parts/widgets.dart and
+      // The widgets and redirect work have both since run and filled parts/widgets.dart and
       // parts/redirect.dart, so both are named here now and dropped from the
       // pending list below — exactly the handoff that test's failure message
       // prescribes. NOTE for whoever merges the next parallel the spec: this map is

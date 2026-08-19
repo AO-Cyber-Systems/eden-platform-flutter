@@ -105,7 +105,7 @@ class CompanyNotifier extends Notifier<CompanyState> {
   /// | `navStateProvider`      | 1 | **0** |
   /// | `selectedNavProvider`   | 1 | **0** |
   ///
-  /// So this is NOT a riverpod 3 regression and NOT a the spec regression:
+  /// So this is NOT a riverpod 3 regression and NOT a migration regression:
   /// `StateNotifier.updateShouldNotify` defaults to `!identical(old, current)`,
   /// which for a class with no value `==` is the same predicate riverpod 3
   /// uses. The defect predates the version bump. See §3.8 and §3.10.

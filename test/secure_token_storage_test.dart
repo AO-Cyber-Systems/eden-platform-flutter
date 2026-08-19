@@ -30,7 +30,7 @@ void main() {
   late int readCallCount;
   // Optional throw injection for the migration-failure-recovery test.
   Object? throwOnNextWrite;
-  // Optional throw injection for the obj-50 carve-out tests: a failing secure
+  // Optional throw injection for the carve-out tests: a failing secure
   // DELETE must still leave clearing best-effort through shared_preferences.
   Object? throwOnNextDelete;
   // Optional throw injection for the iOS Simulator -25308 retry test.
@@ -276,7 +276,7 @@ void main() {
   // ==========================================================================
   // AOID / the spec — the refresh-token carve-out.
   //
-  // Until obj-50, _writeOrDelete caught EVERY secure-storage failure and wrote
+  // Until that change, _writeOrDelete caught EVERY secure-storage failure and wrote
   // to shared_preferences instead, with a comment arguing that was acceptable
   // "because flutter_secure_storage_web also uses localStorage". That is true,
   // and it is an argument for removing BOTH paths for the refresh token — not
@@ -286,7 +286,7 @@ void main() {
   // The access-token fallback STAYS: it is short-lived, and throwing there
   // aborts login (the caller treats any storage failure as an auth failure).
   // ==========================================================================
-  group('SecureTokenStorage refresh-token carve-out (obj-50 D4 / SDK-11)', () {
+  group('SecureTokenStorage refresh-token carve-out', () {
     // Item 12 — the preserved behaviour, and the positive control for item 13.
     // Without this, item 13 could pass against a _writeOrDelete that had no
     // fallback at all.
@@ -424,7 +424,7 @@ void main() {
     });
 
     // The migration path is a SECOND write of the refresh token, 40 lines
-    // above _writeOrDelete, and the spec's task 2(a) did not mention it:
+    // above _writeOrDelete, and the plan's task 2(a) did not mention it:
     // _doReadWithMigration copies a legacy shared_preferences value INTO
     // secure storage — which on web is localStorage with the AES key beside
     // it. [Rule 2 — missing critical security functionality.]

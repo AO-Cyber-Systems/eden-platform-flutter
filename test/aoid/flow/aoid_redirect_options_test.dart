@@ -1,4 +1,4 @@
-// the spec test-list items 1-4 — the per-consumer configuration for the
+// the test list items 1-4 — the per-consumer configuration for the
 // browser hop.
 //
 // The four things asserted here are each a one-line setting with a total
