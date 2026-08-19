@@ -8,7 +8,7 @@
 // ## Riverpod-free ON PURPOSE, and it is not vestigial
 //
 // `AoidTenantController` is a plain `ChangeNotifier`. That is a decision, not
-// a leftover from the firewall TRD 50-24 deleted:
+// a leftover from the firewall the spec deleted:
 //
 // * riverpod 3 RETRIES a failed provider automatically — 10 attempts over a
 //   38.2-second window — declining only for `ProviderException` and `Error`
@@ -58,7 +58,7 @@ final class AoidTenantSwitchOutcome {
 
   /// The NEW access token. When present it is what the switch is VERIFIED
   /// against — never the id_token, whose `tnt` deliberately does not follow
-  /// the switch (aoid `internal/oauth/tokens.go:41-50`).
+  /// the switch (aoid the token claims`).
   final String? accessToken;
 
   /// The ROTATED refresh token, when this deployment holds one client-side.
@@ -66,7 +66,7 @@ final class AoidTenantSwitchOutcome {
 }
 
 /// HOW a deployment performs the switch. One implementation per D4 posture, so
-/// the CALLER never branches on mode (TRD 50-13 test-list item 7).
+/// the CALLER never branches on mode (the spec test-list item 7).
 abstract class AoidTenantSwitchBackend {
   /// The D4 mode this backend implements.
   AoidDeploymentMode get mode;
@@ -128,8 +128,8 @@ final class AoidRefreshGrantBackend implements AoidTenantSwitchBackend {
 
 /// **Modes A and C** — the session cookie is swapped SERVER-side.
 ///
-/// Mode A hands the switch to the consuming app's own backend (the 50-09
-/// `AoidCodeSink` seam's sibling; 50-15 builds AODex's endpoint against this
+/// Mode A hands the switch to the consuming app's own backend (the the spec
+/// `AoidCodeSink` seam's sibling; the spec builds AODex's endpoint against this
 /// shape). Mode C is same-origin, so the browser's own cookie carries it.
 /// Neither returns a refresh token to the client, and neither may call
 /// `replaceSession` — persisting the empty strings would clobber real values.

@@ -2,19 +2,19 @@
 //
 // RIVERPOD-FREE BY CONSTRUCTION (see storage/aoid_token_store.dart's header).
 //
-// TRD 50-02 built the custody dimension. TRD 50-09 COMPLETED the mode
-// dimension, adding — additively, without changing any 50-02 behaviour — the
+// the spec built the custody dimension. the spec COMPLETED the mode
+// dimension, adding — additively, without changing any the spec behaviour — the
 // deployment [mode], the [cookieBound] flag, and the AOID claims as
 // FIRST-CLASS FIELDS.
 //
-// The claims are two fields, not one. `~/dev/aoid/portal/.../aoid_auth_strategy
-// .dart:65,223-226` hangs AOID claims off the session with an `Expando`
+// The claims are two fields, not one. the portal's own strategy
+//.dart:65,223-226` hangs AOID claims off the session with an `Expando`
 // side-table: invisible to the type system, and it dies with the session
 // object. That pattern is deliberately NOT copied here. Neither is that file's
 // `role: me.aal` overload — an assurance level is not a role, and the shared
 // module must not institutionalise the conflation.
 //
-// There is deliberately no single `claims` field either: 50-03 (D5) keeps
+// There is deliberately no single `claims` field either: the spec (D5) keeps
 // AoidAccessClaims and AoidIdClaims apart precisely so the access token's `tnt`
 // (ACTIVE tenant SLUG) and the id_token's `tnt` (HOME tenant UUID) cannot meet
 // at a common type. A unified field here would rebuild that meeting point.
@@ -25,7 +25,7 @@ import 'claims/aoid_claims.dart';
 import 'mode/aoid_deployment_mode.dart';
 import 'storage/aoid_token_store.dart';
 
-/// An AOID session, carrying the one property this TRD exists to make
+/// An AOID session, carrying the one property this the spec exists to make
 /// observable: [hasClientHeldRefreshToken].
 ///
 /// There is **no public unnamed constructor**. A session can only be built
@@ -106,7 +106,7 @@ class AoidSession {
         'Mode B (refresh token in the device keychain) is native-only. On web '
         'there is no keychain: flutter_secure_storage_web keeps the ciphertext '
         'and its AES key together in window.localStorage, so the token is '
-        'readable by any XSS — the configuration 50-CONTEXT.md D4 forbids. '
+        'readable by any XSS — the configuration the design notes forbids. '
         'Use AoidSession.backendHeldCookie (Mode A) on web.',
       );
     }
@@ -140,7 +140,7 @@ class AoidSession {
   /// The AOID **access token's** claims, when they have been decoded.
   ///
   /// Its `tnt` is the ACTIVE tenant SLUG. Kept separate from [idClaims] on
-  /// purpose — see this file's header and 50-CONTEXT.md D5.
+  /// purpose — see this file's header and the design notes.
   final AoidAccessClaims? accessClaims;
 
   /// The AOID **id_token's** claims, when present and decoded.
@@ -148,7 +148,7 @@ class AoidSession {
   /// Its `tnt` is the HOME tenant UUID and does NOT follow the active tenant.
   final AoidIdClaims? idClaims;
 
-  /// Which 50-CONTEXT.md **D4 deployment mode** produced this session.
+  /// Which the design notes **D4 deployment mode** produced this session.
   ///
   /// DERIVED from [posture] rather than stored. A stored field would be a
   /// second source of truth for the same fact, and the two could disagree —

@@ -1,11 +1,11 @@
-// The client half of objective 49's /oauth/native/* contract (SDK-02).
+// The client half of the issuer /oauth/native/* contract (SDK-02).
 //
 // FORM IN, JSON OUT, ZERO CUSTOM REQUEST HEADERS.
 //
 // RIVERPOD-FREE and Flutter-free. It imports lib/src/auth/auth_strategy.dart
 // for RedirectRequired; that file imports only platform_models.dart, which
-// imports nothing, so lib/aoid.dart's closure stays clean (50-04 verified this
-// and handed the note to this TRD).
+// imports nothing, so lib/aoid.dart's closure stays clean (the spec verified this
+// and handed the note to this the spec).
 
 import 'dart:convert';
 import 'dart:io' show SocketException;
@@ -30,7 +30,7 @@ sealed class AoidNativeResponse {
 ///
 /// Wire: `200 {"authorization_code":"…"}` — **exactly one key**.
 ///
-/// NOTE THE SPELLING. The key is `authorization_code`, not `code`. 49-08's
+/// NOTE THE SPELLING. The key is `authorization_code`, not `code`. the spec
 /// `nativeSuccessBody` has a single field and its comment explains why a spare
 /// `auth_session` cannot ride along: it would leave a live handle after the
 /// ceremony ended.
@@ -46,14 +46,14 @@ final class AoidNativeCode extends AoidNativeResponse {
 ///
 /// * `200 {"auth_session","next","available_methods"}` — the `start` response.
 /// * `401 {"error":"insufficient_authorization","auth_session":"<NEW>", …}` —
-///   every intermediate `verify`. 49-07's `Verify` returns BOTH a response and
-///   a non-nil error mid-ceremony, and 49-08 renders both at once. Treating
+///   every intermediate `verify`. the spec `Verify` returns BOTH a response and
+///   a non-nil error mid-ceremony, and the spec renders both at once. Treating
 ///   that 401 as a failure throws away the successor handle and breaks the
 ///   ceremony at step two.
 ///
 /// [advanced] distinguishes "the factor succeeded, here is the next step" from
 /// "the factor did not succeed, present the same step again". That is the ONLY
-/// signal AOID gives, and deliberately so: 49-08 proved a wrong password and a
+/// signal AOID gives, and deliberately so: the spec proved a wrong password and a
 /// correct password needing MFA share their status, their code and every
 /// header, and differ ONLY in `next` / `available_methods`. Do not try to
 /// recover a richer reason — there isn't one, and inventing one rebuilds the
@@ -67,7 +67,7 @@ final class AoidNativeContinue extends AoidNativeResponse {
   });
 
   /// The ROTATED handle. **Present THIS on the next step, never the previous
-  /// one.** 49-06 consumes the presented handle with a conditional UPDATE and
+  /// one.** the spec consumes the presented handle with a conditional UPDATE and
   /// inserts a successor, so re-presenting the old value returns zero rows and
   /// answers `invalid_session` — which looks exactly like a server bug.
   final String authSession;
@@ -76,13 +76,13 @@ final class AoidNativeContinue extends AoidNativeResponse {
   /// EMPTY when the submitted factor did not advance the ceremony.
   final String next;
 
-  /// Factors the identity can satisfy for [next]. May be EMPTY: 49-07 refuses
+  /// Factors the identity can satisfy for [next]. May be EMPTY: the spec refuses
   /// to emit `available_methods` before a factor has succeeded, because doing
   /// so makes the endpoint an enumeration oracle. Render a picker only when it
   /// is non-empty; an empty list is correct, not an error.
   final List<String> availableMethods;
 
-  /// WebAuthn assertion options, verbatim. Passed through untouched — 49-08
+  /// WebAuthn assertion options, verbatim. Passed through untouched — the spec
   /// proved re-encoding reorders keys and re-escapes unicode, and the
   /// assertion signature covers those bytes.
   final Map<String, dynamic>? webauthnChallenge;
@@ -91,28 +91,28 @@ final class AoidNativeContinue extends AoidNativeResponse {
   bool get advanced => next.isNotEmpty;
 }
 
-/// Fall back to the hosted browser flow. **NOT a failure** (50-CONTEXT D7).
+/// Fall back to the hosted browser flow. **NOT a failure**.
 ///
 /// Wire: `400 {"error":"redirect_to_web","error_description":"…",
 /// "authorization_url":"…"}`. Reached by social IdPs, PIV/CAC, and — on a
 /// perfectly CORRECT password — any tenant whose isolation tier is
-/// `cryptographic` (FedRAMP-High) or `physical` (IL5), per 49-04 gate 7.
+/// `cryptographic` or `physical`.
 /// Rendering it as a login failure is a real bug against a real enterprise
 /// tenant.
 final class AoidNativeRedirect extends AoidNativeResponse {
   const AoidNativeRedirect(this.result);
 
-  /// 50-04's `AuthResult` variant, ready for `AuthNotifier` and for 50-12's
+  /// the spec `AuthResult` variant, ready for `AuthNotifier` and for the spec
   /// browser hop. Its `reason` is TELEMETRY ONLY — never UI copy.
   final RedirectRequired result;
 }
 
-/// Speaks objective 49's `/oauth/native/{start,verify}` contract.
+/// Speaks the issuer `/oauth/native/{start,verify}` contract.
 ///
 /// Uses `package:http`, matching `AoidOidcAuthStrategy` and the whole existing
 /// fixture suite. **Do not introduce `dio` here** even though it is in the
-/// pubspec: mixing transports forks `FakeAoidEndpoint`, which 50-09, 50-11 and
-/// 50-12 all extend.
+/// pubspec: mixing transports forks `FakeAoidEndpoint`, which the spec and
+/// the spec all extend.
 class AoidNativeClient {
   const AoidNativeClient({
     required AoidEndpoints endpoints,
@@ -125,7 +125,7 @@ class AoidNativeClient {
 
   /// THE header map. One entry, forever.
   ///
-  /// This is the entire CORS contract. 49-08 built a PER-CLIENT origin
+  /// This is the entire CORS contract. the spec built a PER-CLIENT origin
   /// allowlist that resolves `client_id` from the request BODY, which only
   /// works because these are CORS **simple requests**: a preflight is an
   /// `OPTIONS` with no body, so `client_id` would be unresolvable and the
@@ -138,7 +138,7 @@ class AoidNativeClient {
   ///
   /// So: no `X-AOID-Tenant`, no `X-Requested-With`, no bearer, no correlation
   /// id. `tenant_id` and `client_id` go in the FORM BODY. Do not "tidy" a
-  /// field into a header. Server-side this is enforced by 49-08's
+  /// field into a header. Server-side this is enforced by the spec
   /// `TestNativeHandlersReadNoCustomRequestHeader`; client-side by
   /// test-list item 2, which asserts this map's KEY SET.
   ///
@@ -149,7 +149,7 @@ class AoidNativeClient {
   /// the socket layer, and a browser adds its own; all are CORS-safelisted or
   /// forbidden header names the user agent controls, so none of them
   /// preflights. On web, `BrowserClient` sends only what is in this map.)
-  /// 49-08's `isFormContent` splits on `;` before comparing, so a charset
+  /// the spec `isFormContent` splits on `;` before comparing, so a charset
   /// parameter would be tolerated too — but none is sent.
   static const Map<String, String> _formHeaders = {
     'content-type': 'application/x-www-form-urlencoded',
@@ -159,7 +159,7 @@ class AoidNativeClient {
   ///
   /// [redirectUri] is REQUIRED. AOID deliberately deviates from
   /// draft-ietf-oauth-first-party-apps-03 here so `IssueAuthorizationCode` is
-  /// reused untouched and its exact-match property is preserved (49-11).
+  /// reused untouched and its exact-match property is preserved.
   Future<AoidNativeResponse> start({
     required String clientId,
     required String tenantId,
@@ -178,7 +178,7 @@ class AoidNativeClient {
       'redirect_uri': redirectUri,
       'code_challenge': codeChallenge,
       'code_challenge_method': codeChallengeMethod,
-      // RFC 6749 §3.3 — SPACE-delimited. 49-08 splits on space.
+      // RFC 6749 §3.3 — SPACE-delimited. the spec splits on space.
       if (scopes.isNotEmpty) 'scope': scopes.join(' '),
       if (nonce != null && nonce.isNotEmpty) 'nonce': nonce,
       // The ACTIVE tenant SLUG, on `tenant`, mirroring /oauth/authorize.
@@ -197,7 +197,7 @@ class AoidNativeClient {
   ///
   /// **Never retry this call automatically on [AoidErrorCode.invalidSession].**
   /// The presented handle is already consumed; a retry burns the successor and
-  /// walks into 49-06's durable `MaxAttempts = 5` cap, destroying a ceremony
+  /// walks into the spec durable `MaxAttempts = 5` cap, destroying a ceremony
   /// that was still recoverable.
   Future<AoidNativeResponse> verify({
     required String authSession,
@@ -229,7 +229,7 @@ class AoidNativeClient {
 
   AoidNativeResponse _interpret(http.Response response) {
     // 503 is checked BEFORE the body: a replica refuses the write before the
-    // service is ever called (49-08), so there is no authentication decision
+    // service is ever called, so there is no authentication decision
     // in there to read.
     if (response.statusCode == 503) {
       throw AoidTransportError(
@@ -266,7 +266,7 @@ class AoidNativeClient {
     if (error == 'redirect_to_web') {
       final raw = body['authorization_url'];
       final url = raw is String ? Uri.tryParse(raw) : null;
-      // 50-04 deferred item 1, owner THIS TRD: RedirectRequired cannot refuse
+      // the spec deferred item 1, owner THIS the spec: RedirectRequired cannot refuse
       // an empty or relative Uri, and one would park AuthNotifier in
       // `refreshing` with nothing to open and no error ever surfacing. Refuse
       // it here instead.
@@ -275,7 +275,7 @@ class AoidNativeClient {
       }
       return AoidNativeRedirect(
         // `reason` is TELEMETRY ONLY. It carries the wire code and nothing
-        // that could become UI copy — objective 49 hides WHY on purpose.
+        // that could become UI copy — the issuer hides WHY on purpose.
         RedirectRequired(url, reason: 'redirect_to_web'),
       );
     }

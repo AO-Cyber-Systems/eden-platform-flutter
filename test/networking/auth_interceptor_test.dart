@@ -1,6 +1,6 @@
 // The dio types (DioException, ErrorInterceptorHandler, RequestOptions,
 // Response) now arrive through eden_platform.dart, which re-exports them as of
-// TRD 50-24. The direct `import 'package:dio/dio.dart'` that used to sit here
+// the spec. The direct `import 'package:dio/dio.dart'` that used to sit here
 // was made redundant by that addition — and dropping it is the shape politihub's
 // APP-06 grep gate (`^import 'package:(http|dio)/`) asks consumers for, so this
 // file is now an example of the pattern rather than a counter-example.

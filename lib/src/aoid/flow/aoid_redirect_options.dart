@@ -1,4 +1,4 @@
-// Per-consumer configuration for the AOID browser hop (TRD 50-12, D7).
+// Per-consumer configuration for the AOID browser hop (the spec, D7).
 //
 // Every field here is a one-line setting with a total-failure blast radius,
 // and every one of them is invisible until it happens to a user. The package
@@ -20,7 +20,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart'
 /// A shared library cannot guess a per-app bundle identifier.
 /// `social_auth_service.dart:37` shipped a hardcoded PERSONAL one — a real
 /// developer's reverse-DNS bundle id — to every consumer of this package;
-/// TRD 50-10 removed it and this type must not reintroduce the shape. Unset
+/// the spec removed it and this type must not reintroduce the shape. Unset
 /// is a compile error (`required`); blank or malformed fails fast at
 /// construction, not at the browser hop, where the failure would be a
 /// mystery.
@@ -32,7 +32,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart'
 ///
 /// Registration is per (app, platform), and the FULL redirect URI must be
 /// EXACT-match registered on the AOID client
-/// (`aoid/internal/oauth/service.go:457`):
+/// (`aoid/the token service`):
 ///
 /// | Platform    | Where the scheme is registered                            |
 /// | ----------- | --------------------------------------------------------- |
@@ -113,7 +113,7 @@ class AoidRedirectOptions {
   ///
   /// On web a blocked popup genuinely cannot be detected: `url_launcher_web`
   /// opens with `'noopener,noreferrer'` and its own doc says so —
-  /// *"Always returns `true` ... Because `noopener` is used as a window
+  /// *"Always returns `true`... Because `noopener` is used as a window
   /// feature, it can not be detected if the window was opened successfully."*
   /// (`url_launcher_web-2.4.3/lib/url_launcher_web.dart:64-90`).
   /// `flutter_web_auth_2` then polls on a 1-second timer until its `timeout`,
@@ -138,7 +138,7 @@ class AoidRedirectOptions {
     // flutter_web_auth_2 defaults useWebview to TRUE
     // (flutter_web_auth_2-5.0.3/lib/src/options.dart:69). A WebView is
     // exactly what Google blocks for social login: the leg fails with
-    // disallowed_useragent (49-CONTEXT hard constraint 1). Forced, and
+    // disallowed_useragent. Forced, and
     // deliberately NOT consumer-settable — there is no social IdP for which
     // an embedded WebView is the right answer.
     useWebview: false,

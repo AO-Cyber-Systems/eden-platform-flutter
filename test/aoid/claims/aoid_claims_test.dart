@@ -1,4 +1,4 @@
-// TRD 50-03 test-list items 4-8 — the two unverified decoders, and the
+// the spec test-list items 4-8 — the two unverified decoders, and the
 // EMPIRICAL half of the `tnt` proof.
 //
 // The type-level proof (conflation is a compile error) lives in
@@ -20,7 +20,7 @@ const _sourcePath = 'lib/src/aoid/claims/aoid_claims.dart';
 ///
 /// Load-bearing: a doc comment reflows across line breaks the moment it is
 /// edited, so a phrase assertion made against the raw text is a coin flip.
-/// TRD 50-04 hit exactly this — its "MUST replace their stored handle" gate
+/// the spec hit exactly this — its "MUST replace their stored handle" gate
 /// would have returned 0 purely because the phrase had wrapped.
 String _normalizeDoc(String raw) => raw
     .split('\n')
@@ -32,7 +32,7 @@ String _normalizeDoc(String raw) => raw
 /// The doc comment attached to [declaration], normalized, and nothing else.
 ///
 /// Scoped on purpose. A file-wide `grep -c "UI HINTING ONLY"` cannot tell WHICH
-/// declaration it matched — TRD 50-04's `TELEMETRY ONLY` gate passed while the
+/// declaration it matched — the spec `TELEMETRY ONLY` gate passed while the
 /// comment sat on the wrong class. A doctrine warning that has drifted off the
 /// thing it warns about is worse than absent, because it reads as covered.
 String _docCommentOn(String declaration) {
@@ -177,7 +177,7 @@ void main() {
         // They are different strings...
         expect(access.activeTenant.slug, isNot(id.homeTenant.uuid));
 
-        // ...and different in KIND, which is the durable claim. Shape, not just
+        //...and different in KIND, which is the durable claim. Shape, not just
         // inequality: a slug is not a UUID.
         expect(
           _uuidRe.hasMatch(id.homeTenant.uuid),
@@ -290,7 +290,7 @@ void main() {
 
     test('a `tnt` of the wrong JSON type is rejected rather than coerced', () {
       // Coercing 42 to "42" would produce an AoidActiveTenantSlug that is not a
-      // slug — precisely the class of silent wrongness this TRD exists to stop.
+      // slug — precisely the class of silent wrongness this the spec exists to stop.
       expect(
         () => AoidAccessClaims.decodeUnverified(
           fx.accessTokenWithNonStringTenant,
@@ -311,7 +311,7 @@ void main() {
           reason:
               'the doctrine must sit on $cls itself. A file-wide grep would '
               'still pass with this warning parked on the other class, which '
-              'is exactly the failure mode TRD 50-04 hit.',
+              'is exactly the failure mode the spec hit.',
         );
         expect(doc, contains('re-verifies'));
         expect(

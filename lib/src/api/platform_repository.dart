@@ -18,7 +18,7 @@ abstract class PlatformRepository {
 
   /// Returns the enterprise SSO authorization URL for a desktop loopback flow.
   ///
-  /// DEPRECATED (AOID objective 50, TRD 50-10 / SDK-08 / D6). Its only consumer
+  /// DEPRECATED. Its only consumer
   /// was `SSOAuthService`, which has been DELETED: it read `access_token` and
   /// `refresh_token` out of the loopback callback URL and launched the browser
   /// through `Process.run`. Nothing in eden calls this method any more.
@@ -37,7 +37,7 @@ abstract class PlatformRepository {
   /// Use `initiateSocialLogin` + [SocialAuthService], which is cross-platform
   /// and takes an authorization CODE rather than tokens in a URL.
   @Deprecated(
-    'Unused since TRD 50-10 removed SSOAuthService (a tokens-in-URL loopback '
+    'Unused since the spec removed SSOAuthService (a tokens-in-URL loopback '
     'reader that shelled out to launch a browser). '
     'Use initiateSocialLogin + SocialAuthService. Slated for removal in a '
     'coordinated cross-repo change once consumer test fakes drop their overrides.',

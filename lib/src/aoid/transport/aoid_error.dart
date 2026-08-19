@@ -1,10 +1,10 @@
-// AOID native-login errors — the client half of objective 49's taxonomy.
+// AOID native-login errors — the client half of the issuer taxonomy.
 //
 // RIVERPOD-FREE and Flutter-free: reachable from lib/aoid.dart, whose
 // transitive closure test/aoid/riverpod_free_gate_test.dart walks.
 
 /// The wire error vocabulary of `/oauth/native/*`, per
-/// draft-ietf-oauth-first-party-apps-03 and AOID objective 49.
+/// draft-ietf-oauth-first-party-apps-03 and AOID.
 ///
 /// These five are AUTHENTICATION-LAYER outcomes. `temporarily_unavailable`
 /// (503) and `server_error` (500) are deliberately NOT here: they are
@@ -16,7 +16,7 @@ enum AoidErrorCode {
   invalidRequest,
 
   /// EVERY client-resolution failure — unknown client, native login not
-  /// enabled for it, origin not on its allowlist. 400. Objective 49 makes all
+  /// enabled for it, origin not on its allowlist. 400. the issuer makes all
   /// of them byte-identical so the endpoint cannot enumerate registrations.
   invalidClient,
 
@@ -25,7 +25,7 @@ enum AoidErrorCode {
 
   /// A factor is still outstanding. 401.
   ///
-  /// This is USUALLY NOT AN ERROR: 49-07's `Verify` answers
+  /// This is USUALLY NOT AN ERROR: the spec `Verify` answers
   /// `insufficient_authorization` with the ROTATED handle in the body on every
   /// intermediate step, and a failed factor answers it identically. Both are
   /// [AoidNativeContinue], not a throw. An `AoidError` with this code is
@@ -37,8 +37,8 @@ enum AoidErrorCode {
   ///
   /// NEVER surfaces as an `AoidError`. It is a first-class RESULT
   /// (`AoidNativeRedirect` wrapping `RedirectRequired`), because a social IdP,
-  /// a PIV card, or a FedRAMP-High / IL5 tenancy tier reaching this on a
-  /// CORRECT password is normal (49-04 gate 7). The code is in this enum
+  /// a PIV card, or a restrictive tenancy tier reaching this on a
+  /// CORRECT password is normal (the spec gate 7). The code is in this enum
   /// because it is part of the wire vocabulary, not because it is a failure.
   redirectToWeb,
 }
@@ -47,11 +47,11 @@ enum AoidErrorCode {
 ///
 /// [AoidErrorCode.invalidSession] covers replay, expiry, an unknown handle,
 /// a cross-tenant presentation, a cross-client presentation AND attempt-cap
-/// exhaustion, indistinguishably. Objective 49 folds them together on purpose
-/// (49-04, 49-06) so the endpoint cannot be used as an account-existence or
+/// exhaustion, indistinguishably. the issuer folds them together on purpose
+/// so the endpoint cannot be used as an account-existence or
 /// tenancy-membership oracle. **Do not widen this.** If you find yourself
 /// adding a `reason`, a `cause`, or a second message per branch, you are
-/// rebuilding the oracle that objective 49 spent a whole TRD removing.
+/// rebuilding the oracle that the issuer spent a whole the spec removing.
 ///
 /// Messages are built from a FIXED VOCABULARY held in this file. Request
 /// input — passwords, TOTP codes, backup codes, emails, `auth_session`
@@ -99,7 +99,7 @@ enum AoidTransportFailureKind {
   /// The socket died, DNS failed, TLS failed — nothing reached AOID.
   network,
 
-  /// `503 temporarily_unavailable`. A replica refusing a write (49-08). The
+  /// `503 temporarily_unavailable`. A replica refusing a write. The
   /// ceremony may still be perfectly alive; honour `Retry-After`.
   unavailable,
 

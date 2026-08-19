@@ -17,13 +17,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // TRD 50-22 moved NavNotifier from `StateNotifier` to riverpod 3's
+          // the spec moved NavNotifier from `StateNotifier` to riverpod 3's
           // `Notifier`, so `overrideWith` now takes a zero-argument factory
-          // rather than a `(ref) => ...` create callback. This override is the
+          // rather than a `(ref) =>...` create callback. This override is the
           // real notifier, exactly as before.
           navStateProvider.overrideWith(NavNotifier.new),
           // Auth is left as the real AuthNotifier; only its dependencies are
-          // faked. Constructor injection is gone in riverpod 3 (TRD 50-21),
+          // faked. Constructor injection is gone in riverpod 3,
           // so the fakes arrive through the providers AuthNotifier.build()
           // watches rather than through `AuthNotifier(...)`.
           platformRepositoryProvider
@@ -136,7 +136,7 @@ void main() {
 
 /// A NavNotifier that starts with pre-set state instead of empty.
 ///
-/// TRD 50-22 moved NavNotifier from `StateNotifier` to riverpod 3's `Notifier`,
+/// the spec moved NavNotifier from `StateNotifier` to riverpod 3's `Notifier`,
 /// which has no constructor injection — the initial state comes from `build()`
 /// rather than a `super(...)` call plus a constructor-body assignment.
 ///
@@ -155,7 +155,7 @@ class _PresetNavNotifier extends NavNotifier {
 
 /// Pins [authProvider] at a fixed [AuthState] for widget tests.
 ///
-/// TRD 50-21 moved AuthNotifier from `StateNotifier` to riverpod 3's
+/// the spec moved AuthNotifier from `StateNotifier` to riverpod 3's
 /// `Notifier`, which has no constructor injection — the initial state comes
 /// from `build()` instead of a `super(...)` call plus a constructor body.
 ///

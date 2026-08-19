@@ -1,4 +1,4 @@
-// TRD 50-08 task 3 — AoidNativeFlow, the ceremony state machine.
+// the spec task 3 — AoidNativeFlow, the ceremony state machine.
 //
 // TEST LIST (written first; RED before GREEN, one at a time).
 //
@@ -15,7 +15,7 @@
 //      (the restoreSession sign-out defect, not repeated)
 //   7  the flow never auto-retries — one submission, one verify call
 //   8  SOURCE GATE: no member through which app-owned Dart could read back a
-//      submitted credential (D3's precondition for 50-11's sealed widgets),
+//      submitted credential (D3's precondition for the spec sealed widgets),
 //      with a POSITIVE CONTROL proving the predicate can fire
 //   9  the handle LIFECYCLE on failure paths — added after the fixture was
 //      found to consume the handle on a 503, which the server does not do.
@@ -128,7 +128,7 @@ void main() {
       final again = flow.state as AoidFlowAwaitingFactor;
       expect(again.next, 'password', reason: 'the step is unchanged');
       expect(again.lastAttemptRejected, isTrue);
-      // 49-04 folds unknown-email / wrong-password / no-credential / locked into
+      // the spec folds unknown-email / wrong-password / no-credential / locked into
       // ONE indistinguishable answer. The flow must expose no more than "that
       // did not work".
       expect(again.availableMethods, isEmpty);
@@ -178,7 +178,7 @@ void main() {
       expect(flow.state, isNot(isA<AoidFlowRestartRequired>()));
       expect((flow.state as AoidFlowUnavailable).retryAfterSeconds, 30);
 
-      // 49-08's write gate fires BEFORE the service is called, so the handle was
+      // the spec write gate fires BEFORE the service is called, so the handle was
       // never consumed: the SAME handle must still be presentable.
       await flow.submitPassword(email: 'someone@alpha.test', password: 'pw');
       expect(flow.state, isA<AoidFlowComplete>());
@@ -190,7 +190,7 @@ void main() {
   test(
     '7 one submission fires exactly one verify — the flow never auto-retries',
     () async {
-      // 49-06's MaxAttempts is DURABLE and per-handle. A client retry loop burns
+      // the spec MaxAttempts is DURABLE and per-handle. A client retry loop burns
       // the successor and destroys a recoverable ceremony.
       fake.scriptNativeCeremony([const FakeNativeReject()]);
       await begin();
@@ -207,7 +207,7 @@ void main() {
     // DIFFERENT answers and only the happy path is obvious.
 
     test('a 503 write-gate rejection does NOT consume the handle', () async {
-      // 49-08's nativeWriteAllowed runs BEFORE r.nativeLogin.Verify, so the
+      // the spec nativeWriteAllowed runs BEFORE r.nativeLogin.Verify, so the
       // ceremony service never saw the request.
       fake.scriptNativeCeremony([
         const FakeNativeUnavailable(),
@@ -226,7 +226,7 @@ void main() {
     test(
       'a wrong-factor rejection DOES consume the handle and rotates',
       () async {
-        // 49-06: Consume burns the presented handle and increments the DURABLE
+        // the spec: Consume burns the presented handle and increments the DURABLE
         // per-handle attempt counter, then Rotate issues a successor carrying
         // the count forward. A wrong password costs one attempt, up to
         // MaxAttempts = 5.
@@ -255,7 +255,7 @@ void main() {
     test(
       'the handle a rejection consumed is REFUSED if presented again',
       () async {
-        // The client-side counterpart of 49-06's mutation 11 (reusing the
+        // The client-side counterpart of the spec mutation 11 (reusing the
         // predecessor collides on the primary key). Drive the transport
         // directly, since the flow structurally cannot present a stale handle.
         final client = AoidNativeClient(
@@ -308,7 +308,7 @@ void main() {
         expect(flow.canSubmit, isFalse);
 
         // A further submission must NOT put another request on the wire: the
-        // handle is gone, and 49-06's attempt cap is durable.
+        // handle is gone, and the spec attempt cap is durable.
         final before = fake.nativeRequests.length;
         await flow.submitOtp('123456');
         expect(fake.nativeRequests.length, before);
@@ -327,8 +327,8 @@ void main() {
     });
 
     // Comments discard first: the file DOCUMENTS the rule, and a whole-file
-    // grep cannot tell a doctrine comment from a declaration (the lesson 49-07
-    // and 49-08 both recorded).
+    // grep cannot tell a doctrine comment from a declaration (the lesson the spec
+    // and the spec both recorded).
     String stripComments(String src) => src
         .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
         .replaceAll(RegExp(r'//[^\n]*'), '');
@@ -356,7 +356,7 @@ void main() {
         isEmpty,
         reason:
             'D3: app-owned Dart must never read the '
-            'plaintext back. 50-11 seals AoidLoginForm on this guarantee.',
+            'plaintext back. the spec seals AoidLoginForm on this guarantee.',
       );
     });
 

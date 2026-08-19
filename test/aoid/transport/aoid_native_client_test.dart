@@ -1,4 +1,4 @@
-// TRD 50-08 — the client half of objective 49's /oauth/native/* contract.
+// the spec — the client half of the issuer /oauth/native/* contract.
 //
 // TEST LIST (written first; RED before GREEN, one at a time).
 //
@@ -8,9 +8,9 @@
 //   F3  replay / expiry / unknown-handle / cross-tenant produce BYTE-IDENTICAL
 //       responses — status, every header, and the raw body. If the FAKE
 //       distinguishes them, the client's own lossiness test (item 8) passes
-//       vacuously. This is the 49-08 lesson: a negative test that asserts
+//       vacuously. This is the the spec lesson: a negative test that asserts
 //       exactly what a broken implementation also produces proves nothing.
-//   F4  the fake rejects a JSON content-type, exactly as 49-08's isFormContent
+//   F4  the fake rejects a JSON content-type, exactly as the spec isFormContent
 //       does ("NEVER accept JSON request bodies on OAuth endpoints")
 //
 // Client (task 2):
@@ -23,14 +23,14 @@
 //   4   verify() POSTs the full field set form-encoded
 //   5   a terminal verify() returning {"authorization_code": "..."} yields the
 //       code  — NOTE: the wire key is `authorization_code`, NOT `code`; the
-//       TRD said `code` and objective 49 shipped `authorization_code`
+//       the spec said `code` and the issuer shipped `authorization_code`
 //   6   the handle ROTATES: two sequential verify() calls send two DIFFERENT
 //       auth_session values, the second being the one the first response
 //       returned — asserted on the RECORDED REQUEST BODIES
 //   7   {"error":"invalid_session"} yields AoidError with code invalidSession
 //   8   the error surface does not distinguish replay from expiry from
 //       unknown-handle — same code AND same message
-//   9   {"error":"redirect_to_web","authorization_url":"…"} maps to 50-04's
+//   9   {"error":"redirect_to_web","authorization_url":"…"} maps to the spec
 //       RedirectRequired, NOT to a failure and NOT to an AoidError
 //   10  invalid_client and invalid_request map to their codes
 //   11  no secret in any message: neither the password, the TOTP code, nor the
@@ -45,19 +45,19 @@
 //   15  positive control: the same ceremony continued with tenant A's
 //       tenant_id succeeds  (written BEFORE 14)
 //   16  a mid-ceremony 401 carrying a rotated auth_session is a CONTINUATION,
-//       not a failure — the single most important divergence from the TRD
+//       not a failure — the single most important divergence from the spec
 //   17  a REJECTED factor (401 + rotated handle, no `next`) is also a
 //       continuation, and carries no reason
 //   18  attempt-cap exhaustion (400 invalid_session, no successor) is an
 //       AoidError, so the flow can offer "start again"
 //   19  a redirect_to_web with a missing/unusable authorization_url is a
 //       failure, not a RedirectRequired carrying an unusable Uri
-//       (50-04 deferred item 1, owner 50-08)
+//       (the spec deferred item 1, owner the spec)
 
 import 'dart:convert';
 
 // This file used to take the AOID surface from `aoid.dart` and `RedirectRequired`
-// from `eden_platform.dart`. TRD 50-24 folded the two AOID barrels into
+// from `eden_platform.dart`. the spec folded the two AOID barrels into
 // eden_platform.dart, so both now arrive through one import — which is the
 // single-entrypoint outcome the fold exists to produce.
 import 'package:eden_platform_flutter/eden_platform.dart';
@@ -220,7 +220,7 @@ void main() {
         );
 
         // And pin WHAT they agree on, so a mutation moving all four together
-        // still fails (49-08 section 2's independent-assertion lesson).
+        // still fails (the spec section 2's independent-assertion lesson).
         expect(replay.statusCode, 400);
         final decoded = jsonDecode(replay.body) as Map<String, dynamic>;
         expect(decoded.keys.toSet(), {'error', 'error_description'});
@@ -230,7 +230,7 @@ void main() {
     );
 
     test(
-      'F4 the fake rejects a JSON content-type, as 49-08 isFormContent does',
+      'F4 the fake rejects a JSON content-type, as the spec isFormContent does',
       () async {
         // A raw String body is required here: package:http REFUSES to encode a
         // Map body under a non-form content type (see F5). So this probe has to
@@ -247,7 +247,7 @@ void main() {
 
     test('F5 package:http STRUCTURALLY refuses a Map body under a non-form '
         'content type — the anti-JSON rule is enforced by the library', () {
-      // Recorded because it is load-bearing for 50-16's AODex adapter and for
+      // Recorded because it is load-bearing for the spec AODex adapter and for
       // any future maintainer tempted to "just send JSON": as long as the
       // client passes a Map<String,String> body, sending JSON is not a bug
       // that can be introduced quietly — it throws at the call site.
@@ -262,9 +262,9 @@ void main() {
     });
 
     test(
-      'F6 a charset parameter would still satisfy isFormContent (49-08 splits on ;)',
+      'F6 a charset parameter would still satisfy isFormContent (the spec splits on ;)',
       () async {
-        // 49-08's isFormContent splits on ';' before comparing, so
+        // the spec isFormContent splits on ';' before comparing, so
         // "application/x-www-form-urlencoded; charset=utf-8" is accepted.
         //
         // MEASURED: http ^1.2.0 does NOT append a charset — item 3 pins that
@@ -326,7 +326,7 @@ void main() {
         expect(req.fields['redirect_uri'], kFakeRedirectUri);
         expect(req.fields['code_challenge'], kFakeCodeChallenge);
         expect(req.fields['code_challenge_method'], 'S256');
-        // RFC 6749 §3.3: SPACE-delimited, and 49-08 splits on space.
+        // RFC 6749 §3.3: SPACE-delimited, and the spec splits on space.
         expect(req.fields['scope'], 'openid profile email');
         expect(req.fields['nonce'], 'fixture-nonce-01');
         // The ACTIVE tenant SLUG rides on `tenant`, mirroring /oauth/authorize
@@ -344,7 +344,7 @@ void main() {
     test('2 start() sends NO application header other than the content type — '
         'the CORS simple-request guard', () async {
       await startCeremony();
-      // THE assertion. 49-08 built a per-client origin allowlist that only
+      // THE assertion. the spec built a per-client origin allowlist that only
       // works because these are CORS SIMPLE requests: a preflight is an
       // OPTIONS with no body, so client_id would be unresolvable. ONE custom
       // header turns every browser caller into a preflighted one.
@@ -356,7 +356,7 @@ void main() {
       final ct = fake.nativeRequests.single.headers['content-type']!;
       expect(ct.split(';').first.trim(), 'application/x-www-form-urlencoded');
       expect(ct, isNot(contains('json')));
-      // The EXACT value, recorded for 50-12's browser leg and 50-16's AODex
+      // The EXACT value, recorded for the spec browser leg and the spec AODex
       // adapter: http ^1.2.0 appends no charset parameter.
       expect(ct, 'application/x-www-form-urlencoded');
     });
@@ -548,13 +548,13 @@ void main() {
           expect(other.toString(), replay.toString());
         }
         // Pin WHAT they agree on, so a mutation moving all four together still
-        // fails (49-08 section 2's independent-assertion lesson).
+        // fails (the spec section 2's independent-assertion lesson).
         expect(replay.code, AoidErrorCode.invalidSession);
       },
     );
 
     test(
-      '9 redirect_to_web maps to 50-04 RedirectRequired, not to a failure',
+      '9 redirect_to_web maps to the spec RedirectRequired, not to a failure',
       () async {
         fake.scriptNativeCeremony([const FakeNativeRedirect()]);
         await startCeremony();
@@ -713,7 +713,7 @@ void main() {
         expect(
           (unavailable as AoidTransportError).retryAfterSeconds,
           30,
-          reason: '49-08 answers a replica with 503 + Retry-After',
+          reason: 'the spec answers a replica with 503 + Retry-After',
         );
       },
     );
@@ -818,9 +818,9 @@ void main() {
       );
 
       final cont = res as AoidNativeContinue;
-      // 49-06: a wrong password costs ONE attempt and yields a fresh handle.
+      // the spec: a wrong password costs ONE attempt and yields a fresh handle.
       // Returning Failed here would clear the continuation token and destroy
-      // a recoverable ceremony (50-04 deferred item 2, owner 50-08).
+      // a recoverable ceremony (the spec deferred item 2, owner the spec).
       expect(cont.advanced, isFalse);
       expect(cont.next, isEmpty);
       expect(cont.availableMethods, isEmpty);
@@ -855,7 +855,7 @@ void main() {
       '19 a redirect_to_web with an unusable authorization_url is a failure, '
       'not a RedirectRequired carrying an unusable Uri',
       () async {
-        // 50-04 deferred item 1, owner 50-08: RedirectRequired cannot prevent
+        // the spec deferred item 1, owner the spec: RedirectRequired cannot prevent
         // an empty/relative Uri, so the notifier would sit in `refreshing`
         // with nothing to open and no error ever surfacing.
         fake.scriptNativeCeremony([
@@ -884,7 +884,7 @@ void main() {
       // Item 8 could not see it: it compares four causes that the SERVER
       // already answers with identical descriptions, so a client reflecting
       // that string produces four identical messages too. It asserts exactly
-      // what the broken implementation also produces (49-08's lesson).
+      // what the broken implementation also produces (the spec lesson).
       // Item 11 could not see it either: the fixture's description carried
       // no secret, so a reflected description leaked nothing (the nil-only-
       // fixture trap).
@@ -929,7 +929,7 @@ void main() {
       // A future server that starts distinguishing causes...
       final replayish = await errorWithDescription('auth_session replayed');
       final expiryish = await errorWithDescription('auth_session expired');
-      // ...and one that echoes request input into its description.
+      //...and one that echoes request input into its description.
       final echoing = await errorWithDescription(
         'rejected SERVER-ECHO-PROBE-PASSWORD for native-handle-alpha-0001',
       );

@@ -1,6 +1,6 @@
 // aoidTokenStoreFor — the ONE place the AOID module decides which token store
 // a deployment gets. Kept in its own file so aoid_token_store.dart (the
-// interface 50-09 and 50-13 import) stays dependency-free.
+// interface the spec and the spec import) stays dependency-free.
 //
 // RIVERPOD-FREE BY CONSTRUCTION (see aoid_token_store.dart's header).
 
@@ -15,7 +15,7 @@ import 'aoid_token_store.dart';
 ///
 /// **On web the answer is always [AoidMemoryTokenStore], for every posture.**
 /// [nativeSecureStorage] is ignored there — a web build cannot opt into
-/// persisting a refresh token even by supplying one (50-CONTEXT.md D4).
+/// persisting a refresh token even by supplying one.
 ///
 /// On native:
 /// - [AoidRefreshTokenPosture.deviceKeychain] (Mode B) returns an

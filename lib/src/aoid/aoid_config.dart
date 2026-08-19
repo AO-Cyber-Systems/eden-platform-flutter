@@ -10,8 +10,8 @@
 // This file happens to name no riverpod symbol, and that is fine, but it is NO
 // LONGER AN ENFORCED INVARIANT. It was one while `lib/aoid.dart` existed as a
 // riverpod-free barrel for a riverpod-3 consumer to import across a version
-// boundary. AOID objective 50 (50-CONTEXT.md D2) removed that boundary by
-// migrating the package to riverpod 3, TRD 50-24 folded the barrel into
+// boundary. AOID removed that boundary by
+// migrating the package to riverpod 3, the spec folded the barrel into
 // eden_platform.dart, and the gate that enforced the property was DELETED
 // rather than weakened — it asserted precisely what D2 rejected. Adding a
 // riverpod import here is a design choice to argue on its merits now, not a
@@ -30,7 +30,7 @@
 // Flag OFF (enabled=false) is a no-op regardless of issuer/clientId content
 // — zero behavior change to password login is a hard requirement.
 //
-// Promoted from eden-biz-console-login/flutter (AOID-CONSOLE-LOGIN-04-TRD)
+// Promoted from eden-biz-console-login/flutter
 // into this shared package.
 
 /// Env-driven AOID OIDC login configuration for a consumer app.
@@ -48,12 +48,12 @@ class AoidConfig {
     // AOID login is OPT-IN: off unless a build explicitly passes
     // --dart-define=AOID_CONSOLE_LOGIN_ENABLED=true.
     //
-    // THE POLARITY WAS FLIPPED BY AOID obj-50 TRD 50-02, and the flip is
+    // THE POLARITY WAS FLIPPED BY AOID obj-50 the spec, and the flip is
     // part of the security fix, not tidying. This defaulted to TRUE, with
     // issuer/clientId defaulting to the PRODUCTION eden-biz web console —
     // so every build that did not opt OUT ran AOID login against prod, on
     // web, where the strategy then wrote a refresh token to localStorage.
-    // That default is what made 50-CONTEXT.md premise correction C3 a live
+    // That default is what made the design notes premise correction C3 a live
     // exposure rather than a latent flaw. An opt-in default means a build
     // has to ask for AOID login before it can be affected by anything in
     // this path.

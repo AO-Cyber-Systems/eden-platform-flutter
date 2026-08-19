@@ -114,7 +114,7 @@ class AuthNotifier extends Notifier<AuthState> {
     // still clears in-flight ceremony state on a rebuild. Both hold a live
     // server-side handle:
     //   * `_continuationToken` is an objective-49 `auth_session` handle, which
-    //     49-06 rotates on EVERY step. A handle surviving the rebuild that was
+    //     the spec rotates on EVERY step. A handle surviving the rebuild that was
     //     meant to discard it lets a later completeLogin present a token from
     //     an abandoned ceremony.
     //   * `_pendingRedirectUrl` carries an OAuth authorization URL with its
@@ -190,7 +190,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Authorization URL surfaced by the most recent [RedirectRequired], or
   /// null when no browser hop is pending.
   ///
-  /// A redirect is a FIRST-CLASS path, not an error (50-CONTEXT.md D7): the
+  /// A redirect is a FIRST-CLASS path, not an error: the
   /// notifier stays in [AuthStatus.refreshing] and exposes the URL here so
   /// the UI can open a system browser (ASWebAuthenticationSession / Chrome
   /// Custom Tabs) and finish via the redirect flow. It is surfaced as a
@@ -303,7 +303,7 @@ class AuthNotifier extends Notifier<AuthState> {
         }
         state = AuthState.authenticated(session);
       case FactorRequired(:final continuationToken):
-        // Objective 49 rotates `auth_session` on EVERY step (49-06). This
+        // the issuer rotates `auth_session` on EVERY step. This
         // write is the rotation capture: the handle we just received replaces
         // the one we presented. Removing it makes the second completeLogin
         // present a consumed handle and fail with invalid_session. Pinned by
@@ -321,10 +321,10 @@ class AuthNotifier extends Notifier<AuthState> {
       // `const TwoFactorRequired(...)` construction. A separate arm here
       // would be dead code.
       case RedirectRequired(:final authorizationUrl):
-        // NOT an error (50-CONTEXT.md D7). The user merely needs a browser
+        // NOT an error. The user merely needs a browser
         // hop — social IdP, PIV/CAC, or a tenancy tier that forbids native
-        // login. Mapping this onto AuthState.error is the exact defect TRD
-        // 50-04 exists to remove: it shows "login failed" to a user whose
+        // login. Mapping this onto AuthState.error is the exact defect the spec
+        // the spec exists to remove: it shows "login failed" to a user whose
         // credentials are fine. Pinned by test/auth_provider_test.dart
         // "RedirectRequired does not put the notifier into an error state".
         _pendingRedirectUrl = authorizationUrl;
@@ -426,12 +426,12 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  // REMOVED (AOID objective 50, TRD 50-10 / SDK-08 / D6): `loginWithSSO`.
+  // REMOVED: `loginWithSSO`.
   //
   // It was the sole caller of `SSOAuthService`, which read `access_token` and
   // `refresh_token` straight out of a desktop loopback callback URL and
   // launched the system browser via `Process.run`. A repo-wide grep across
-  // ~/dev (excluding .pub-cache and worktrees) found ZERO callers of either
+  // ~/dev (excluding.pub-cache and worktrees) found ZERO callers of either
   // symbol, so the whole chain was deleted rather than repaired.
   //
   // Desktop is already covered by `flutter_web_auth_2`, which [SocialAuthService]
@@ -448,7 +448,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final socialService = SocialAuthService(
         repository: _repository,
         baseUrl: _resolvePlatformBaseUrl(),
-        // REQUIRED per-app configuration (TRD 50-10). Previously a hardcoded
+        // REQUIRED per-app configuration. Previously a hardcoded
         // personal bundle identifier in the shared library, which meant every
         // consumer's mobile callback claimed to be one developer's app.
         // Build with --dart-define=SOCIAL_CALLBACK_SCHEME=<your.bundle.id>.
@@ -643,6 +643,6 @@ final authStrategyProvider = Provider<AuthStrategy?>((ref) => null);
 // StateNotifierProvider had.
 //
 // The IDENTIFIER `authProvider` and the state type `AuthState` are a contract
-// with 50-22 and 50-23, which run in the same wave and consume both by name.
+// with the spec and the spec, which run in the same wave and consume both by name.
 final authProvider =
     NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

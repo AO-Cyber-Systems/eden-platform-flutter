@@ -44,7 +44,7 @@ void main() {
   /// Not closed deliberately: `container.dispose()` at the end of each test
   /// tears it down. See doc/riverpod-3-migration.md §3.2.
   ///
-  /// STILL REQUIRED after the Notifier migration (TRD 50-22). §3.2.2 measured
+  /// STILL REQUIRED after the Notifier migration. §3.2.2 measured
   /// a faithful `Notifier` mirror breaking identically under a one-shot
   /// `container.read` — `NotifierProvider` goes through the same
   /// `ProviderElement.onCancel()` deactivation, so the migration is orthogonal
@@ -228,7 +228,7 @@ void main() {
   });
 
   // =====================================================================
-  // Stage B (TRD 50-22): the provider-closure -> Notifier.build() port.
+  // Stage B: the provider-closure -> Notifier.build() port.
   // =====================================================================
 
   group('the currentCompanyProvider listener', () {
@@ -432,7 +432,7 @@ void main() {
   });
 
   // =====================================================================
-  // The multi-tenant isolation assertion (TRD 50-22 test 7).
+  // The multi-tenant isolation assertion (the spec test 7).
   //
   // These providers are two links in
   //   auth -> company -> currentCompanyProvider -> nav -> entitlements
@@ -559,7 +559,7 @@ void main() {
       expect(currentCompanyFires, isEmpty);
       expect(selectedNavFires, isEmpty);
 
-      // ...and everything is still clear.
+      //...and everything is still clear.
       expect(container.read(companyStateProvider).companies, isEmpty);
       expect(container.read(currentCompanyProvider), isNull);
       expect(container.read(navStateProvider).items, isEmpty);
@@ -572,7 +572,7 @@ void main() {
       // would pass for the wrong reason. Dart canonicalizes const instances...
       expect(identical(const NavState(), const NavState()), true);
       expect(identical(const CompanyState(), const CompanyState()), true);
-      // ...and these classes declare no `operator ==`, so two structurally
+      //...and these classes declare no `operator ==`, so two structurally
       // identical NON-const instances compare unequal. That is what makes
       // riverpod 3's `previous != next` degrade to an identity test, and what
       // makes it coincide with StateNotifier's `!identical` default.
@@ -629,7 +629,7 @@ void main() {
       navFires.clear();
       companyFires.clear();
 
-      // ...and again. THIS is the sentinel-to-identical-sentinel assignment,
+      //...and again. THIS is the sentinel-to-identical-sentinel assignment,
       // and it comes from the early return, not from clear(). Only a remedy
       // that covers the whole notifier — `updateShouldNotify` — makes it
       // notify. De-consting `clear()` leaves this path suppressed, which is a

@@ -1,7 +1,7 @@
 // THE 3 x 2 REFRESH-TOKEN CUSTODY MATRIX — D4 made mechanical rather than
 // documentary.
 //
-// 50-CONTEXT.md D4 ranks three deployment modes and states that web NEVER holds
+// the design notes ranks three deployment modes and states that web NEVER holds
 // a refresh token. That is prose. This file turns it into an assertion over
 // every mode x platform cell, and pins the count: `hasClientHeldRefreshToken`
 // is true in EXACTLY ONE of six cells — Mode B on native. Two means a bug;
@@ -15,7 +15,7 @@
 //   lib/src/networking/connect_cookie_interceptor.dart:55-67, which ships
 //   `connectCookieInterceptorWebForTest` for exactly this reason. These tests
 //   prove the WEB BRANCH behaves correctly. They do not prove a real browser
-//   was exercised. Live-browser coverage is 50-17's.
+//   was exercised. Live-browser coverage is the spec.
 //
 // READING ORDER MATTERS. The positive controls come FIRST. Every "is false" /
 // "throws" assertion below would pass vacuously against
@@ -43,8 +43,8 @@ import 'package:eden_platform_flutter/src/models/platform_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../claims/fixtures/aoid_claim_fixtures.dart' as claim_fixtures;
-// Was '../riverpod_free_gate_test.dart' until TRD 50-24 deleted that file (it
-// asserted the property 50-CONTEXT.md D2 rejected). The helper itself has
+// Was '../riverpod_free_gate_test.dart' until the spec deleted that file (it
+// asserted the property the design notes rejected). The helper itself has
 // nothing to do with riverpod and was relocated, not resurrected.
 import '../source_utils.dart' show stripComments;
 import '../storage/web_never_holds_refresh_token_test.dart'
@@ -56,7 +56,7 @@ const kRealRefreshToken = 'refresh-token-that-would-have-been-persisted-0001';
 const kRealAccessToken = 'access-token-fixture-0001';
 
 /// Any BRANCH on `isWeb` — `if (isWeb)`, `if (!isWeb)`, or the ternary
-/// `isWeb ? … : …`.
+/// `isWeb ? …: …`.
 ///
 /// The ternary alternative is load-bearing, not thoroughness for its own sake:
 /// mutation M2 introduced precisely that form and an earlier version of this
@@ -199,14 +199,14 @@ void main() {
               outcome.wasRefused,
               isTrue,
               reason:
-                  'Mode B on web is D4\'s forbidden configuration; selection '
+                  'Mode B on web is the forbidden configuration; selection '
                   'must throw, not downgrade',
             );
             expect(outcome.refusal, isA<UnsupportedError>());
             expect(
               (outcome.refusal! as UnsupportedError).message ?? '',
-              contains('D4'),
-              reason: 'the refusal must send the reader to the decision',
+              contains('AoidMemoryTokenStore'),
+              reason: 'the refusal must send the reader to the remedy',
             );
             // And nothing reached the keychain delegate on the way out.
             expect(keychain.calls, isEmpty);
@@ -316,7 +316,7 @@ void main() {
       });
     });
 
-    test('mode -> posture is a BIJECTION onto 50-02\'s three postures — 50-09 '
+    test('mode -> posture is a BIJECTION onto the spec\'s three postures — the spec '
         'maps onto that vocabulary, it does not replace it', () {
       final postures = AoidDeploymentMode.values.map((m) => m.posture).toSet();
       expect(postures, hasLength(3));
@@ -380,7 +380,7 @@ void main() {
     });
   });
 
-  group('the web refusal has ONE home — 50-02\'s constructor guard', () {
+  group('the web refusal has ONE home — the spec\'s constructor guard', () {
     // The mode package must not carry its own isWeb branch. Two guards drift
     // silently: both still compile when they disagree.
     test('aoid_deployment_mode.dart routes the refusal through '
@@ -401,7 +401,7 @@ void main() {
         reason:
             'a branch on isWeb here is a SECOND D4 guard. It can drift out of '
             'sync with AoidSecureTokenStore\'s and the drift compiles. Route '
-            'the refusal through 50-02 instead. Matched: '
+            'the refusal through the spec instead. Matched: '
             '${kIsWebBranch.firstMatch(code)?.group(0)}',
       );
     });

@@ -1,4 +1,4 @@
-// Stage A of AOID objective 50's riverpod alignment (50-CONTEXT.md D2, TRD 50-06).
+// Stage A of AOID riverpod alignment.
 //
 // This suite pins the VERSION axis and nothing else. It exists so that a silent
 // downgrade back to flutter_riverpod 2.x is a red test rather than a surprise in
@@ -25,7 +25,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // This import is what makes proof (1) above work. It is NOT a temporary shim —
 // this file's whole job is to assert the 3.x layout, so it stays after
-// 50-20..50-23 remove the shims from lib/.
+// the spec..the spec remove the shims from lib/.
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -182,7 +182,7 @@ void main() {
   group('legacy.dart still ships the symbols Stage A depends on', () {
     // If any of these stopped resolving, the `legacy.dart` shim strategy that
     // makes the version bump separable from the API migration would be dead,
-    // and 50-20..50-23 would have to be merged back into this TRD.
+    // and the spec..the spec would have to be merged back into this the spec.
     test('StateController still holds and mutates state', () {
       final controller = StateController<int>(1);
       addTearDown(controller.dispose);

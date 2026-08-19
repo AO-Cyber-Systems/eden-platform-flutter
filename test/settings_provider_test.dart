@@ -121,7 +121,7 @@ void main() {
 
   // ---------------------------------------------------------------------
   // Stage B riverpod-3 mechanics. `SettingsNotifier` is the CONTROL CASE of
-  // TRD 50-22: it holds no `Ref`, registers no `ref.listen`, schedules no
+  // the spec: it holds no `Ref`, registers no `ref.listen`, schedules no
   // bootstrap microtask and has no `clear()`. Everything below therefore
   // isolates the *mechanics* of the StateNotifier -> Notifier port, with the
   // wiring that company/nav carry removed as a variable. If a mechanic is
@@ -170,7 +170,7 @@ void main() {
       // that has to start fresh.
       expect(identical(before, after), true,
           reason: 'riverpod 3 REUSES the Notifier instance across a rebuild');
-      // ...and `build()` still re-ran on that reused instance.
+      //...and `build()` still re-ran on that reused instance.
       expect(container.read(settingsProvider).themeMode, ThemeMode.system);
     });
 

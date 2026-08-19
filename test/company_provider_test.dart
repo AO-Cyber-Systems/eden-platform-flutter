@@ -15,7 +15,7 @@ void main() {
 
   setUp(() {
     repository = FakePlatformRepository();
-    // SecureTokenStorage (default backing for AuthNotifier in TRD 10-03)
+    // SecureTokenStorage (default backing for AuthNotifier in the spec)
     // calls flutter_secure_storage which has no native side in unit tests —
     // install a MethodChannel mock to avoid MissingPluginException.
     installSecureStorageChannelMock();
@@ -283,7 +283,7 @@ void main() {
   });
 
   // =====================================================================
-  // Stage B (TRD 50-22): the provider-closure -> Notifier.build() port.
+  // Stage B: the provider-closure -> Notifier.build() port.
   // =====================================================================
 
   /// Open a REAL, long-lived subscription. Never `container.read` — riverpod 3
@@ -484,7 +484,7 @@ void main() {
 
       expect(container.read(companyStateProvider).current?.id, 'c2',
           reason: 'preferred (c2) must win over stored (c3)');
-      // ...and the winner is persisted back.
+      //...and the winner is persisted back.
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('current_company_id'), 'c2');
     });
@@ -599,7 +599,7 @@ void main() {
       // A shadowing `final Ref ref;` compiles and then behaves differently
       // across rebuilds from the inherited Notifier.ref.
       expect(RegExp(r'final\s+Ref\s+ref\s*;').hasMatch(code), false);
-      // ...and no constructor taking a Ref survives either.
+      //...and no constructor taking a Ref survives either.
       expect(code.contains('CompanyNotifier(this.ref)'), false);
 
       // The wiring moved, it did not evaporate: one subscription, one
@@ -612,8 +612,8 @@ void main() {
               'scheduled, so a bootstrap-driven state change cannot land '
               'before the subscription exists');
 
-      // The derived providers keep their identifiers: 50-24 migrates the
-      // widgets that read them and 50-13/50-16 cite them.
+      // The derived providers keep their identifiers: the spec migrates the
+      // widgets that read them and the spec/the spec cite them.
       expect(code.contains('final currentCompanyProvider = Provider<PlatformCompany?>'),
           true);
       expect(code.contains('final companiesProvider = Provider<List<PlatformCompany>>'),

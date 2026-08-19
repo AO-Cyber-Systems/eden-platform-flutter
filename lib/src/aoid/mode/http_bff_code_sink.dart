@@ -3,9 +3,9 @@
 // RIVERPOD-FREE BY CONSTRUCTION (see storage/aoid_token_store.dart's header).
 //
 // Uses `package:http` with an injected client, matching AoidNativeClient
-// (50-08) and the existing fixture suite. Do NOT introduce `dio` into the aoid
+// and the existing fixture suite. Do NOT introduce `dio` into the aoid
 // module even though it is in the pubspec: mixing transports forks the fakes
-// that 50-09, 50-11 and 50-12 all extend.
+// that the spec and the spec all extend.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
@@ -15,7 +15,7 @@ import 'aoid_code_sink.dart';
 
 /// Posts `{code, code_verifier}` to the consuming app's own backend.
 ///
-/// ## THE WIRE CONTRACT (50-15 implements the other side of this)
+/// ## THE WIRE CONTRACT (the spec implements the other side of this)
 ///
 /// ```
 /// POST <exchangeUrl>
@@ -32,15 +32,15 @@ import 'aoid_code_sink.dart';
 ///
 /// **The response BODY is not read.** That is deliberate and is the narrowest
 /// contract that makes Mode A work: 2xx plus a cookie. A richer JSON body would
-/// be a shape 50-15 has to match blindly, and any token in it would be a token
+/// be a shape the spec has to match blindly, and any token in it would be a token
 /// this client is not supposed to hold.
 ///
 /// ## Form encoding, not JSON
 ///
 /// `application/x-www-form-urlencoded` is a CORS-safelisted content type;
 /// `application/json` is not and provokes an `OPTIONS` preflight when the
-/// frontend and backend are on different origins. Same reasoning as 50-08's
-/// native client, and the same house style as 50-15's `active_tenant` form
+/// frontend and backend are on different origins. Same reasoning as the spec
+/// native client, and the same house style as the spec `active_tenant` form
 /// field.
 ///
 /// ## Cookies and credentials on web
@@ -56,7 +56,7 @@ import 'aoid_code_sink.dart';
 /// on native the shared `cookieJar` applies. This class adds no cookie
 /// plumbing of its own for either.
 class HttpBffCodeSink implements AoidCodeSink {
-  /// The path AODex's Go backend implements (TRD 50-15).
+  /// The path AODex's Go backend implements.
   ///
   /// Exposed so a consumer can BUILD its [exchangeUrl] from an origin without
   /// guessing. It is deliberately **not applied automatically** — see
@@ -107,7 +107,7 @@ class HttpBffCodeSink implements AoidCodeSink {
   final http.Client _http;
   final bool _isWeb;
 
-  /// THE header map. One entry — same contract as 50-08's native client.
+  /// THE header map. One entry — same contract as the spec native client.
   static const Map<String, String> _formHeaders = {
     'content-type': 'application/x-www-form-urlencoded',
   };

@@ -338,7 +338,7 @@ void main() {
           reason: 'the previous page must survive the failed loadMore');
       expect(n.currentItems!.map((i) => i.id), ['a']);
 
-      // The helper the TRD flagged as the risk: a mutation right after a
+      // The helper the spec flagged as the risk: a mutation right after a
       // failure must build on the surviving items, not on an empty list.
       n.prependItem(const _Item('z', 'Z'));
       expect(container.read(p).requireValue.map((i) => i.id), ['z', 'a'],

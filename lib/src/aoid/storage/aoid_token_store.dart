@@ -7,22 +7,22 @@
 // HISTORY: this file was riverpod-free by ENFORCED invariant, because
 // `lib/aoid.dart` was a riverpod-free barrel a riverpod-3 consumer had to be
 // able to import while this package was still on riverpod 2. That version
-// boundary is gone (50-CONTEXT.md D2), the barrel was folded into
-// eden_platform.dart by TRD 50-24, and the closure-walking gate went with it.
+// boundary is gone, the barrel was folded into
+// eden_platform.dart by the spec, and the closure-walking gate went with it.
 // The file still names no riverpod symbol; that is now a preference, not a gate.
 //
 // NO DEPENDENCY ON flutter_secure_storage — deliberately. This package pins
 // that plugin to 9.2.4 EXACTLY (pubspec.yaml: "DO NOT bump to 10.x, upstream
-// issue #1043 data-loss bug"), while AODex — objective 50's proving consumer —
+// issue #1043 data-loss bug"), while AODex — the issuer proving consumer —
 // carries a dependency_overrides entry resolving ^10.0.0. Depending on the
 // abstract TokenStorage interface (lib/src/auth/token_storage.dart) and letting
 // the consumer inject an implementation means those two pins never have to be
-// reconciled. See 50-RESEARCH.md §5.4.
+// reconciled. See the design notes §5.4.
 
 /// WHERE a session's refresh token lives.
 ///
-/// This is the narrow custody question 50-CONTEXT.md **D4** answers, and it is
-/// deliberately narrower than "deployment mode": TRD 50-09 owns the full mode
+/// This is the narrow custody question the design notes **D4** answers, and it is
+/// deliberately narrower than "deployment mode": the spec owns the full mode
 /// matrix (`lib/src/aoid/parts/modes.dart`) and will map its deployment modes
 /// onto these three postures rather than replacing them.
 ///
@@ -33,7 +33,7 @@
 /// | C — same-origin | [none] | nowhere; the session is cookie-bound |
 ///
 /// There is no fourth value for "web localStorage". That is the configuration
-/// D4 forbids and premise correction C3 records as having shipped; TRD 50-02
+/// D4 forbids and premise correction C3 records as having shipped; the spec
 /// removed the capability rather than adding a flag to discourage it.
 enum AoidRefreshTokenPosture {
   /// **Mode A.** The app's own backend holds the refresh token and hands the
@@ -56,10 +56,10 @@ enum AoidRefreshTokenPosture {
 /// implementation of this interface that can persist one:
 /// [AoidMemoryTokenStore] throws from [writeRefreshToken] and
 /// [AoidSecureTokenStore] refuses to construct. That is deliberate and
-/// structural — see 50-CONTEXT.md D4 and premise correction C3.
+/// structural — see the design notes and premise correction C3.
 ///
 /// Pick an implementation with `aoidTokenStoreFor` rather than by hand; it is
-/// the single seam TRD 50-09 (deployment modes) and 50-13 (tenant switch)
+/// the single seam the spec (deployment modes) and the spec (tenant switch)
 /// extend.
 abstract class AoidTokenStore {
   /// The persisted access token, or `null` if none.

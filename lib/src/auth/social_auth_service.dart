@@ -38,10 +38,10 @@ class SocialCallback {
 ///
 /// It used to receive `access_token` + `refresh_token` as query parameters.
 /// That leaked tokens into browser history, Referer headers and proxy logs.
-/// See AOID objective 50 (SDK-08 / D6) and eden-platform-go 50-05.
+/// See AOID (SDK-08 / D6) and eden-platform-go the spec.
 /// Gate: test/aoid/no_tokens_in_callback_gate_test.dart.
 ///
-/// Wire contract, taken verbatim from eden-platform-go TRD 50-05:
+/// Wire contract, taken verbatim from eden-platform-go the spec:
 ///
 /// - callback: `<redirect_uri>?code=<handoff>&state=<state>`
 /// - exchange: `POST /auth/social/exchange`,
@@ -73,7 +73,7 @@ class SocialAuthService {
   /// The dart-define that supplies [callbackScheme].
   static const String schemeEnvVar = 'SOCIAL_CALLBACK_SCHEME';
 
-  /// Path of the exchange endpoint added by eden-platform-go TRD 50-05.
+  /// Path of the exchange endpoint added by eden-platform-go the spec.
   static const String exchangePath = '/auth/social/exchange';
 
   /// Reads the custom URL scheme from the compile-time environment, mirroring
@@ -233,7 +233,7 @@ class SocialAuthService {
   static SocialCallback parseCallbackUrl(String callbackUrl) {
     final uri = Uri.parse(callbackUrl);
 
-    // 50-05 appends the query INSIDE the fragment for a fragment-shaped
+    // the spec appends the query INSIDE the fragment for a fragment-shaped
     // redirect_uri (`https://host/#/auth/complete?code=…`), which is what a
     // hash-routed SPA router parses. Uri.queryParameters is empty in that case,
     // so fall back to the fragment's own query string.
@@ -254,7 +254,7 @@ class SocialAuthService {
     if (code == null || code.isEmpty) {
       throw AuthError(
         'Social login callback carried no authorization code. The backend must '
-        'redirect with ?code=<handoff>&state=<state> (eden-platform-go 50-05). '
+        'redirect with ?code=<handoff>&state=<state>. '
         'A callback carrying tokens instead of a code is REFUSED, not used.',
       );
     }
@@ -320,7 +320,7 @@ class SocialAuthService {
     }
 
     if (response.statusCode != 200) {
-      // 50-05 makes expired / replayed / wrong-audience / unknown deliberately
+      // the spec makes expired / replayed / wrong-audience / unknown deliberately
       // indistinguishable (400 "invalid request") so the endpoint is not an
       // oracle. 405 means the request was not a POST.
       throw AuthError(

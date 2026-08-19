@@ -1,4 +1,4 @@
-// AoidMfaForm — SEALED (50-CONTEXT.md D3, TRD 50-11).
+// AoidMfaForm — SEALED.
 //
 // The same rules as AoidLoginForm, for the same reason: a TOTP code is a
 // credential and a backup code is a long-lived one. This widget owns its own
@@ -9,13 +9,13 @@
 // name one.
 //
 // A "convenience" API letting an app supply its own code field defeats
-// objective 49's containment guarantee and must not be built.
+// the issuer containment guarantee and must not be built.
 //
 // Gate: test/aoid/widgets/sealed_form_no_leak_test.dart (tests 3, 4 and 5).
 //
 // THE PICKER MUST TOLERATE AN EMPTY LIST, AND USUALLY GETS ONE.
 // `AoidFlowAwaitingFactor.availableMethods` is empty until a factor has already
-// succeeded: 49-07 refuses to emit a per-identity method list before that,
+// succeeded: the spec refuses to emit a per-identity method list before that,
 // because doing so turns the endpoint into an enumeration oracle — ask for any
 // address and the response tells you whether the account exists and how it is
 // protected. So "no methods offered" is the NORMAL early state, not a
@@ -46,7 +46,7 @@ const _methodLabels = <String, String>{
 ///
 /// AOID accepts a TOTP code and a backup code on the SAME `otp` field, so both
 /// submit identically. A security key is not a typed code and is completed by
-/// the platform authenticator path instead (TRD 50-12), so selecting it here
+/// the platform authenticator path instead, so selecting it here
 /// says so rather than offering a text box that cannot work.
 const _codeMethods = <String>{'totp', 'backup_code', 'sms', 'email', 'mfa'};
 
@@ -59,7 +59,7 @@ class AoidMfaForm extends StatefulWidget {
   });
 
   /// Drives the ceremony. Exposes step / next / availableMethods / outcome —
-  /// NEVER the credential. (`AoidNativeFlow`, TRD 50-08.)
+  /// NEVER the credential. (`AoidNativeFlow`, the spec.)
   final AoidNativeFlow controller;
 
   /// Copy and chrome. Input-only; carries no function-typed field.
@@ -175,7 +175,7 @@ class _AoidMfaFormState extends State<AoidMfaForm> {
           const SizedBox(height: 24),
 
           // Only render a picker when there is a CHOICE to make. An empty list is
-          // the normal early state (49-07), and a single offered method is not a
+          // the normal early state, and a single offered method is not a
           // choice — showing either as a picker is chrome pretending to be a
           // decision.
           if (methods.length > 1) ...[

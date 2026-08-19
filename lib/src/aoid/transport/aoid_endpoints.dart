@@ -1,12 +1,12 @@
 // The SINGLE source of AOID URL construction for this module.
 //
-// 50-08 (native ceremony) and 50-13 (tenant switch) both build on this; two
+// the spec (native ceremony) and the spec (tenant switch) both build on this; two
 // URL builders would guarantee drift. AoidOidcAuthStrategy still has its own
 // inline `Uri.parse('$issuer/oauth/authorize')` getters — those predate this
-// type and are left alone here because this TRD changes no behaviour; folding
-// them onto AoidEndpoints belongs to the TRD that next touches that file.
+// type and are left alone here because this the spec changes no behaviour; folding
+// them onto AoidEndpoints belongs to the spec that next touches that file.
 //
-// Paths are AOID's, per aoid/internal/oauth/http/router.go.
+// Paths are AOID's, per the issuer router.
 //
 // RIVERPOD-FREE: reachable from lib/aoid.dart. Dependency-free by design (D1
 // — every eden consumer pays for anything added here), so it imports nothing
@@ -39,11 +39,11 @@ class AoidEndpoints {
   /// `{issuer}/oauth/revoke` — best-effort refresh-token revocation.
   Uri get revoke => issuer.resolve('/oauth/revoke');
 
-  /// `{issuer}/oauth/native/start` — objective 49's no-redirect ceremony,
+  /// `{issuer}/oauth/native/start` — the issuer no-redirect ceremony,
   /// step 1.
   Uri get nativeStart => issuer.resolve('/oauth/native/start');
 
-  /// `{issuer}/oauth/native/verify` — objective 49's no-redirect ceremony,
+  /// `{issuer}/oauth/native/verify` — the issuer no-redirect ceremony,
   /// step 2.
   Uri get nativeVerify => issuer.resolve('/oauth/native/verify');
 

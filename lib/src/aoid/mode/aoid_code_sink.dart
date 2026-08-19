@@ -8,7 +8,7 @@ import '../aoid_session.dart';
 /// Mode A. The SDK obtains an authorization code and hands it to the
 /// CONSUMING APP'S OWN backend, which holds the client secret, performs the
 /// exchange with AOID, and sets an httpOnly `SameSite` cookie. The refresh
-/// token never reaches the browser — 50-CONTEXT.md D4's ranked-first posture.
+/// token never reaches the browser — the design notes' ranked-first posture.
 ///
 /// ## The `code_verifier` IS sent to the app's own backend
 ///
@@ -20,7 +20,7 @@ import '../aoid_session.dart';
 /// The verifier is NOT a credential in the confidential-client sense and it
 /// **MUST NOT be confused with the client secret**, which never leaves the
 /// app's backend. Do not "protect" the verifier in secure storage — that is how
-/// the web-storage exposure TRD 50-02 removed comes back. Do not remove it
+/// the web-storage exposure the spec removed comes back. Do not remove it
 /// thinking it is a leak. Either change breaks Mode A.
 ///
 /// ## Only ONE party may spend the code

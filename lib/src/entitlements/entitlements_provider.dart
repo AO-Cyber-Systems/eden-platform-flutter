@@ -154,7 +154,7 @@ class EntitlementsNotifier extends Notifier<EntitlementsState> {
   /// | `currentSubscriptionProvider`| 1 | **0** |
   /// | `canUseFeatureProvider`      | 1 | **0** |
   ///
-  /// So this is NOT a riverpod 3 regression and NOT a 50-06 regression:
+  /// So this is NOT a riverpod 3 regression and NOT a the spec regression:
   /// `StateNotifier.updateShouldNotify` defaults to `!identical(old, current)`,
   /// which for a class with no value `==` is the same predicate riverpod 3
   /// uses. The defect predates the version bump. Fourth occurrence in this

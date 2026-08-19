@@ -1,9 +1,9 @@
 // Shared source-inspection helpers for the AOID suite's source-level gates.
 //
 // WHY THIS FILE EXISTS: `stripComments` used to live in
-// `test/aoid/riverpod_free_gate_test.dart`, which TRD 50-24 DELETED — that file
+// `test/aoid/riverpod_free_gate_test.dart`, which the spec DELETED — that file
 // asserted the AOID surface never resolves a riverpod symbol, the exact property
-// 50-CONTEXT.md D2 rejected, so it could not be kept in any form.
+// the design notes rejected, so it could not be kept in any form.
 //
 // But it was doing double duty. Two unrelated source-level gates imported
 // `stripComments` from it:
@@ -21,11 +21,11 @@
 ///
 /// Source-level gates need this because a whole-file `contains` cannot tell a
 /// DECLARATION from a MENTION, and these files deliberately name the things they
-/// forbid in order to explain why they are forbidden. Every Stage B TRD hit the
-/// same problem (50-21 §5, 50-22 §6, 50-23 §7).
+/// forbid in order to explain why they are forbidden. Every Stage B the spec hit the
+/// same problem (the spec §5, the spec §6, the spec §7).
 ///
 /// Block comments are removed first: doing it the other way round lets a `//`
-/// inside a `/* ... */` truncate the block's terminator.
+/// inside a `/*... */` truncate the block's terminator.
 ///
 /// KNOWN LIMIT, and it is the reason callers must pair this with a positive
 /// control: it is not a Dart parser. A `//` sequence inside a string literal

@@ -2,10 +2,10 @@
 //
 // HISTORY: this entrypoint existed because the auth/company/nav providers were
 // built on flutter_riverpod 2.x StateNotifier and were therefore unusable from
-// a riverpod 3.x consumer. AOID objective 50 (50-CONTEXT.md D2) migrated all
+// a riverpod 3.x consumer. AOID migrated all
 // five notifiers to the 3.x Notifier API, so that incompatibility NO LONGER
 // EXISTS — see doc/riverpod-3-migration.md. This file's old header named that
-// migration as the precondition for reunification; TRD 50-24 is where it came
+// migration as the precondition for reunification; the spec is where it came
 // true.
 //
 // It is KEPT, not deleted, for two reasons:
@@ -59,7 +59,7 @@ export 'package:dio/dio.dart'
     show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
          ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
          DioException, HttpClientAdapter, ResponseBody,
-         // Added for politihub-navigators Obj 7 TRD 07-09 (header-based futures).
+         // Added for politihub-navigators Obj 7 the spec (header-based futures).
          // Body-field idempotency (ADR-0007) doesn't require this for Obj 7
          // itself; this re-export lands in parallel for future use such as
          // per-request `Idempotency-Key` headers, per-request timeouts, or

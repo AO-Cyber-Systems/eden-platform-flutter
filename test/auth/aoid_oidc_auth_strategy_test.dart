@@ -1,6 +1,6 @@
 // R-ACL-03 AoidOidcAuthStrategy TDD suite.
 //
-// Test list (see AOID-CONSOLE-LOGIN-03-TRD.md, ported from
+// Test list  (ported from
 // eden-biz-console-login/flutter):
 // Happy:
 //   (a) initiateLogin({}) builds authorize URL per AOID frozen contract §1.

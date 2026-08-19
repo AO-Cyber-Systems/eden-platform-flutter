@@ -58,8 +58,8 @@ connect.Interceptor _bearerInterceptor(String? Function() tokenReader) {
 ///   tokenReader: () => 'fake-jwt-token',
 /// );
 /// final transport = FakeTransportBuilder()
-///     .unary(mySpec, (req, ctx) => myResponse)
-///     .build(interceptors: [interceptor]);
+///.unary(mySpec, (req, ctx) => myResponse)
+///.build(interceptors: [interceptor]);
 /// ```
 @visibleForTesting
 connect.Interceptor connectBearerInterceptorForTest({

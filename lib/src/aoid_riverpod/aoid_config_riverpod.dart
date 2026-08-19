@@ -1,18 +1,18 @@
 // Riverpod-2 wiring for AoidConfig — the half of the old
 // lib/src/auth/aoid_config.dart that names providers.
 //
-// Split out by AOID objective 50 TRD 50-01, when the plain [AoidConfig] value
+// Split out by AOID the spec, when the plain [AoidConfig] value
 // class had to stay riverpod-free in lib/src/aoid/aoid_config.dart so that a
 // riverpod-3 consumer could import it across a version boundary, while
 // everything here needed riverpod 2. Both halves now ship from the single
-// `package:eden_platform_flutter/eden_platform.dart` entrypoint: TRD 50-24
+// `package:eden_platform_flutter/eden_platform.dart` entrypoint: the spec
 // folded the two top-level AOID barrels in and deleted them, because the
 // boundary they routed around was removed by the riverpod 3 alignment
-// (50-CONTEXT.md D2). The directory split remains as a LAYERING marker only.
+//. The directory split remains as a LAYERING marker only.
 //
 // Nothing under lib/src/aoid/ should import this file — the core should not
 // depend on the adapter layer. That was previously enforced by
-// test/aoid/riverpod_free_gate_test.dart, which TRD 50-24 deleted along with
+// test/aoid/riverpod_free_gate_test.dart, which the spec deleted along with
 // the firewall it guarded; the layering is now a convention. See
 // doc/riverpod-3-migration.md §3.12.
 //
@@ -22,9 +22,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // riverpod 3.x split the old single barrel into THREE: flutter_riverpod.dart
 // (core), legacy.dart (StateNotifier & friends) and misc.dart. `Override` — the
 // return type of buildAoidOverrides below — moved into misc.dart. STAGE A of
-// AOID objective 50's riverpod alignment (50-CONTEXT.md D2, TRD 50-06).
+// AOID riverpod alignment.
 //
-// PERMANENT, and deliberately so — resolved by TRD 50-24 (Stage C), which was
+// PERMANENT, and deliberately so — resolved by the spec (Stage C), which was
 // the ticket this import's old "TEMPORARY" marker pointed at. It is NOT a Stage
 // A shim: `Override` is not deprecated and has no Notifier-API replacement, so
 // there is nothing here to retire. Every actual legacy.dart shim is gone (Stage
@@ -102,7 +102,7 @@ AoidOidcAuthStrategy? buildAoidStrategy(
 /// ```dart
 /// final container = ProviderContainer(overrides: [
 ///   tokenStorageProvider.overrideWith((ref) => tokenStorage),
-///   ...buildAoidOverrides(AoidConfig.fromEnvironment(), tokenStorage),
+///...buildAoidOverrides(AoidConfig.fromEnvironment(), tokenStorage),
 /// ]);
 /// ```
 List<Override> buildAoidOverrides(AoidConfig cfg, TokenStorage storage) {

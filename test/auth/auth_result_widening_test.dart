@@ -1,8 +1,8 @@
-// Proves AOID objective 50 TRD 50-04: the `AuthResult` sealed family is
-// widened ADDITIVELY to carry what objective 49's `/oauth/native/*` ceremony
+// Proves AOID the spec: the `AuthResult` sealed family is
+// widened ADDITIVELY to carry what the issuer `/oauth/native/*` ceremony
 // actually returns.
 //
-// The two shapes being added, verbatim from 49-08-SUMMARY.md's wire table:
+// The two shapes being added, verbatim from 49-the design notes' wire table:
 //
 //   mid-ceremony  401 {"error":"insufficient_authorization", "auth_session":"<NEW>",
 //                      "next":"mfa", "available_methods":[...]}
@@ -34,8 +34,8 @@ void main() {
       expect(result, isA<AuthResult>());
     });
 
-    test('availableMethods defaults to empty — objective 49 deliberately does '
-        'not emit available_methods before a factor has succeeded (49-07: '
+    test('availableMethods defaults to empty — the issuer deliberately does '
+        'not emit available_methods before a factor has succeeded (the spec: '
         'pre-success emission makes the endpoint an enumeration oracle)', () {
       const FactorRequired result = FactorRequired(
         continuationToken: 'as_1',
@@ -73,7 +73,7 @@ void main() {
     });
 
     test('is NOT a Failed — a browser hop is a first-class path, not an error '
-        '(50-CONTEXT.md D7)', () {
+        '', () {
       final AuthResult result = RedirectRequired(
         Uri.parse('https://auth.aocyber.ai/oauth/authorize'),
       );
@@ -86,7 +86,7 @@ void main() {
   group('source compatibility with existing implementors (D8: additive)', () {
     test('const TwoFactorRequired(String) still compiles and constructs — the '
         'exact form AOID\'s portal uses at aoid_auth_strategy.dart:133', () {
-      // Verbatim from ~/dev/aoid/portal/lib/src/auth/aoid_auth_strategy.dart:
+      // Verbatim from the portal strategy
       //   const _kAoidMfaContinuationToken = 'aoid:mfa-cookie-bound';   (:100)
       //   return const eden.TwoFactorRequired(_kAoidMfaContinuationToken); (:133)
       // If this stops compiling, the widening is NOT additive and the portal
@@ -229,7 +229,7 @@ void main() {
 
     test('RedirectRequired.reason is documented TELEMETRY ONLY — objective '
         '49\'s error mapper is deliberately lossy so the client cannot become '
-        'an account-existence or tenancy-tier oracle (49-04)', () {
+        'an account-existence or tenancy-tier oracle', () {
       final String source = strategySource.readAsStringSync();
       // Scope the assertion to RedirectRequired's own declaration, so the
       // warning cannot drift onto an unrelated class and still pass.
@@ -253,13 +253,13 @@ void main() {
       expect(decl, contains('Never branch UI on this'));
       expect(
         decl,
-        contains('D7'),
-        reason: 'the "not an error" rule must cite 50-CONTEXT.md D7',
+        contains('This is NOT an error'),
+        reason: 'the "not an error" rule must be stated on the declaration',
       );
     });
 
     test('the auth_session rotation contract is written into the source, not '
-        'only into the TRD (49-06)', () {
+        'only into the spec', () {
       final String strategy = strategySource.readAsStringSync();
       final int start = strategy.indexOf('class FactorRequired');
       expect(start, greaterThan(-1));
@@ -271,16 +271,16 @@ void main() {
       final String decl = strategy.substring(docStart, start);
 
       expect(decl, contains('MUST replace their stored handle'));
-      expect(decl, contains('49-06'));
+      expect(decl, contains('rotat'));
       expect(decl, contains('invalid_session'));
 
       // And the capture site itself carries the reason it may not be deleted.
       final String provider = providerSource.readAsStringSync();
-      expect(provider, contains('49-06'));
+      expect(provider, contains('rotat'));
     });
 
-    test('no third spelling: the wire code is redirect_to_web per 49-04, and '
-        '50-CONTEXT D8\'s informal `redirect_required` must not leak into the '
+    test('no third spelling: the wire code is redirect_to_web, and '
+        'the design notes\'s informal `redirect_required` must not leak into the '
         'source', () {
       expect(
         strategySource.readAsStringSync(),

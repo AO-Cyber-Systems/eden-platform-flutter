@@ -1,7 +1,7 @@
-// TRD 50-12 test-list items 5-12 — the code-only browser hop.
+// the spec test-list items 5-12 — the code-only browser hop.
 //
 // Item 6 is written first and deliberately: it is the D6 invariant for this
-// new callback handler. 50-10's repo-wide gate covers the SOURCE of this file
+// new callback handler. the spec repo-wide gate covers the SOURCE of this file
 // textually; item 6 covers the BEHAVIOUR.
 
 import 'dart:async';
@@ -751,7 +751,7 @@ void main() {
   // riverpod 3 retries a failed provider by DEFAULT: 10 attempts over a
   // 38.2-second window, declining only ProviderException and Error. Dart's
   // Error means PROGRAMMING faults, so every ordinary Exception IS retried,
-  // and .when(error:) is unreachable throughout because each retry returns
+  // and.when(error:) is unreachable throughout because each retry returns
   // the provider to AsyncLoading.
   //
   // This flow's defence is STRUCTURAL rather than configurational: it returns
@@ -829,14 +829,14 @@ void main() {
 
     test('the flow adds no provider — the firewall holds over flow/', () {
       // Stated as a test so the DECISION is visible where the behaviour is:
-      // this TRD introduces no provider at all, which is why there is no
+      // this the spec introduces no provider at all, which is why there is no
       // per-provider `retry:` override to review.
       //
       // Comments are stripped first. These files deliberately NAME the retry
       // behaviour in order to explain why the flow is built to make it
       // unreachable, and a whole-file `contains` cannot tell a DECLARATION
-      // from a MENTION — the same problem every Stage B TRD hit (50-21 §5,
-      // 50-22 §6, 50-23 §7). The positive control below is what keeps the
+      // from a MENTION — the same problem every Stage B the spec hit (the spec §5,
+      // the spec §6, the spec §7). The positive control below is what keeps the
       // stripper honest.
       final files = Directory('lib/src/aoid/flow')
           .listSync(recursive: true)

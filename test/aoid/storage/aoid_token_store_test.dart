@@ -11,8 +11,8 @@
 //   DO NOT read these passes as "verified on a real browser" — they verify the
 //   branch, not the platform.
 //
-// Fixtures are hand-written literals (no_llm_test_data is in force for TRD
-// 50-02): every token string below is spelled out here.
+// Fixtures are hand-written literals (no_llm_test_data is in force for the spec
+// the spec): every token string below is spelled out here.
 //
 // ignore_for_file: avoid_relative_lib_imports
 
@@ -110,7 +110,7 @@ void main() {
     // deliberately avoids (it looks like a session-restore bug and invites the
     // next engineer to re-add the write).
     test('writeRefreshToken(non-null) THROWS UnsupportedError, and the message '
-        'names D4 and Mode A', () async {
+        'states the prohibition and names Mode A', () async {
       final store = AoidMemoryTokenStore();
 
       await expectLater(
@@ -128,7 +128,7 @@ void main() {
       }
       expect(caught, isNotNull);
       final message = (caught! as UnsupportedError).message ?? '';
-      expect(message, contains('D4'));
+      expect(message, contains('never held by a web client'));
       expect(message, contains('Mode A'));
     });
 
@@ -186,7 +186,7 @@ void main() {
         // Read back through the store...
         expect(await store.readAccessToken(), 'access-token-item-6');
         expect(await store.readRefreshToken(), 'refresh-token-item-6');
-        // ...and confirm the values genuinely landed in the delegate rather
+        //...and confirm the values genuinely landed in the delegate rather
         // than being cached in the store itself.
         expect(delegate.values['access'], 'access-token-item-6');
         expect(delegate.values['refresh'], 'refresh-token-item-6');
@@ -257,7 +257,7 @@ void main() {
     });
   });
 
-  // TRD 50-02's <verify> block specifies
+  // the spec <verify> block specifies
   //   grep -c "flutter_secure_storage" lib/src/aoid/storage/*.dart -> 0
   // which cannot do this job in EITHER direction:
   //   - it is a raw substring count, so the header comments in
@@ -266,9 +266,9 @@ void main() {
   //     delete the explanation — strictly worse code;
   //   - and it only looks at one directory, so a file under lib/src/aoid/
   //     reaching flutter_secure_storage through `../auth/…` passes it. That is
-  //     the exact hole 50-01 found in the equivalent riverpod grep.
-  // The closure walk below is the real invariant. It is scoped to this TRD's
-  // part-barrel so it does not touch a file another wave-2 TRD owns.
+  //     the exact hole the spec found in the equivalent riverpod grep.
+  // The closure walk below is the real invariant. It is scoped to this the spec's
+  // part-barrel so it does not touch a file another wave-2 the spec owns.
   group('dependency footprint (the pin conflict this design sidesteps)', () {
     const root = 'lib/src/aoid/parts/storage.dart';
 
@@ -288,7 +288,7 @@ void main() {
 
     test('POSITIVE CONTROL: the walker follows FIRST-PARTY hops, not just the '
         'root file', () {
-      // aoid_secure_token_store.dart imports ../../auth/token_storage.dart,
+      // aoid_secure_token_store.dart imports../../auth/token_storage.dart,
       // two hops from the barrel. Proving the walk crosses that boundary is
       // what makes the absence assertion meaningful.
       final direct = reachablePackages(

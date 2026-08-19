@@ -8,7 +8,7 @@
 // builds a BEARER PlatformSession. restoreSession() runs the AOID
 // refresh_token grant; logout() best-effort POSTs {issuer}/oauth/revoke.
 //
-// Promoted from eden-biz-console-login/flutter (AOID-CONSOLE-LOGIN-03-TRD)
+// Promoted from eden-biz-console-login/flutter
 // into this shared package so console/mobile/POS all consume one
 // implementation. See docs/aoid-console-oauth-client.md in that repo for the
 // frozen contract this strategy implements.
@@ -16,13 +16,13 @@
 // Reachable via `package:eden_platform_flutter/eden_platform.dart`.
 //
 // HISTORY: this file was placed on the ADAPTER side of a riverpod split (AOID
-// obj-50 TRD 50-01) because it `implements AuthStrategy`, the interface
+// obj-50 the spec) because it `implements AuthStrategy`, the interface
 // AuthNotifier drives — and AuthNotifier was then a riverpod-2 StateNotifier,
 // so a riverpod-3 consumer could not reach this class through a riverpod-2
-// barrel. AuthNotifier is now a riverpod 3 `Notifier` (TRD 50-21) and TRD 50-24
+// barrel. AuthNotifier is now a riverpod 3 `Notifier` and the spec
 // folded both top-level AOID barrels into the single entrypoint, so the split
 // no longer has a boundary to defend. The `lib/src/aoid_riverpod/` DIRECTORY
-// stays as a layering marker — 50-04 owns auth_strategy.dart — but it is now
+// stays as a layering marker — the spec owns auth_strategy.dart — but it is now
 // only that. (Its own import closure happens to be riverpod-free even so.)
 
 import 'dart:convert';
@@ -48,7 +48,7 @@ typedef AuthorizeFn =
 /// AOID authorization-code + PKCE(S256) [AuthStrategy].
 class AoidOidcAuthStrategy implements AuthStrategy {
   /// [isWeb] defaults to [kIsWeb] and decides whether a refresh token may be
-  /// persisted at all (50-CONTEXT.md D4 — it may not, on web). It is
+  /// persisted at all. It is
   /// injectable because `kIsWeb` is a compile-time constant that
   /// `flutter test` fixes to false, so the web branch is otherwise
   /// untestable; same seam as `connectCookieInterceptorWebForTest`
@@ -231,20 +231,20 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
     await tokenStorage.writeAccessToken(accessToken);
 
-    // D4 / SDK-11. Until AOID objective 50 this line was
+    // D4 / SDK-11. Until AOID this line was
     //     await tokenStorage.writeRefreshToken(refreshToken);
     // with no guard at all — and AoidConfig.fromEnvironment() defaulted AOID
     // login ON against the eden-biz WEB console in production. Every web
     // login durably wrote a refresh token to localStorage (both through
     // shared_preferences and through flutter_secure_storage_web, which keeps
     // the ciphertext and its AES key there together). That is the exposure
-    // 50-CONTEXT.md premise correction C3 documents.
+    // the design notes premise correction C3 documents.
     //
     // On web the refresh token is now DROPPED, and the stored key is actively
     // CLEARED so a token written by an earlier build does not linger. Clearing
     // is always legal on every AoidTokenStore. Web sessions restore through
     // Mode A (the app's backend holds the refresh token and sets an httpOnly
-    // SameSite cookie) — assembled by TRD 50-09 — or not at all.
+    // SameSite cookie) — assembled by the spec — or not at all.
     if (_isWeb) {
       await tokenStorage.writeRefreshToken(null);
     } else {

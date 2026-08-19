@@ -1,4 +1,4 @@
-// The D3 GATES for the sealed AOID forms (50-CONTEXT.md D3, TRD 50-11).
+// The D3 GATES for the sealed AOID forms.
 //
 // WHY THESE ARE SOURCE-LEVEL TESTS AND NOT RUNTIME ASSERTIONS.
 //
@@ -43,8 +43,8 @@ const _themePath = 'lib/src/aoid/widgets/aoid_login_theme.dart';
 ///     LEGITIMATE when the value is discarded (`onSubmitted: (_) => _submit()`)
 ///     — it is how the field learns the user pressed return. A public
 ///     `onSubmit` parameter on OUR widget is the forbidden portal shape:
-///     `~/dev/aoid/portal/lib/src/screens/widgets/password_step.dart:47` declares
-///     `final ValueChanged<String> onSubmit;` and `:89` calls
+///     the portal's own password step declares
+///     `final ValueChanged<String> onSubmit;` and calls
 ///     `widget.onSubmit(_passwordCtrl.text)`. Correct for a same-origin portal
 ///     that owns both halves of the exchange; forbidden here.
 ///     A naive `source.contains('onSubmit')` cannot express that difference —
@@ -118,7 +118,7 @@ List<String> forbiddenHitsIn(String source, Map<String, String> needles) {
 /// This is the gate that actually pins the SURFACE: an absence list can only
 /// forbid the leaks somebody thought of, whereas asserting the constructor's
 /// parameters are EXACTLY a known set rejects the next leak too — including one
-/// with a name nobody has invented yet. TRD 50-17 binds AODex's login screen to
+/// with a name nobody has invented yet. the spec binds AODex's login screen to
 /// this surface, so it is also the compatibility contract.
 String constructorParamsOf(String source, String className) {
   final code = stripComments(source);
@@ -192,8 +192,8 @@ void main() {
       for (final hit in forbiddenHitsIn(src, kForbidden)) {
         fail(
           'AoidLoginForm declares `$hit`.\n\n${kForbidden[hit]}\n\n'
-          'See 50-CONTEXT.md D3. A "convenience" API letting an app supply or '
-          'observe its own password field defeats objective 49\'s containment '
+          'See the design notes. A "convenience" API letting an app supply or '
+          'observe its own password field defeats the issuer\'s containment '
           'guarantee and must not be built. Do not weaken this gate to land a '
           'feature — a gate loosened to pass is not a gate.',
         );
@@ -220,7 +220,7 @@ void main() {
             'AoidNativeFlow that drives the ceremony (it exposes step/next/'
             'availableMethods, NEVER the credential) and `theme` is an '
             'input-only presentation struct. Every additional parameter is a '
-            'candidate leak and TRD 50-17 binds AODex\'s login screen to this '
+            'candidate leak and the spec binds AODex\'s login screen to this '
             'exact surface.',
       );
     });
@@ -303,7 +303,7 @@ void main() {
           fail(
             '$path contains `$hit`.\n\n${kLoggingSinks[hit]}\n\n'
             'D3: containment is worthless if the value is printed on the way '
-            'past. AoidError (50-08) builds its messages from a fixed '
+            'past. AoidError builds its messages from a fixed '
             'vocabulary precisely so a credential cannot ride out inside one; '
             'the widgets must not undo that.',
           );
@@ -346,7 +346,7 @@ void main() {
               'on this struct is an INPUT. A function-typed field — '
               '`String Function()`, a WidgetBuilder, any *Callback — is how a '
               'presentation struct grows a member that RETURNS user input, '
-              'which is the leak this whole TRD exists to prevent. brandMark is '
+              'which is the leak this whole the spec exists to prevent. brandMark is '
               'a Widget for exactly this reason: the app constructs it before '
               'the form exists, so it can close over nothing the form knows.',
         );

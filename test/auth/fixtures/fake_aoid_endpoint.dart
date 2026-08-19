@@ -15,16 +15,16 @@ import 'package:http/testing.dart';
 import 'aoid_fixtures.dart';
 
 // ---------------------------------------------------------------------------
-// TRD 50-08 — the /oauth/native/* ceremony fixtures.
+// the spec — the /oauth/native/* ceremony fixtures.
 //
-// EVERY value below is a hand-written literal (no_llm_test_data). 50-09, 50-11
-// and 50-12 all extend THIS fixture; a second fake would guarantee drift.
+// EVERY value below is a hand-written literal (no_llm_test_data). the spec
+// and the spec all extend THIS fixture; a second fake would guarantee drift.
 // ---------------------------------------------------------------------------
 
 /// Issuer origin used by the native-ceremony tests.
 const kFakeAoidIssuer = 'https://auth.fake-aoid.test';
 
-/// The OAuth `client_id` string (not the `oauth_clients.id` UUID — 49-06's
+/// The OAuth `client_id` string (not the `oauth_clients.id` UUID — the spec
 /// Binding carries both and only the UUID is stored).
 const kFakeNativeClientId = 'aodex-web';
 
@@ -59,7 +59,7 @@ sealed class FakeNativeStep {
 
 /// The factor SUCCEEDED and the ceremony advances.
 ///
-/// Wire (49-08):
+/// Wire:
 ///
 /// ```
 /// 401 {"error":"insufficient_authorization",
@@ -77,14 +77,14 @@ class FakeNativeAdvance extends FakeNativeStep {
   final String next;
   final List<String> availableMethods;
 
-  /// Raw JSON, passed through untouched (49-08 mutation 13).
+  /// Raw JSON, passed through untouched (the spec mutation 13).
   final String? webauthnChallenge;
 }
 
-/// The factor FAILED but the ceremony survives: 49-06's `Consume` burns the
+/// The factor FAILED but the ceremony survives: the spec `Consume` burns the
 /// presented handle and `Rotate` issues a successor carrying the attempt
 /// count. The response is byte-identical to [FakeNativeAdvance] except that
-/// `next` and `available_methods` are absent — 49-08's
+/// `next` and `available_methods` are absent — the spec
 /// `a_wrong_password_and_a_correct_password_needing_MFA_share_code_and_status`
 /// pins that the asymmetry lives ONLY there, never in the code or the status.
 class FakeNativeReject extends FakeNativeStep {
@@ -99,24 +99,24 @@ class FakeNativeTerminal extends FakeNativeStep {
 }
 
 /// `400 {"error":"redirect_to_web","error_description":"…",
-/// "authorization_url":"…"}` — a NORMAL outcome (social IdP, PIV, or 49-04
-/// gate 7's FedRAMP-High / IL5 tenancy tier), not a failure.
+/// "authorization_url":"…"}` — a NORMAL outcome (social IdP, PIV, or the spec
+/// a restrictive tenancy tier), not a failure.
 class FakeNativeRedirect extends FakeNativeStep {
   const FakeNativeRedirect({this.authorizationUrl = kFakeAuthorizationUrl});
 
-  /// Set to `''` to model the malformed case 50-04 handed to this TRD:
+  /// Set to `''` to model the malformed case the spec handed to this the spec:
   /// a `redirect_to_web` whose `authorization_url` is unusable.
   final String authorizationUrl;
 }
 
-/// 49-06's `MaxAttempts = 5` exhausted: the ceremony is destroyed and NO
+/// the spec `MaxAttempts = 5` exhausted: the ceremony is destroyed and NO
 /// successor handle comes back. Indistinguishable from replay / expiry /
 /// unknown-handle / cross-tenant, by design.
 class FakeNativeAttemptCapExceeded extends FakeNativeStep {
   const FakeNativeAttemptCapExceeded();
 }
 
-/// An arbitrary opaque error from 49-04's taxonomy, e.g. `invalid_client`.
+/// An arbitrary opaque error from the spec taxonomy, e.g. `invalid_client`.
 class FakeNativeErrorStep extends FakeNativeStep {
   const FakeNativeErrorStep({
     required this.code,
@@ -130,7 +130,7 @@ class FakeNativeErrorStep extends FakeNativeStep {
 }
 
 /// A replica refusing the write: `503 temporarily_unavailable` with
-/// `Retry-After` and — deliberately (49-08) — no ACAO.
+/// `Retry-After` and — deliberately — no ACAO.
 class FakeNativeUnavailable extends FakeNativeStep {
   const FakeNativeUnavailable({this.retryAfterSeconds = 30});
 
@@ -211,7 +211,7 @@ class FakeAoidEndpoint {
   }
 
   // -------------------------------------------------------------------------
-  // TRD 50-08 — /oauth/native/{start,verify}
+  // the spec — /oauth/native/{start,verify}
   // -------------------------------------------------------------------------
 
   /// Every native request the fake handled, in order — path, header map, raw
@@ -231,7 +231,7 @@ class FakeAoidEndpoint {
   bool _nativeExpired = false;
   int _handleSeq = 0;
 
-  /// State the `start` response reports. 49-07 makes both STATIC — emitting a
+  /// State the `start` response reports. the spec makes both STATIC — emitting a
   /// per-identity list before a factor succeeds would make the endpoint an
   /// enumeration oracle.
   String startNext = 'password';
@@ -247,7 +247,7 @@ class FakeAoidEndpoint {
       ..addAll(steps);
   }
 
-  /// Kill the ceremony's absolute deadline (49-01: `ceremony_expires_at` is
+  /// Kill the ceremony's absolute deadline (the spec: `ceremony_expires_at` is
   /// never extended on rotation).
   void expireNativeCeremony() {
     _nativeExpired = true;
@@ -278,7 +278,7 @@ class FakeAoidEndpoint {
   // The ONE function that renders invalid_session. Replay, expiry, unknown
   // handle, cross-tenant presentation, cross-client presentation and attempt-
   // cap exhaustion ALL go through it, so byte-identity is structural rather
-  // than six coincidentally-equal literals. 49-04 folds them together on
+  // than six coincidentally-equal literals. the spec folds them together on
   // purpose; a fixture that distinguished them would make the client's own
   // lossiness test pass vacuously.
   http.Response _nativeInvalidSession() => _nativeJson(400, {
@@ -295,7 +295,7 @@ class FakeAoidEndpoint {
         jsonEncode(body),
         status,
         headers: {
-          // 49-08's writeNativeJSON header discipline.
+          // the spec writeNativeJSON header discipline.
           'content-type': 'application/json',
           'cache-control': 'no-store',
           'pragma': 'no-cache',
@@ -331,7 +331,7 @@ class FakeAoidEndpoint {
       });
     }
 
-    // 49-08 reuses isFormContent, whose comment reads "NEVER accept JSON
+    // the spec reuses isFormContent, whose comment reads "NEVER accept JSON
     // request bodies on OAuth endpoints." It splits on ';' so a charset
     // parameter is fine — which matters, because package:http appends one.
     final contentType = request.headers['content-type'] ?? '';
@@ -379,7 +379,7 @@ class FakeAoidEndpoint {
     final live = _liveNativeHandle;
     if (live == null) return _nativeInvalidSession();
 
-    // Handle lifecycle, in 49-06's order. Every branch renders the SAME body.
+    // Handle lifecycle, in the spec order. Every branch renders the SAME body.
     if (fields['auth_session'] != live) return _nativeInvalidSession();
     if (_nativeExpired) return _nativeInvalidSession();
     if (fields['tenant_id'] != _nativeTenantId) return _nativeInvalidSession();
@@ -392,7 +392,7 @@ class FakeAoidEndpoint {
     }
     // Outcomes that never reach the ceremony service leave the handle ALIVE.
     //
-    // 49-08's nativeWriteAllowed applies the region write gate BEFORE
+    // the spec nativeWriteAllowed applies the region write gate BEFORE
     // r.nativeLogin.Verify is called — its mutation 12 ("the gate let 1
     // call(s) through") proves that ordering is load-bearing — so a replica's
     // 503 cannot have burned the handle. A dead socket is modelled the same
@@ -420,7 +420,7 @@ class FakeAoidEndpoint {
     final step = _nativeScript.removeAt(0);
 
     // Everything below REACHED the service, so the presented handle is
-    // consumed either way (49-06: Consume burns it, then Rotate mints the
+    // consumed either way (the spec: Consume burns it, then Rotate mints the
     // successor).
     _liveNativeHandle = null;
 
@@ -440,7 +440,7 @@ class FakeAoidEndpoint {
         });
 
       case FakeNativeReject():
-        // 49-08's enumeration-parity reference response: the key set is
+        // the spec enumeration-parity reference response: the key set is
         // EXACTLY [auth_session, error, error_description]. No `next`, no
         // `available_methods` — that is the ONLY difference between a wrong
         // password and a correct one that needs MFA.
@@ -454,7 +454,7 @@ class FakeAoidEndpoint {
 
       case FakeNativeTerminal():
         // EXACTLY one key. A spare auth_session would leave a live handle
-        // after the ceremony ended (49-08 mutation 8).
+        // after the ceremony ended (the spec mutation 8).
         return _nativeJson(200, {
           'authorization_code': step.authorizationCode,
         });

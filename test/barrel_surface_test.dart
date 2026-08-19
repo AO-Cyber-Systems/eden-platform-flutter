@@ -1,4 +1,4 @@
-// The two entrypoints' PUBLIC SURFACE, asserted by compilation (TRD 50-24).
+// The two entrypoints' PUBLIC SURFACE, asserted by compilation.
 //
 // These are the package's public API, and 13 of eden's consumers resolve it by
 // LOCAL PATH rather than a pinned git ref — so a silent removal reaches them on
@@ -7,7 +7,7 @@
 // red, which is a stronger guarantee than any export-line diff: `export 'x.dart'`
 // surviving says nothing about whether x.dart still declares the symbol.
 //
-// Test-list items 1, 2 and 3 of TRD 50-24.
+// Test-list items 1, 2 and 3 of the spec.
 //
 // ITEM 2 IS A STAND-IN FOR A GATE IN ANOTHER REPOSITORY. politihub's APP-06 gate
 // greps consumer sources for `^import 'package:(http|dio)/` and requires the dio
@@ -71,7 +71,7 @@ void main() {
 
       // Function/getter-shaped exports cannot be named as a Type, so reference
       // them as values. connect_cookie_interceptor and sentry_init are the two
-      // the TRD singles out as present on the full barrel and absent from
+      // the spec singles out as present on the full barrel and absent from
       // networking.dart — the asymmetry that makes the two barrels non-nested.
       expect(full.connectCookieInterceptor, isNotNull);
       expect(full.initSentry, isNotNull);
@@ -84,7 +84,7 @@ void main() {
   group('item 2 — networking.dart still exposes the dio symbols', () {
     test('the politihub APP-06 dio re-export is intact, symbol for symbol', () {
       // Every symbol in networking.dart's `show` clause. This list is derived
-      // from the file, not from memory: the TRD asserts "fourteen dio symbols"
+      // from the file, not from memory: the spec asserts "fourteen dio symbols"
       // in five places and the measured count is ELEVEN. Trusting the prose
       // would have written a wrong assertion here.
       final dioSymbols = <String, Type>{
@@ -134,7 +134,7 @@ void main() {
       expect(net.Options(headers: const {'a': 'b'}).headers, isNotNull);
     });
 
-    test('the full barrel ALSO exposes the dio symbols (added by 50-24), and '
+    test('the full barrel ALSO exposes the dio symbols (added by the spec), and '
         'they are the SAME declarations — no ambiguity for a consumer '
         'importing both entrypoints', () {
       // Purely additive convenience. Identity of the declarations is what makes

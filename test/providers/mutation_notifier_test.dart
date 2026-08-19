@@ -29,7 +29,7 @@ final _saveProvider = NotifierProvider<MutationNotifier<int>, MutationState<int>
 // Auto-dispose is a PROVIDER flag in riverpod 3, not a notifier base class.
 // Verified against the resolved riverpod 3.3.2:
 //   riverpod-3.3.2/lib/src/providers/notifier/orphan.dart:86
-//     NotifierProvider(this._createNotifier, {..., super.isAutoDispose = false, ...})
+//     NotifierProvider(this._createNotifier, {..., super.isAutoDispose = false,...})
 // `NotifierProvider.autoDispose<...>` (orphan.dart:108) is equivalent sugar.
 // Both spellings are exercised below so neither can rot unnoticed.
 final _autoDisposeProvider =

@@ -32,7 +32,7 @@
 // imports + a local fake TokenStorage keep this suite green.
 import 'package:eden_platform_flutter/src/aoid/aoid_config.dart';
 // buildAoidStrategy / buildAoidOverrides / aoidConfigProvider split out of
-// aoid_config.dart into the riverpod adapter layer (AOID obj-50 TRD 50-01);
+// aoid_config.dart into the riverpod adapter layer (AOID obj-50 the spec);
 // the AoidConfig value class itself stayed riverpod-free above.
 import 'package:eden_platform_flutter/src/aoid_riverpod/aoid_config_riverpod.dart';
 import 'package:eden_platform_flutter/src/aoid_riverpod/aoid_oidc_auth_strategy.dart';

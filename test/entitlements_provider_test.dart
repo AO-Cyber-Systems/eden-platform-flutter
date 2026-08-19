@@ -1,6 +1,6 @@
 // Characterization suite for lib/src/entitlements/entitlements_provider.dart.
 //
-// WHY THIS FILE EXISTS (TRD 50-23). Until now there was none. Every sibling
+// WHY THIS FILE EXISTS. Until now there was none. Every sibling
 // notifier in the riverpod alignment — auth, company, nav, settings — had a
 // test file to migrate; this 208-line notifier and its five derived providers
 // had zero coverage, including the deny-by-default feature gate that the whole
@@ -13,7 +13,7 @@
 // contract it protects rather than the code path it walks, so a later reader
 // learns the rule and not the implementation.
 //
-// SCOPE NOTE, and it has already caused real confusion twice (50-CONTEXT.md):
+// SCOPE NOTE, and it has already caused real confusion twice:
 // this file covers the eden-biz PLAN/BILLING axis — `/api/v1/entitlements/
 // bootstrap`, subscriptions, quotas and plan feature flags. AOID's `ent` claim
 // is identity and role, an unrelated system that happens to share the word.
@@ -32,7 +32,7 @@ import 'test_helpers.dart';
 
 // ---------------------------------------------------------------------------
 // Local fake. Deliberately NOT in test_helpers.dart: that file is shared and
-// was being edited concurrently by 50-21 and 50-22 in this same wave.
+// was being edited concurrently by the spec and the spec in this same wave.
 // ---------------------------------------------------------------------------
 
 /// [EntitlementsRepository] with a configurable result, a configurable error,
@@ -324,7 +324,7 @@ void main() {
         'already loaded, and surfaces errorMessage', () async {
       // Deliberate contract, not defensiveness: a transient bootstrap failure
       // must not blank the user's plan. A migration that "simplifies" the
-      // catch branch to `state = EntitlementsState(errorMessage: ...)` would
+      // catch branch to `state = EntitlementsState(errorMessage:...)` would
       // do exactly that, which is why this is pinned before the port.
       final container = await loggedInContainer();
 
@@ -667,7 +667,7 @@ void main() {
       //   currentSubscriptionProvider 0 · canUseFeatureProvider 0
       // So this PREDATES the riverpod bump — `StateNotifier`'s own
       // `!identical` default is the same predicate. Fourth occurrence in this
-      // objective, after AuthState (50-21), CompanyState and NavState (50-22).
+      // objective, after AuthState, CompanyState and NavState.
       final container = await loggedInContainer(companyId: 'c1');
       final fires = <String?>[];
       container.listen<EntitlementsState>(
@@ -696,7 +696,7 @@ void main() {
         'a de-consted clear() cannot pass for a whole-class fix', () async {
       // `clear()` is NOT the only place this notifier assigns the sentinel:
       // load()'s no-access-token early return does `state = const
-      // EntitlementsState()` too. 50-22 measured that de-consting `clear()`
+      // EntitlementsState()` too. the spec measured that de-consting `clear()`
       // alone PASSES the entire clear-based chain test while leaving every
       // early-return path suppressed — a silent PARTIAL fix with a green
       // suite. This test is what tells the two remedies apart, and it is why
@@ -721,7 +721,7 @@ void main() {
       expect(entitlementsRepository.calls, callsBefore,
           reason: 'premise: the early return was taken, not a real fetch');
 
-      // ...and again. THIS is the suppressed assignment.
+      //...and again. THIS is the suppressed assignment.
       fires.clear();
       await container.read(entitlementsStateProvider.notifier).load('c1');
       await deepSettle();
@@ -770,7 +770,7 @@ void main() {
       // instances, so `clear()`'s `const EntitlementsState()` is ONE object...
       expect(identical(const EntitlementsState(), const EntitlementsState()),
           true);
-      // ...and the class declares no `operator ==`, so two structurally
+      //...and the class declares no `operator ==`, so two structurally
       // identical NON-const instances compare unequal. That is what makes
       // riverpod 3's `previous != next` degrade to an identity test — and what
       // makes it the SAME predicate as StateNotifier's `!identical` default,
@@ -820,7 +820,7 @@ void main() {
     });
 
     test('a riverpod 3 Notifier instance is REUSED across a rebuild', () async {
-      // Recorded because the TRD body claims the opposite in two places, and
+      // Recorded because the spec body claims the opposite in two places, and
       // it decides whether fields outside `state` need resetting in build().
       // This notifier keeps none, so the reuse is currently harmless — but a
       // future contributor adding one needs to know which way it goes.
@@ -846,7 +846,7 @@ void main() {
       // The pump below is load-bearing: riverpod SCHEDULES disposal rather
       // than running it inside close(), so a synchronous read after detaching
       // observes the pre-disposal value and this assertion would pass even
-      // with isAutoDispose: true. 50-22 measured exactly that survival.
+      // with isAutoDispose: true. the spec measured exactly that survival.
       final container = await loggedInContainer(companyId: 'c1');
       final sub = container.listen<EntitlementsState>(
           entitlementsStateProvider, (_, _) {});
@@ -895,8 +895,8 @@ void main() {
 
     test('all five derived providers keep their identifiers, and so do the '
         'two entry points', () {
-      // 50-24 migrates feature_gate.dart, quota_bar.dart and plan_badge.dart,
-      // which read these by name. Renaming any of them breaks that TRD.
+      // the spec migrates feature_gate.dart, quota_bar.dart and plan_badge.dart,
+      // which read these by name. Renaming any of them breaks that the spec.
       for (final id in <String>[
         'final entitlementsRepositoryProvider =',
         'final entitlementsStateProvider =',
@@ -928,7 +928,7 @@ void main() {
 
       final legacyImport = "flutter_riverpod/${'legacy'}.dart";
       expect(src.contains("import 'package:$legacyImport'"), false,
-          reason: 'the Stage A shim import is removed — this is how 50-24 '
+          reason: 'the Stage A shim import is removed — this is how the spec '
               'knows this notifier is done');
 
       expect(RegExp(r'final\s+Ref\s+ref\s*;').hasMatch(code), false,
@@ -977,7 +977,7 @@ void main() {
 
     test('the UI-hinting and billing-axis framing is documented in the file',
         () {
-      // 50-CONTEXT.md documentation requirements. Both have already caused
+      // the design notes documentation requirements. Both have already caused
       // real confusion, so they are asserted rather than trusted.
       expect(RegExp(r'hinting', caseSensitive: false).hasMatch(src), true,
           reason: 'the file must say these providers are UI hinting');

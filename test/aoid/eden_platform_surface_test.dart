@@ -1,15 +1,15 @@
 // Proves lib/eden_platform.dart's exported SYMBOL SET survived the AOID
-// relocation (AOID objective 50 TRD 50-01). 18 packages and ~450 import sites
+// relocation. 18 packages and ~450 import sites
 // depend on that surface; the relocation must be invisible to all of them.
 //
-// Why this file exists instead of the diffstat check TRD 50-01 specified:
-//   The TRD's gate was
+// Why this file exists instead of the diffstat check the spec specified:
+//   The the spec's gate was
 //       git diff --stat origin/main -- lib/eden_platform.dart
 //     -> "insertions only, zero deletions"
 //   which is a proxy for "no symbol removed", and a bad one in both
 //   directions. Moving a file forces its `export` LINE to change path, so the
 //   proxy reports a deletion while every symbol is still exported (exactly
-//   this TRD's situation). Conversely you can add lines while narrowing an
+//   this the spec's situation). Conversely you can add lines while narrowing an
 //   export with `show` and the proxy stays green. Line counts do not measure
 //   API surface.
 //
@@ -79,7 +79,7 @@ void main() {
         expect(probe, isNull);
       });
 
-      // --- new in this TRD, reachable through the same barrel ---
+      // --- new in this the spec, reachable through the same barrel ---
       test(
         'AoidEndpoints is exported and derives AOID paths from the issuer',
         () {
@@ -120,7 +120,7 @@ void main() {
     },
   );
 
-  // ── TRD 50-24, test-list items 8 and 9: THE FOLD'S CONTRACT ────────────────
+  // ── the spec, test-list items 8 and 9: THE FOLD'S CONTRACT ────────────────
   //
   // `lib/aoid.dart` and `lib/aoid_riverpod.dart` are DELETED. Everything they
   // exported now ships from `eden_platform.dart` alone. This group is what
@@ -128,7 +128,7 @@ void main() {
   // through the single entrypoint imported at the top of this file, so a
   // half-applied fold is a compile error here.
   group('item 8 — the whole AOID SDK resolves from eden_platform.dart alone', () {
-    test('client, config, endpoints and strategy — the four the TRD names', () {
+    test('client, config, endpoints and strategy — the four the spec names', () {
       expect(
         PkceGenerator.generate().codeVerifier.length,
         greaterThanOrEqualTo(43),
@@ -147,17 +147,17 @@ void main() {
     });
 
     test('one symbol from each POPULATED part-barrel', () {
-      // NOTE — the TRD asks for "one symbol from each of the seven
+      // NOTE — the spec asks for "one symbol from each of the seven
       // part-barrels". That was UNSATISFIABLE when written: three of the seven
-      // (widgets -> 50-11, redirect -> 50-12, tenant -> 50-13) were deliberately
+      // (widgets -> the spec, redirect -> the spec, tenant -> the spec) were deliberately
       // EMPTY placeholders whose owning TRDs had not run yet. They exported
       // nothing, so no symbol from them could be named. The next test asserts
       // the REMAINING placeholders' emptiness is by design rather than breakage.
       //
-      // 50-11 and 50-12 have both since run and filled parts/widgets.dart and
+      // the spec and the spec have both since run and filled parts/widgets.dart and
       // parts/redirect.dart, so both are named here now and dropped from the
       // pending list below — exactly the handoff that test's failure message
-      // prescribes. NOTE for whoever merges the next parallel TRD: this map is
+      // prescribes. NOTE for whoever merges the next parallel the spec: this map is
       // ADDITIVE and the pending list is SUBTRACTIVE. Resolving a conflict here
       // by taking one side wholesale silently un-ships the other side's barrel.
       final byPartBarrel = <String, Object?>{
@@ -172,14 +172,14 @@ void main() {
             AoidNativeClient,
         'parts/native.dart  -> transport/aoid_error.dart': AoidError,
         'parts/native.dart  -> flow/aoid_native_flow.dart': AoidNativeFlow,
-        // Filled by TRD 50-11. The sealed forms are only useful if a consuming
+        // Filled by the spec. The sealed forms are only useful if a consuming
         // app can actually name them from the one import, so this entry is the
         // reason the barrel export exists at all.
         'parts/widgets.dart -> widgets/aoid_login_form.dart': AoidLoginForm,
         'parts/widgets.dart -> widgets/aoid_mfa_form.dart': AoidMfaForm,
         'parts/widgets.dart -> widgets/aoid_login_theme.dart':
             const AoidLoginTheme(),
-        // Filled by TRD 50-12.
+        // Filled by the spec.
         'parts/redirect.dart -> flow/aoid_redirect_options.dart':
             AoidRedirectOptions,
         'parts/redirect.dart -> flow/aoid_redirect_flow.dart': AoidRedirectFlow,
@@ -193,7 +193,7 @@ void main() {
     });
 
     test('all seven part-barrels still exist and are exported by '
-        'eden_platform.dart — the parallel-TRD collision guard survives the '
+        'eden_platform.dart — the parallel-work collision guard survives the '
         'fold', () {
       // This invariant came from the DELETED test/aoid/riverpod_free_gate_test.dart.
       // It is NOT a firewall property — it is what stops TRDs running in
@@ -217,7 +217,7 @@ void main() {
           isTrue,
           reason:
               'missing part-barrel lib/src/aoid/parts/$name.dart — a '
-              'downstream TRD has nowhere to write',
+              'downstream the spec has nowhere to write',
         );
         expect(
           barrel,
@@ -228,18 +228,18 @@ void main() {
     });
 
     test('the remaining unfilled part-barrels are empty BY DESIGN, each naming '
-        'its owning TRD — and as of 50-14 there are none left', () {
+        'its owning the spec — and as of the spec there are none left', () {
       // Without this, "tenant.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
       //
-      // 50-11 (widgets), 50-12 (redirect) and 50-13 (tenant) each ran in its own
-      // worktree off origin/main and each removed ITS OWN key from this map.
-      // TRD 50-14 merged all three; the three removals compose to an EMPTY map.
-      // Resolving that merge by taking any one branch wholesale would have
-      // restored another TRD's key and silently un-shipped a barrel that had in
-      // fact landed — so all three removals are kept here deliberately.
+      // The widgets, redirect and tenant work each ran in its own worktree off
+      // origin/main and each removed ITS OWN key from this map. The three
+      // removals compose to an EMPTY map. Resolving that merge by taking any
+      // one branch wholesale would have restored another branch's key and
+      // silently un-shipped a barrel that had in fact landed — so all three
+      // removals are kept here deliberately.
       const pending = <String, String>{};
-      pending.forEach((name, trd) {
+      pending.forEach((name, owner) {
         final src = File('lib/src/aoid/parts/$name.dart').readAsStringSync();
         expect(
           RegExp(r"^\s*export\s+'", multiLine: true).hasMatch(src),
@@ -250,8 +250,8 @@ void main() {
         );
         expect(
           src,
-          contains(trd),
-          reason: 'parts/$name.dart must name its owning TRD ($trd)',
+          contains(owner),
+          reason: 'parts/\$name.dart must name its owning area (\$owner)',
         );
       });
 
@@ -277,7 +277,7 @@ void main() {
           isTrue,
           reason:
               'parts/$name.dart is not in the pending list yet exports '
-              'nothing — either its owning TRD was un-shipped by a bad merge '
+              'nothing — either its owning the spec was un-shipped by a bad merge '
               'resolution, or it belongs back in `pending`',
         );
       }
@@ -289,16 +289,16 @@ void main() {
       expect(
         File('lib/aoid.dart').existsSync(),
         isFalse,
-        reason: 'lib/aoid.dart was folded into eden_platform.dart by 50-24',
+        reason: 'lib/aoid.dart was folded into eden_platform.dart by the spec',
       );
       expect(
         File('lib/aoid_riverpod.dart').existsSync(),
         isFalse,
-        reason: 'lib/aoid_riverpod.dart was folded in by 50-24',
+        reason: 'lib/aoid_riverpod.dart was folded in by the spec',
       );
-      // ...and the firewall gate that guarded the split went with it. It
+      //...and the firewall gate that guarded the split went with it. It
       // asserted that the AOID surface never resolves a riverpod symbol —
-      // precisely the property 50-CONTEXT.md D2 rejected — so it was DELETED
+      // precisely the property the design notes rejected — so it was DELETED
       // rather than weakened. A softened version would have kept the firewall's
       // premise alive in the suite after the code abandoned it.
       expect(

@@ -9,9 +9,9 @@ import '../transport/aoid_error.dart';
 /// answer, and it MUST NOT be treated as an authentication failure.
 ///
 /// AOID returns a generic `invalid_grant` for a non-membership switch (aoid
-/// `internal/oauth/service.go:906-913`). If that reaches
+/// the token service`). If that reaches
 /// `AuthNotifier.restoreSession`'s `AuthError` path (`auth_provider.dart`
-/// :410-413 -> `_clearPersistedTokens()` + `unauthenticated`) or a Dio 401
+///:410-413 -> `_clearPersistedTokens()` + `unauthenticated`) or a Dio 401
 /// interceptor's `forceUnauthenticated()` (AODex
 /// `lib/src/features/auth/application/auth_service.dart:139-147`), the user is
 /// **SIGNED OUT for asking about a workspace they are not in**. That is the
@@ -25,7 +25,7 @@ import '../transport/aoid_error.dart';
 ///
 /// ## It carries NO detail, and that is load-bearing
 ///
-/// `service.go:906-913` withholds the distinction between "not a member" and
+/// `the token service` withholds the distinction between "not a member" and
 /// "bad token" so the endpoint is not a membership oracle. **Do not add a
 /// `reason`, a `cause`, a slug, or a second message per branch** — that
 /// rebuilds the oracle the server spent code removing. Note in particular that
@@ -47,7 +47,7 @@ import '../transport/aoid_error.dart';
 /// been. That self-corrects — the next ORDINARY refresh carries no
 /// `active_tenant`, so it surfaces as `AoidError` and the normal sign-out
 /// happens. Failing the other way would sign people out of a live session,
-/// which is the defect this whole TRD exists to prevent.
+/// which is the defect this whole the spec exists to prevent.
 final class AoidTenantDenied implements Exception {
   const AoidTenantDenied();
 

@@ -63,7 +63,7 @@ class MutationFailure<T> extends MutationState<T> {
 /// bool _saving = false;
 /// String? _error;
 /// Future<void> _save() async { setState(() { _saving = true; _error = null; });
-///   try { await repo.save(...); ... } catch (e) { setState(() { _error = '$e'; }); }
+///   try { await repo.save(...);... } catch (e) { setState(() { _error = '$e'; }); }
 ///   finally { setState(() { _saving = false; }); } }
 /// ```
 ///
@@ -87,8 +87,8 @@ class MutationFailure<T> extends MutationState<T> {
 /// final notifier = ref.read(saveConversationMutation.notifier);
 ///
 /// EdenButton(
-///   label: state.isInFlight ? 'Saving…' : 'Save',
-///   onPressed: state.isInFlight ? null : () async {
+///   label: state.isInFlight ? 'Saving…': 'Save',
+///   onPressed: state.isInFlight ? null: () async {
 ///     await notifier.run(() => repo.update(id, title));
 ///   },
 /// );
