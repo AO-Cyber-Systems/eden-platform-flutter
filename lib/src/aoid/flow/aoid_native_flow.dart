@@ -3,6 +3,7 @@
 //
 // RIVERPOD-FREE and Flutter-free: reachable from lib/aoid.dart.
 
+import '../../auth/native_ceremony.dart';
 import '../../auth/auth_strategy.dart' show RedirectRequired;
 import '../claims/tenant_ref.dart' show AoidActiveTenantSlug;
 import '../transport/aoid_error.dart';
@@ -132,7 +133,7 @@ final class AoidFlowFailed extends AoidFlowState {
 /// The widgets layer's sealed `AoidLoginForm` owns its own `TextEditingController` and
 /// calls [submitPassword] directly. That call boundary is where D3's
 /// containment is realised.
-class AoidNativeFlow {
+class AoidNativeFlow implements NativeCeremony {
   AoidNativeFlow({
     required AoidNativeClient client,
     required String clientId,

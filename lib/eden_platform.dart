@@ -54,6 +54,9 @@ export 'src/aoid_riverpod/aoid_oidc_auth_strategy.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 export 'src/auth/auth_provider.dart';
 export 'src/auth/auth_strategy.dart';
+export 'src/auth/direct_auth_strategy.dart';
+export 'src/auth/native_ceremony.dart';
+export 'src/auth/native_delegated_auth_strategy.dart';
 export 'src/auth/login_screen.dart';
 export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
