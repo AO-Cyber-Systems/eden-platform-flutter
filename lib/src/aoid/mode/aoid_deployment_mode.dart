@@ -250,10 +250,9 @@ extension AoidSessionPlatformBridge on AoidSession {
   /// Converts to a [PlatformSession].
   ///
   /// [role] is whatever the CONSUMING APP decides a role is. It is never
-  /// derived from a claim: the AOID portal's strategy passes `role: me.aal`
-  /// (`the portal strategy`), and an
-  /// assurance level is not a role. AOID owns authN; the app owns authZ
-  ///. Institutionalising that overload in the
+  /// derived from a claim: the AOID portal's strategy passes `role: me.aal`,
+  /// and an assurance level is not a role. AOID owns authN; the app owns
+  /// authZ. Institutionalising that overload in the
   /// shared module would push an authZ decision into the identity layer for
   /// every consumer at once.
   PlatformSession toPlatformSession({

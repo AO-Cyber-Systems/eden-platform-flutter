@@ -7,8 +7,8 @@
 // everything here needed riverpod 2. Both halves now ship from the single
 // `package:eden_platform_flutter/eden_platform.dart` entrypoint: the barrel consolidation
 // folded the two top-level AOID barrels in and deleted them, because the
-// boundary they routed around was removed by the riverpod 3 alignment
-//. The directory split remains as a LAYERING marker only.
+// boundary they routed around was removed by the riverpod 3 alignment.
+// The directory split remains as a LAYERING marker only.
 //
 // Nothing under lib/src/aoid/ should import this file — the core should not
 // depend on the adapter layer. That was previously enforced by
