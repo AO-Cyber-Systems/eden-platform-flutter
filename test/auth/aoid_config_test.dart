@@ -6,7 +6,7 @@
 // AoidConfig.fromEnvironment() (exercised via aoid_wireup_test.dart's
 // aoidConfigProvider override pattern, not here) touches the env constants.
 //
-// Test list (see AOID-CONSOLE-LOGIN-04-TRD.md, ported from
+// Test list  (ported from
 // eden-biz-console-login/flutter):
 // Happy:
 //   - explicit args expose enabled/issuer/clientId unchanged.

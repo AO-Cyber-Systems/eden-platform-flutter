@@ -1,18 +1,18 @@
 // Tests for the AUTHORIZATION-CODE social login flow.
 //
-// AOID objective 50, TRD 50-10 (SDK-08 / D6). This file previously asserted the
+// AOID, the spec (SDK-08 / D6). This file previously asserted the
 // opposite contract — that `sessionFromCallbackUrl` parsed `access_token` and
 // `refresh_token` out of the callback query string. That contract was the
-// vulnerability. eden-platform-go TRD 50-05 stopped the server sending tokens;
+// vulnerability. eden-platform-go stopped the server sending tokens;
 // these tests pin the client to the replacement.
 //
-// Wire contract consumed VERBATIM from 50-05-SUMMARY.md:
-//   callback : <redirect_uri>?code=<handoff>&state=<state>
-//   exchange : POST /auth/social/exchange
+// Wire contract consumed VERBATIM from 50-the design notes:
+//   callback: <redirect_uri>?code=<handoff>&state=<state>
+//   exchange: POST /auth/social/exchange
 //              Content-Type: application/x-www-form-urlencoded
 //              code=<handoff>&redirect_uri=<exact target the code was minted for>
-//   success  : 200 application/json {"access_token":"...","refresh_token":"..."}
-//   failure  : 400 text/plain "invalid request"  (GET -> 405)
+//   success: 200 application/json {"access_token":"...","refresh_token":"..."}
+//   failure: 400 text/plain "invalid request"  (GET -> 405)
 
 import 'dart:convert';
 
@@ -193,7 +193,7 @@ void main() {
         );
         expect(req.bodyFields['code'], 'HANDOFF123');
         expect(req.bodyFields['redirect_uri'], _redirectUri);
-        // The code must NOT re-enter a request line — 50-05 reads it with
+        // The code must NOT re-enter a request line — the spec reads it with
         // r.PostFormValue, so a query-string code would silently fail.
         expect(req.url.query, isEmpty);
       },
@@ -472,7 +472,7 @@ void main() {
     );
   });
 
-  // A NAME-based gate is insufficient: eden-platform-go 50-05 proved a token
+  // A NAME-based gate is insufficient: eden-platform-go proved a token
   // can ship under a benign parameter name while a `grep access_token=` gate
   // passes. These assert on the token VALUE, wherever in the URL it hides.
   group('no token VALUE from the callback URL ever reaches the session', () {
@@ -481,7 +481,7 @@ void main() {
     final hidingPlaces = <String, String>{
       'the canonical parameter name':
           '$_redirectUri?code=C&state=S&access_token=$smuggled',
-      'a benign parameter name (the 50-05 D6-M2 smuggling case)':
+      'a benign parameter name (the the spec D6-M2 smuggling case)':
           '$_redirectUri?t=$smuggled&code=C&state=S',
       'an innocuous-looking parameter':
           '$_redirectUri?profile=$smuggled&code=C&state=S',
@@ -531,7 +531,7 @@ void main() {
     );
   });
 
-  group('fragment-shaped redirect (hash-routed SPA — 50-05 composes the query '
+  group('fragment-shaped redirect (hash-routed SPA — the spec composes the query '
       'INSIDE the fragment)', () {
     test('code + state are read out of the fragment query', () async {
       final rec = _Recorder();

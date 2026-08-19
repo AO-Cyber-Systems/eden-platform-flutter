@@ -1,11 +1,11 @@
-// THE CONTAINMENT PROOF for the sealed AOID forms (TRD 50-11, items 8-14).
+// THE CONTAINMENT PROOF for the sealed AOID forms (the spec, items 8-14).
 //
 // The companion file `sealed_form_no_leak_test.dart` proves the forms hand out
 // no API. That is only half the guarantee: a widget with no callbacks could
 // still POST the password to the embedding app's own backend. This file closes
 // the other half by asserting where the credential actually goes.
 //
-// Item 8 is the load-bearing one — 49-CONTEXT guarantee #1 made mechanical. It
+// Item 8 is the load-bearing one — the design notes guarantee #1 made mechanical. It
 // asserts three things at once, and the third is the one people leave out:
 //
 //   1. the request body carries the password        (it went somewhere)
@@ -14,7 +14,7 @@
 //
 // Assertion 3 is not redundant with 2. A test that checked only "the password
 // is in a request body" passes just as happily when the form posts it to the
-// consuming app's backend, which is precisely what objective 49 forbids. The
+// consuming app's backend, which is precisely what the issuer forbids. The
 // fixture deliberately gives the issuer and the app DIFFERENT hosts
 // (`auth.fake-aoid.test` vs `app.fake-aoid.test`) so the distinction is real
 // rather than notional.
@@ -130,7 +130,7 @@ void main() {
         req.url.host,
         kIssuerUri.host,
         reason:
-            '49-CONTEXT guarantee #1: the password goes straight from the '
+            'the design notes guarantee #1: the password goes straight from the '
             'widget to the AOID issuer, NEVER to the consuming app backend.',
       );
       expect(req.url.path, '/oauth/native/verify');
@@ -143,13 +143,13 @@ void main() {
         isNot(kAppBaseUri.host),
         reason:
             'The password was posted to the CONSUMING APP\'S host '
-            '(${kAppBaseUri.host}). That is exactly what objective 49 forbids: '
+            '(${kAppBaseUri.host}). That is exactly what the issuer forbids: '
             'the app must never be in a position to see the credential, and a '
             'containment guarantee that only holds when the app behaves is not '
             'a guarantee.',
       );
 
-      // ...and no request in the whole exchange went anywhere but the issuer.
+      //...and no request in the whole exchange went anywhere but the issuer.
       for (final r in fake.capturedRequests) {
         expect(
           r.url.host,
@@ -421,7 +421,7 @@ void main() {
 
     testWidgets('14b. AoidMfaForm renders sensibly when availableMethods is '
         'EMPTY — the normal early state', (tester) async {
-      // 49-07 refuses to emit a per-identity method list before a factor has
+      // the issuer refuses to emit a per-identity method list before a factor has
       // succeeded, because that turns the endpoint into an enumeration oracle.
       // So the empty list is the COMMON path, not an edge case, and a picker
       // that rendered empty chrome (or threw) would be a bug in the common path.

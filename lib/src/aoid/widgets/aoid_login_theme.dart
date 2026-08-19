@@ -1,4 +1,4 @@
-// Presentation inputs for the sealed AOID forms (50-CONTEXT.md D3, TRD 50-11).
+// Presentation inputs for the sealed AOID forms.
 //
 // EVERY FIELD ON THIS STRUCT IS AN INPUT. There is deliberately no field of a
 // function type — no builder, no callback, nothing that could RETURN user

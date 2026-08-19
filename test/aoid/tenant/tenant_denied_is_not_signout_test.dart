@@ -1,10 +1,10 @@
-// TRD 50-13, task 1 — THE REQUIRED MULTI-TENANT ISOLATION GATE
+// the spec, task 1 — THE REQUIRED MULTI-TENANT ISOLATION GATE
 // (`wrong_tenant_assertion`, enforcement: required).
 //
 // The bug this file exists to prevent, stated once:
 //
 //   AOID answers a switch to a tenant you are NOT a member of with a GENERIC
-//   `invalid_grant` (aoid internal/oauth/service.go:906-913). Wire that
+//   `invalid_grant` (the token service). Wire that
 //   naively into AuthNotifier.restoreSession's `on AuthError` arm
 //   (auth_provider.dart:410-413 -> _clearPersistedTokens() + unauthenticated)
 //   or into AODex's Dio 401 interceptor
@@ -20,7 +20,7 @@
 // exists. Without them the client's own assertions pass for the wrong reason:
 //   F1  the fake serves the refresh grant and ROTATES the refresh token
 //   F2  the membership gate is NON-CONSUMING: a denied switch leaves the
-//       presented refresh token LIVE (aoid service.go:882-885 reads the row
+//       presented refresh token LIVE (the token service reads the row
 //       without consuming it precisely so a bad target does not burn it)
 //   F3  a denied switch and a genuinely bad refresh token are BYTE-IDENTICAL
 //       — status, every header, and the raw body. If the FAKE distinguished
@@ -30,7 +30,7 @@
 //
 // Client (task 1):
 //   1   refresh(activeTenant:) sends `active_tenant` IN THE FORM BODY, with
-//       the slug value (aoid internal/oauth/http/token.go:109-127)
+//       the slug value (the token endpoint)
 //   2   NO custom header is sent — the outgoing header map carries only the
 //       content type. That is the CORS simple-request guard: verified live
 //       2026-08-01, /oauth/token answers preflight 204 with ACAO:* and no
@@ -61,12 +61,12 @@
 //
 // FIXTURES ARE INLINE (resolved intent: fixture_strategy: inline) and
 // HAND-BUILT (no_llm_test_data). The JWT assembly and the tenant identifiers
-// are reused from TRD 50-03's fixture module rather than re-invented, so the
+// are reused from the spec fixture module rather than re-invented, so the
 // decoded claims are trustworthy and the slug/UUID pairing cannot drift.
 //
 // The shared test/auth/fixtures/fake_aoid_endpoint.dart is deliberately NOT
-// extended here: 50-11 and 50-12 are running against it concurrently, and this
-// TRD's fake models a DIFFERENT contract (the refresh grant's membership gate,
+// extended here: concurrent work is running against it, and this
+// file's fake models a DIFFERENT contract (the refresh grant's membership gate,
 // not the native ceremony).
 
 import 'dart:convert';
@@ -92,12 +92,12 @@ const _outsiderSlug = 'initech';
 // ---------------------------------------------------------------------------
 // THE FAKE — aoid /oauth/token, refresh grant, with the membership gate.
 //
-// Modelled on aoid internal/oauth/service.go:
-//   :882-885  a NON-CONSUMING read of the refresh row, so a bad target does
+// Modelled on the token service
+//:882-885  a NON-CONSUMING read of the refresh row, so a bad target does
 //             not burn the token
-//   :886-914  the membership check; non-member -> auth.active_tenant.denied
+//:886-914  the membership check; non-member -> auth.active_tenant.denied
 //             audit + a GENERIC invalid_grant
-//   :922-928  `tnt` = the validated target's SLUG, else home
+//:922-928  `tnt` = the validated target's SLUG, else home
 // ---------------------------------------------------------------------------
 
 /// One recorded request: exactly what the client put on the wire.
@@ -135,7 +135,7 @@ class _FakeAoidTokenEndpoint {
   /// The ONE function that renders `invalid_grant`. A denied switch and a
   /// genuinely bad refresh token BOTH go through it, so byte-identity is
   /// structural rather than two coincidentally-equal literals. AOID collapses
-  /// them on purpose (service.go:906-913): distinguishing them would make the
+  /// them on purpose (the token service): distinguishing them would make the
   /// endpoint a membership oracle.
   http.Response _invalidGrant() => http.Response(
     jsonEncode({
@@ -168,13 +168,13 @@ class _FakeAoidTokenEndpoint {
 
     if (fields['grant_type'] != 'refresh_token') return _invalidGrant();
 
-    // service.go:882-885 — a NON-CONSUMING read. Nothing below this line
+    // the token service — a NON-CONSUMING read. Nothing below this line
     // rotates the token until the grant is actually issued.
     if (fields['refresh_token'] != liveRefreshToken) return _invalidGrant();
 
     final target = fields['active_tenant'];
     if (target != null && !memberOf.contains(target)) {
-      // service.go:906-913 — audit, then a GENERIC invalid_grant. The
+      // the token service — audit, then a GENERIC invalid_grant. The
       // presented refresh token is STILL LIVE.
       return _invalidGrant();
     }
@@ -183,7 +183,7 @@ class _FakeAoidTokenEndpoint {
     liveRefreshToken = 'refresh-token-${_seq.toString().padLeft(4, '0')}';
     mintedRefreshTokens.add(liveRefreshToken);
 
-    // service.go:922-928 — tnt is the validated target's SLUG, else home.
+    // the token service — tnt is the validated target's SLUG, else home.
     // GID-14: with no active selection the access token's tnt is the HOME
     // tenant's SLUG, still never the UUID.
     final tnt = target ?? homeTenantSlug;
@@ -203,7 +203,7 @@ class _FakeAoidTokenEndpoint {
         }),
         'refresh_token': liveRefreshToken,
         // The id_token's tnt is the HOME tenant UUID and does NOT follow the
-        // switch (aoid internal/oauth/tokens.go:41-50). Present so a client
+        // switch (the token claims). Present so a client
         // that verified the switch by decoding the id_token would FAIL here.
         'id_token': idTokenHomeTenant,
         'token_type': 'Bearer',
@@ -230,7 +230,7 @@ AoidTokenClient _clientFor(_FakeAoidTokenEndpoint fake) => AoidTokenClient(
 //
 // Item 9 is worthless without something that COULD sign the user out. The
 // handler below is that something: it reproduces the two real sign-out paths
-// this TRD exists to route around, and item 9c proves it genuinely bites.
+// this work exists to route around, and item 9c proves it genuinely bites.
 // ---------------------------------------------------------------------------
 
 const _seedRefreshToken = 'refresh-token-0001';
@@ -465,7 +465,7 @@ void main() {
         tenantBSlug,
         reason:
             'active_tenant must be a FORM FIELD (aoid '
-            'internal/oauth/http/token.go:109-127) — that is what keeps the '
+            'the token endpoint) — that is what keeps the '
             'switch a CORS simple request with no preflight',
       );
       // The raw body, not merely the parsed map: a header would not appear
@@ -529,7 +529,7 @@ void main() {
         final claims = AoidAccessClaims.decodeUnverified(response.accessToken);
         expect(claims.activeTenant.slug, tenantBSlug);
 
-        // ...and the id_token deliberately does NOT follow the switch, so a
+        //...and the id_token deliberately does NOT follow the switch, so a
         // client that verified by decoding it would be wrong. Pinned here so
         // nobody "simplifies" the verification onto the id_token later.
         expect(response.idToken, isNotNull);
@@ -606,7 +606,7 @@ void main() {
         expect(thrown, isNot(isA<AuthError>()));
         expect(thrown, isNot(isA<AoidError>()));
 
-        // ...and now the part that actually matters. Run the SAME handler that
+        //...and now the part that actually matters. Run the SAME handler that
         // item 9c proved signs people out.
         await _appSignOutOnAuthFailure(thrown!, session);
 
@@ -615,7 +615,7 @@ void main() {
           AuthStatus.authenticated,
           reason:
               'asking about a workspace you are not in must not sign you '
-              'out (aoid internal/oauth/service.go:906-913)',
+              'out (the token service)',
         );
         expect(session.isAuthenticated, isTrue);
         expect(
@@ -638,7 +638,7 @@ void main() {
           throwsA(isA<AoidTenantDenied>()),
         );
 
-        // aoid service.go:882-885 does a NON-CONSUMING read precisely so a bad
+        // the token service does a NON-CONSUMING read precisely so a bad
         // target does not burn the token. The client must not undo that by
         // clearing storage on the error path.
         expect(await session.storage.readRefreshToken(), _seedRefreshToken);
@@ -681,7 +681,7 @@ void main() {
         // The server's own strings must never be reflected.
         expect(rendered, isNot(contains('invalid_grant')));
         expect(rendered, isNot(contains('invalid or expired refresh token')));
-        // ...and it must still say something a human can read.
+        //...and it must still say something a human can read.
         expect(denial.message, isNotEmpty);
       },
     );

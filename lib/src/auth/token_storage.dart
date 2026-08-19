@@ -29,6 +29,6 @@ abstract class TokenStorage {
   /// Removes both tokens from every backing store (secure storage AND any
   /// legacy `shared_preferences` straggler). Used by logout AND by company
   /// switch as defense-in-depth (CLI-07 — see eden-biz-flutter.SAAS
-  /// 10-08-SUMMARY.md TODO marker).
+  /// 10-the design notes TODO marker).
   Future<void> clear();
 }

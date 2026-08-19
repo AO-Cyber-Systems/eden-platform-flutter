@@ -1,5 +1,4 @@
-// STAGE B of AOID objective 50's riverpod alignment (50-CONTEXT.md D2,
-// TRD 50-22). Stage A parked this file on the `legacy.dart` shim; that shim is
+// STAGE B of AOID riverpod alignment. Stage A parked this file on the `legacy.dart` shim; that shim is
 // now gone and the main barrel is back, because `Notifier`/`NotifierProvider`
 // live in it. See doc/riverpod-3-migration.md §3.3.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +34,7 @@ enum ThemeMode { system, light, dark }
 
 /// Persisted user preferences, on riverpod 3's [Notifier].
 ///
-/// This is the CONTROL CASE of TRD 50-22's Stage B unit: unlike
+/// This is the CONTROL CASE of the spec Stage B unit: unlike
 /// [CompanyNotifier] and [NavNotifier] it holds no `Ref`, registers no
 /// `ref.listen`, schedules no bootstrap microtask and has no `clear()`. It
 /// therefore isolates the port's *mechanics* with the wiring removed.

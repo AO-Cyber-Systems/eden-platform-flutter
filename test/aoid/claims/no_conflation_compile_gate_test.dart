@@ -1,6 +1,6 @@
 // THE OBJECTIVE'S REQUIRED MULTI-TENANT ISOLATION GATE (wrong_tenant_assertion).
 //
-// TRD 50-03 test-list items 9-11, plus four extra regions that close holes the
+// the test list items 9-11, plus four extra regions that close holes the
 // three named items leave open.
 //
 // A running test cannot observe "this does not compile", so this drives the
@@ -104,7 +104,7 @@ String _dartExecutable() {
   }
   fail(
     'no `dart` executable found (tried: ${candidates.join(", ")}). This gate '
-    'is the objective 50 REQUIRED multi-tenant isolation assertion — it must '
+    'is the the issuer REQUIRED multi-tenant isolation assertion — it must '
     'not be skipped. Fix the environment or the gate is a false green.',
   );
 }

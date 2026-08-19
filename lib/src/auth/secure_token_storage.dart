@@ -36,14 +36,14 @@ import 'token_storage.dart';
 /// tokens accessible after the device is unlocked once after boot — matches
 /// user mental model.
 ///
-/// **Refresh token on web (AOID objective 50, 50-CONTEXT.md D4 / C3):** the
+/// **Refresh token on web:** the
 /// refresh token is never persisted to `shared_preferences`, and a legacy one
 /// found there is never copied into secure storage. On web both of those are
 /// `localStorage` — `flutter_secure_storage_web` keeps the ciphertext and its
 /// AES key there side by side — so either write makes the token readable by
 /// any XSS. The access token keeps both behaviours; see [_writeOrDelete].
 ///
-/// Reference: 10-RESEARCH.md Pattern 1, Pitfall 1 (DO NOT bump to 10.x), and
+/// Reference: the design notes Pattern 1, Pitfall 1 (DO NOT bump to 10.x), and
 /// Pitfall 8 (iOS Simulator -25308 retry).
 class SecureTokenStorage implements TokenStorage {
   /// Creates a storage instance. Pass an injected [FlutterSecureStorage] for
@@ -110,12 +110,12 @@ class SecureTokenStorage implements TokenStorage {
     final legacy = prefs.getString(key);
     if (legacy == null) return null;
 
-    // AOID obj-50 / D4: on web, do NOT create a second persisted copy of the
+    // On web: on web, do NOT create a second persisted copy of the
     // refresh token. Migrating it means writing it into secure storage, which
     // on web is window.localStorage with the AES key alongside — the state D4
     // forbids. The pre-existing prefs value is deliberately left ALONE and
     // still returned: purging tokens users already hold needs a coordinated
-    // eden-biz change and is escalated by TRD 50-02's SUMMARY, not done here.
+    // eden-biz change and is escalated by the spec SUMMARY, not done here.
     if (_isWeb && key == StorageKeys.kRefreshToken) {
       return legacy;
     }
@@ -138,7 +138,7 @@ class SecureTokenStorage implements TokenStorage {
       try {
         return await _secure.read(key: key);
       } on PlatformException catch (e) {
-        // iOS Simulator first-launch flake — see 10-RESEARCH.md Pitfall 8.
+        // iOS Simulator first-launch flake — see the design notes Pitfall 8.
         // -25308 is errSecAuth; transient. Retry up to `attempts` times with
         // 100ms backoff. Any other code is a real failure — rethrow.
         if (e.code != '-25308' || i == attempts - 1) rethrow;
@@ -181,8 +181,8 @@ class SecureTokenStorage implements TokenStorage {
       // is localStorage, and so is flutter_secure_storage_web (it puts the AES
       // key and the ciphertext in localStorage side by side). Persisting a
       // refresh token to either makes it readable by any XSS. That is the
-      // configuration AOID objective 50 / 50-CONTEXT.md D4 forbids, and it is
-      // what this package shipped until obj-50. Deleting (value == null, or an
+      // configuration AOID / the design notes forbids, and it is
+      // what this package shipped until that change. Deleting (value == null, or an
       // empty string — a cookie-bound/web session clobbering a stale value)
       // still falls through to both backends: clearing must always be
       // best-effort, or a logout can strand a token.

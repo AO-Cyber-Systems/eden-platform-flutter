@@ -1,4 +1,4 @@
-// The AOID native ceremony state machine — the CONTROLLER 50-11's sealed
+// The AOID native ceremony state machine — the CONTROLLER the spec sealed
 // AoidLoginForm drives.
 //
 // RIVERPOD-FREE and Flutter-free: reachable from lib/aoid.dart.
@@ -31,7 +31,7 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   final String next;
 
   /// Factors the identity can satisfy. MAY BE EMPTY; render a picker only when
-  /// it is not. 49-07 refuses to emit this before a factor has succeeded
+  /// it is not. the issuer refuses to emit this before a factor has succeeded
   /// because doing so makes the endpoint an enumeration oracle.
   final List<String> availableMethods;
 
@@ -43,22 +43,22 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   ///
   /// This flag is the ENTIRE signal, deliberately. AOID answers an unknown
   /// email, a wrong password, an account with no password credential and a
-  /// locked account **byte-identically** (49-04, re-proved over real HTTP by
-  /// 49-08). There is no richer reason to surface, and manufacturing one —
-  /// even in UI copy — reconstructs the account-existence oracle objective 49
-  /// spent a TRD removing.
+  /// locked account **byte-identically** (the spec, re-proved over real HTTP by
+  /// the spec). There is no richer reason to surface, and manufacturing one —
+  /// even in UI copy — reconstructs the account-existence oracle the issuer
+  /// spent real effort removing.
   final bool lastAttemptRejected;
 }
 
 /// This factor cannot be completed in-app. Open a system browser.
 ///
-/// NOT an error (50-CONTEXT D7). Reached by social IdPs, PIV/CAC, and — on a
-/// CORRECT password — any tenant on a `cryptographic` (FedRAMP-High) or
-/// `physical` (IL5) isolation tier, per 49-04 gate 7.
+/// NOT an error. Reached by social IdPs, PIV/CAC, and — on a
+/// CORRECT password — any tenant on a `cryptographic` or
+/// `physical` isolation tier.
 final class AoidFlowRedirectRequired extends AoidFlowState {
   const AoidFlowRedirectRequired(this.result);
 
-  /// 50-04's `AuthResult` variant. `reason` is TELEMETRY ONLY, never UI copy.
+  /// the spec `AuthResult` variant. `reason` is TELEMETRY ONLY, never UI copy.
   final RedirectRequired result;
 }
 
@@ -71,7 +71,7 @@ final class AoidFlowComplete extends AoidFlowState {
 
 /// The ceremony is over and cannot be continued — but the USER can start a new
 /// one. Replay, expiry, an unknown handle, a cross-tenant presentation and
-/// 49-06's durable `MaxAttempts = 5` cap all land here, indistinguishably.
+/// the spec durable `MaxAttempts = 5` cap all land here, indistinguishably.
 ///
 /// Deliberately NOT an exception: exhausting the attempt cap is an ordinary
 /// end to a session, and "start again" is the whole of the correct UX. Do NOT
@@ -85,9 +85,9 @@ final class AoidFlowRestartRequired extends AoidFlowState {
 /// answering 503.
 ///
 /// **The ceremony is not known to be over.** `AoidOidcAuthStrategy`
-/// .restoreSession swallows every non-200 as `null`, which signs the user out
+///.restoreSession swallows every non-200 as `null`, which signs the user out
 /// on a blip; this state exists so that defect cannot be written here. On a
-/// 503 specifically, 49-08's write gate fires BEFORE the service is called, so
+/// 503 specifically, the spec write gate fires BEFORE the service is called, so
 /// the handle was never consumed and re-submitting the same factor is correct.
 /// On a 500 or a dead socket the handle MAY have been consumed — a retry then
 /// answers `invalid_session` and lands in [AoidFlowRestartRequired], which is
@@ -114,14 +114,14 @@ final class AoidFlowFailed extends AoidFlowState {
 ///
 /// Exposes step / next / availableMethods / outcome — **NEVER the credential**.
 ///
-/// # D3 (50-CONTEXT.md)
+/// # D3
 ///
 /// The plaintext password arrives as a PARAMETER, goes straight into the
 /// request body, and is never assigned to a field, never logged, never placed
 /// in an exception. There is deliberately no getter, callback or stream
 /// through which app-owned Dart could read it back, and none may be added: a
 /// "convenience" API letting an app supply or observe its own password field
-/// defeats the whole objective. Adding one also defeats objective 49's
+/// defeats the whole objective. Adding one also defeats the issuer
 /// containment guarantee, because the credential's only journey is
 /// widget -> flow -> request body.
 ///
@@ -129,7 +129,7 @@ final class AoidFlowFailed extends AoidFlowState {
 /// which strips comments and then scans for a credential getter or a
 /// credential field, with a positive control proving both predicates can fire.
 ///
-/// 50-11's sealed `AoidLoginForm` owns its own `TextEditingController` and
+/// the spec sealed `AoidLoginForm` owns its own `TextEditingController` and
 /// calls [submitPassword] directly. That call boundary is where D3's
 /// containment is realised.
 class AoidNativeFlow {
@@ -149,17 +149,17 @@ class AoidNativeFlow {
   final String _redirectUri;
 
   /// The CURRENT handle. Private, and there is no accessor: nothing outside
-  /// this class needs it, and every response replaces it. 49-06 consumes the
+  /// this class needs it, and every response replaces it. the spec consumes the
   /// presented handle with a conditional UPDATE and inserts a successor, so a
   /// caller holding its own copy would present a dead value.
   String? _handle;
 
   AoidFlowState _state = const AoidFlowIdle();
 
-  /// Where the ceremony stands. 50-11 renders from this and nothing else.
+  /// Where the ceremony stands. the spec renders from this and nothing else.
   AoidFlowState get state => _state;
 
-  /// The terminal authorization code, once there is one. 50-09's Mode A sink
+  /// The terminal authorization code, once there is one. the spec Mode A sink
   /// spends it at `/oauth/token`.
   String? get authorizationCode => _state is AoidFlowComplete
       ? (_state as AoidFlowComplete).authorizationCode
@@ -199,7 +199,7 @@ class AoidNativeFlow {
   ///
   /// [email] is passed RAW. AOID normalises internally exactly as
   /// `PasswordLoginStart` does; normalising here too would key a DIFFERENT
-  /// AC-7 rate-limit bucket than the factor actually consumes (49-02, 49-08).
+  /// AC-7 rate-limit bucket than the factor actually consumes.
   Future<void> submitPassword({
     required String email,
     required String password,
@@ -210,7 +210,7 @@ class AoidNativeFlow {
 
   /// Submit a WebAuthn assertion. [responseJson] is the browser's own JSON,
   /// passed through UNTOUCHED: the assertion signature covers those exact
-  /// bytes, so re-encoding invalidates it (49-08).
+  /// bytes, so re-encoding invalidates it.
   Future<void> submitWebAuthn(
     String responseJson, {
     String method = 'webauthn',
@@ -222,7 +222,7 @@ class AoidNativeFlow {
       _state = const AoidFlowRestartRequired();
       return;
     }
-    // The handle is cleared BEFORE the call: 49-06 consumes it server-side, so
+    // The handle is cleared BEFORE the call: the spec consumes it server-side, so
     // it is dead the moment it leaves. Only a response can install a successor.
     _handle = null;
     await _step(
@@ -240,7 +240,7 @@ class AoidNativeFlow {
 
   /// Runs ONE request and folds the outcome into [_state].
   ///
-  /// There is deliberately NO retry here. 49-06's `MaxAttempts = 5` is durable
+  /// There is deliberately NO retry here. the spec `MaxAttempts = 5` is durable
   /// and carried forward on rotation, so an automatic retry burns the
   /// successor and can destroy a ceremony the user could still have completed.
   Future<void> _step(

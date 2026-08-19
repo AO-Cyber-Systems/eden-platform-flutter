@@ -1,5 +1,5 @@
 // Persists ONLY the PKCE code_verifier across a full-page redirect on web
-// (TRD 50-12).
+//.
 //
 // AoidOidcAuthStrategy._pendingPkce is an INSTANCE FIELD cleared in a `finally`
 // (aoid_oidc_auth_strategy.dart:65,119-120,151-154). That is correct for the
@@ -14,7 +14,7 @@
 //
 // # Why `window.sessionStorage` is an ACCEPTABLE exception to D4
 //
-// 50-CONTEXT.md D4 says nothing goes in web storage. This is a DELIBERATE,
+// the design notes says nothing goes in web storage. This is a DELIBERATE,
 // BOUNDED exception, and the bound is the whole justification:
 //
 //   * ONE key, holding ONE value: the code_verifier. Nothing else may ever be

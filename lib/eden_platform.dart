@@ -1,7 +1,7 @@
 // The FULL entrypoint for `eden_platform_flutter` — auth, company, navigation,
 // settings, entitlements, shell, networking, observability and the AOID SDK.
 //
-// Prefer this import. Since AOID objective 50 (50-CONTEXT.md D2) migrated all
+// Prefer this import. Since AOID migrated all
 // five notifiers from riverpod 2's StateNotifier to the 3.x Notifier API, taking
 // the full surface no longer costs a riverpod version conflict — which is the
 // reason the narrower entrypoints existed in the first place. See
@@ -19,14 +19,14 @@ export 'src/analytics/analytics_provider.dart';
 //
 // The AOID surface is part of this single entrypoint. It used to sit behind two
 // top-level barrels — `lib/aoid.dart` (riverpod-FREE) and `lib/aoid_riverpod.dart`
-// (the riverpod-2 adapter) — which TRD 50-24 FOLDED IN HERE and deleted.
+// (the riverpod-2 adapter) — which later work FOLDED IN HERE and deleted.
 //
 // That split had exactly one cause: `AoidOidcAuthStrategy` depends on riverpod,
 // and while this package pinned riverpod 2 a riverpod-3 consumer (AODex) could
 // not reach the AOID client through a riverpod-2 barrel. It was a VERSION
-// BOUNDARY, not a layering decision, and 50-01's own headers said so — both
-// barrels were labelled TRANSITIONAL and named 50-24 as the TRD that would
-// retire them. Stages A–C removed the boundary (50-CONTEXT.md D2), so the split
+// BOUNDARY, not a layering decision, and the spec own headers said so — both
+// barrels were labelled TRANSITIONAL and named the follow-up work that would
+// retire them. Stages A–C removed the boundary, so the split
 // was left defending nothing while still taxing every consumer with a choice of
 // entrypoint. See doc/riverpod-3-migration.md §3.12.
 //
@@ -40,10 +40,7 @@ export 'src/analytics/analytics_provider.dart';
 export 'src/aoid/aoid_config.dart';
 export 'src/aoid/pkce.dart';
 export 'src/aoid/transport/aoid_endpoints.dart';
-// ONE PART-BARREL PER DOWNSTREAM TRD (carried over from lib/aoid.dart):
-//   storage  -> 50-02   claims  -> 50-03   native   -> 50-08
-//   modes    -> 50-09   widgets -> 50-11   redirect -> 50-12
-//   tenant   -> 50-13
+// One part-barrel per downstream area (carried over from lib/aoid.dart):
 export 'src/aoid/parts/claims.dart';
 export 'src/aoid/parts/modes.dart';
 export 'src/aoid/parts/native.dart';
@@ -62,7 +59,7 @@ export 'src/auth/secure_token_storage.dart';
 export 'src/auth/signup_screen.dart';
 export 'src/auth/social_auth_service.dart';
 export 'src/auth/social_login_providers.dart';
-// REMOVED (AOID objective 50, TRD 50-10 / SDK-08 / D6):
+// REMOVED:
 // `export 'src/auth/sso_auth_service.dart'`. SSOAuthService read access_token
 // and refresh_token out of a desktop loopback callback URL and shelled out via
 // Process.run. Zero callers across ~/dev, so it was deleted, not repaired.
@@ -100,7 +97,7 @@ export 'src/networking/connect_bearer_interceptor.dart';
 export 'src/networking/connect_cookie_interceptor.dart'
     show connectCookieInterceptor;
 export 'src/networking/proactive_refresh.dart';
-// The same dio re-export `networking.dart` carries, ADDED here by TRD 50-24.
+// The same dio re-export `networking.dart` carries, ADDED here by the spec.
 //
 // Why: before this, a consumer on the FULL barrel that wrote its own
 // `Interceptor` or a fake `HttpClientAdapter` had to either import package:dio
@@ -131,7 +128,7 @@ export 'src/providers/mutation_notifier.dart';
 // Riverpod ↔ eden-ui-flutter bridge helpers.
 export 'src/widgets/eden_async_snapshot_riverpod.dart';
 
-// Shared Sentry init + PII scrubbers (opsCluster obj-31 TRD 31-08 / TELE-03).
+// Shared Sentry init + PII scrubbers (opsCluster).
 // Every AOCyber Flutter app calls initSentry from here so the scrubbers exist
 // in exactly ONE place — four copies of a privacy control is the failure mode
 // this replaces.

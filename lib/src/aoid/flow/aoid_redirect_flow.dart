@@ -1,9 +1,9 @@
-// The AOID browser hop, code-only (TRD 50-12, SDK-04, D6 + D7).
+// The AOID browser hop, code-only (the spec, SDK-04, D6 + D7).
 //
-// Objective 49 cannot embed everything: social IdPs block embedded login
+// the issuer cannot embed everything: social IdPs block embedded login
 // outright and PIV needs OS-level certificate selection, so both force a hop
 // to a real browser. D7 makes that a FIRST-CLASS path rather than an error
-// case — AoidFlowRedirectRequired (50-08) is what produces it, and this is the
+// case — AoidFlowRedirectRequired is what produces it, and this is the
 // other half: open the browser, take the CODE back.
 //
 // RIVERPOD-FREE, like every file under lib/src/aoid/flow/.
@@ -56,7 +56,7 @@ import 'aoid_verifier_stash.dart';
 /// `options` is REQUIRED here, unlike the older `AuthorizeFn` next door, which
 /// omits it entirely. That is the point: a `FlutterWebAuth2Options` that is
 /// built but never threaded through is the common failure mode for exactly the
-/// settings this TRD exists to force, and `required` makes forgetting it a
+/// settings this work exists to force, and `required` makes forgetting it a
 /// compile error. `FlutterWebAuth2.authenticate` remains assignable because its
 /// own `options` parameter is optional.
 typedef AoidAuthorizeFn =

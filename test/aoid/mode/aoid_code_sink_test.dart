@@ -9,9 +9,9 @@
 //
 // WHAT THIS FILE DOES **NOT** PROVE.
 //   No real backend is contacted. The cookie attributes asserted below are
-//   asserted against the FIXTURE, which is this TRD's statement of the contract
-//   50-15's Go endpoint must implement — not proof that it does. Live coverage
-//   is 50-17's.
+//   asserted against the FIXTURE, which is this file's statement of the contract
+//   the spec Go endpoint must implement — not proof that it does. Live coverage
+//   is the spec.
 //
 // ignore_for_file: avoid_relative_lib_imports
 
@@ -25,8 +25,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-// Was '../riverpod_free_gate_test.dart' until TRD 50-24 deleted that file (it
-// asserted the property 50-CONTEXT.md D2 rejected). The helper itself has
+// Was '../riverpod_free_gate_test.dart' until the spec deleted that file (it
+// asserted the property the design notes rejected). The helper itself has
 // nothing to do with riverpod and was relocated, not resurrected.
 import '../source_utils.dart' show stripComments;
 
@@ -45,7 +45,7 @@ const kAuthorizationCode = 'authz-code-single-use-0001';
 const kCodeVerifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
 const kRedirectUri = 'https://app.aodex.example/auth/callback';
 
-/// The Set-Cookie THIS TRD REQUIRES of the app's backend. Recorded here because
+/// The Set-Cookie THIS the spec REQUIRES of the app's backend. Recorded here because
 /// the fixture is where the contract becomes executable.
 const kConformantSetCookie =
     'aodex_session=opaque-session-value-0001; Path=/; HttpOnly; SameSite=Lax; '
@@ -272,8 +272,8 @@ void main() {
           session.accessToken,
           isNull,
           reason:
-              'this TRD ships the NARROWEST Mode A contract: 2xx + Set-Cookie. '
-              'Adopting tokens from the body is a widening 50-15 has not agreed '
+              'this work ships the NARROWEST Mode A contract: 2xx + Set-Cookie. '
+              'Adopting tokens from the body is a widening the spec has not agreed '
               'to.',
         );
       },

@@ -1,4 +1,4 @@
-// THE THREE AOID DEPLOYMENT MODES (50-CONTEXT.md D4), and the ONE selector.
+// THE THREE AOID DEPLOYMENT MODES, and the ONE selector.
 //
 // Reachable from `package:eden_platform_flutter/eden_platform.dart` via
 // lib/src/aoid/parts/modes.dart.
@@ -6,21 +6,21 @@
 // HISTORY: this file was riverpod-free by ENFORCED invariant, because
 // `lib/aoid.dart` was a riverpod-free barrel that a riverpod-3 consumer had to
 // be able to import while this package was still on riverpod 2. That version
-// boundary is gone (50-CONTEXT.md D2), the barrel was folded into
-// eden_platform.dart by TRD 50-24, and the closure-walking gate that enforced
+// boundary is gone, the barrel was folded into
+// eden_platform.dart by the spec, and the closure-walking gate that enforced
 // it was deleted with it. The file still names no riverpod symbol, which is
 // worth keeping on its own merits — but it is now a preference, not a gate.
 //
 // ## Where the web refusal lives — READ BEFORE EDITING
 //
 // There is NO `if (isWeb)` in this file, and adding one is a regression even if
-// it is correct. Mode B on web is refused by CONSTRUCTING TRD 50-02's
+// it is correct. Mode B on web is refused by CONSTRUCTING the spec
 // `AoidSecureTokenStore`, whose constructor throws on web. That keeps the D4
 // refusal in exactly ONE place. A second, independent check here would drift
 // out of sync with it the first time either is edited, and the drift is silent:
 // two guards that disagree still both compile.
 //
-// `isWeb` appears below only as a parameter being PASSED THROUGH to 50-02's
+// `isWeb` appears below only as a parameter being PASSED THROUGH to the spec
 // guards, never as a branch condition.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -33,18 +33,18 @@ import '../storage/aoid_memory_token_store.dart';
 import '../storage/aoid_secure_token_store.dart';
 import '../storage/aoid_token_store.dart';
 
-/// The three AOID deployment modes (50-CONTEXT.md D4), **ranked**.
+/// The three AOID deployment modes, **ranked**.
 ///
 /// The refresh token is the asset. Ranked posture:
 ///   1. [bff]        — refresh token never reaches the client at all.
 ///   2. [sameOrigin] — nothing to hold; the session is cookie-bound.
 ///   3. [publicPkce] — NATIVE ONLY; refresh token in the OS keychain.
 ///   (4. refresh token in web localStorage — FORBIDDEN, and what this
-///       package shipped until objective 50. Not representable here.)
+///       package shipped until the issuer. Not representable here.)
 ///
 /// The absent fourth value is the point. Premise correction C3 records that
 /// configuration as having SHIPPED, readable by any XSS on the eden-biz
-/// console. TRD 50-02 removed the capability rather than adding a flag that
+/// console. the spec removed the capability rather than adding a flag that
 /// discourages it; this enum has no way to name it.
 enum AoidDeploymentMode {
   /// **Mode A — BFF / confidential client. The default for web.**
@@ -56,7 +56,7 @@ enum AoidDeploymentMode {
   /// at all — see `AoidCodeSink`.
   ///
   /// This is the mode AODex needs: its AOID client is CONFIDENTIAL
-  /// (`~/dev/aodex/go/internal/config/config.go:353` hard-requires
+  /// (its server configuration hard-requires
   /// `AOID_CLIENT_SECRET`), so a public-client Mode B would require a second
   /// client registered in AOID with its own `client_id` and redirect URIs.
   bff,
@@ -78,7 +78,7 @@ enum AoidDeploymentMode {
 extension AoidDeploymentModeCustody on AoidDeploymentMode {
   /// Where this mode's refresh token lives.
   ///
-  /// 50-09 MAPS onto 50-02's [AoidRefreshTokenPosture] rather than replacing
+  /// This MAPS onto [AoidRefreshTokenPosture] rather than replacing
   /// it, so there is one custody vocabulary in the module, not two.
   AoidRefreshTokenPosture get posture => switch (this) {
     AoidDeploymentMode.bff => AoidRefreshTokenPosture.backendHeldCookie,
@@ -126,7 +126,7 @@ final class AoidModeWiring {
 
   /// True only when the refresh token is held **by this client**. True in
   /// exactly one of the six mode x platform cells: [AoidDeploymentMode
-  /// .publicPkce] on native.
+  ///.publicPkce] on native.
   bool get hasClientHeldRefreshToken => session.hasClientHeldRefreshToken;
 
   /// True for Modes A and C, on every platform.
@@ -136,7 +136,7 @@ final class AoidModeWiring {
 /// Resolves [mode] and the platform to a token store and a session shape.
 ///
 /// **THE single mode-selection point.** There is no `if (isWeb)` here — see
-/// this file's header. Mode B on web is refused by 50-02's
+/// this file's header. Mode B on web is refused by the spec
 /// [AoidSecureTokenStore] constructor, which throws [UnsupportedError] citing
 /// D4.
 ///
@@ -154,7 +154,7 @@ final class AoidModeWiring {
 ///
 /// Throws:
 /// - [UnsupportedError] for [AoidDeploymentMode.publicPkce] when [isWeb] is
-///   true and a delegate was supplied — 50-02's guard, citing D4.
+///   true and a delegate was supplied — the spec guard, citing D4.
 /// - [ArgumentError] for [AoidDeploymentMode.publicPkce] when
 ///   [nativeSecureStorage], [accessToken] or [refreshToken] is missing. Mode B
 ///   is not selectable without them **on any platform**, so this is a refusal
@@ -172,7 +172,7 @@ AoidModeWiring aoidWiringFor({
     case AoidDeploymentMode.publicPkce:
       // The store is built FIRST, and its constructor IS this function's web
       // refusal. Do not hoist an `if (isWeb)` above it "to give a better
-      // message" — that is a second guard, and 50-02's already names D4 and
+      // message" — that is a second guard, and the spec already names D4 and
       // the remedy.
       final delegate = nativeSecureStorage;
       if (delegate == null) {
@@ -184,7 +184,7 @@ AoidModeWiring aoidWiringFor({
               'back to an in-memory store: a silent downgrade produces a '
               'native session that mysteriously stops restoring. On web Mode B '
               'is refused outright — see AoidSecureTokenStore and '
-              '50-CONTEXT.md D4.',
+              'the design notes.',
         );
       }
       // Throws UnsupportedError on web. THE refusal.
@@ -199,8 +199,8 @@ AoidModeWiring aoidWiringFor({
       return AoidModeWiring._(
         mode: mode,
         tokenStore: store,
-        // Throws on web too — a second 50-02 guard on the session side, not a
-        // second CONDITION: both are `isWeb` checks living in 50-02's files.
+        // Throws on web too — a second the spec guard on the session side, not a
+        // second CONDITION: both are `isWeb` checks living in the spec files.
         session: AoidSession.deviceKeychain(
           accessToken: accessToken,
           refreshToken: refreshToken,
@@ -251,9 +251,9 @@ extension AoidSessionPlatformBridge on AoidSession {
   ///
   /// [role] is whatever the CONSUMING APP decides a role is. It is never
   /// derived from a claim: the AOID portal's strategy passes `role: me.aal`
-  /// (`~/dev/aoid/portal/lib/src/auth/aoid_auth_strategy.dart:215-222`), and an
+  /// (`the portal strategy`), and an
   /// assurance level is not a role. AOID owns authN; the app owns authZ
-  /// (50-CONTEXT.md, "RBAC framing"). Institutionalising that overload in the
+  ///. Institutionalising that overload in the
   /// shared module would push an authZ decision into the identity layer for
   /// every consumer at once.
   PlatformSession toPlatformSession({

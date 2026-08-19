@@ -9,7 +9,7 @@
 //
 // If you find yourself wanting a unified type "for convenience", that is the
 // bug asking to be reintroduced. See tenant_ref.dart's header and AOID
-// objective 50, D5.
+// the issuer, D5.
 //
 // Decoding uses `JWT.decode` from `dart_jsonwebtoken`, already a dependency and
 // already used for exactly this purpose at

@@ -1,8 +1,8 @@
-// The widget no-op, made executable (AOID objective 50, TRD 50-24, Stage C).
+// The widget no-op, made executable.
 //
-// Stage B (50-21/50-22/50-23) moved all five notifiers from riverpod 2's
+// Stage B moved all five notifiers from riverpod 2's
 // `StateNotifier` to riverpod 3's `Notifier`, preserving every provider
-// identifier and every method signature. The claim this TRD has to discharge is
+// identifier and every method signature. The claim to discharge is
 // that the NINE widget consumers therefore need ZERO source edits.
 //
 // "We ran flutter analyze and it was fine" is not that proof — it holds only
@@ -22,7 +22,7 @@
 //      riverpod 2 and break on the migrated providers.
 //
 // GOTCHA for whoever reads this next: the standing "No GoRouter found in
-// context" failure in platform_sidebar_test.dart is PRE-EXISTING (50-01's
+// context" failure in platform_sidebar_test.dart is PRE-EXISTING (the spec
 // baseline) and is NOT this file's business. Nothing here renders a widget.
 
 import 'dart:io';
@@ -34,7 +34,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_helpers.dart';
 
-/// The nine widget consumers named in TRD 50-24's file tree as DO-NOT-EDIT.
+/// The nine widget consumers named in the spec file tree as DO-NOT-EDIT.
 const _widgetFiles = <String>[
   'lib/src/navigation/sidebar.dart',
   'lib/src/auth/login_screen.dart',
@@ -49,7 +49,7 @@ const _widgetFiles = <String>[
 
 /// Strips `//` line comments and `/* */` block comments, so prose naming a
 /// forbidden API is never mistaken for code using it. Same stripper shape the
-/// Stage B source gates use (50-21 §5, 50-22 §6, 50-23 §7).
+/// Stage B source gates use.
 String stripComments(String src) => src
     .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
     .replaceAll(RegExp(r'//[^\n]*'), '');
@@ -92,7 +92,7 @@ void main() {
     return container;
   }
 
-  group('the mechanism the nine widgets rely on (TRD 50-24 test 5)', () {
+  group('the mechanism the nine widgets rely on (the spec test 5)', () {
     test('ref.read(p.notifier) returns the MIGRATED notifier type for all five '
         'providers', () async {
       final container = makeContainer();
@@ -153,7 +153,7 @@ void main() {
       expect(container.read(featureFlagProvider('anything')), isA<bool>());
       container.read(featureQuotaProvider('analytics'));
 
-      // Deny-by-default, pinned by 50-23 and re-asserted from the widget's own
+      // Deny-by-default, pinned by the spec and re-asserted from the widget's own
       // call site: an unknown feature is NOT permitted.
       expect(container.read(canUseFeatureProvider('no-such-feature')), isFalse);
     });
@@ -225,7 +225,7 @@ void main() {
         isTrue,
       );
 
-      // ...and that the comment stripper does not hide a real violation, while
+      //...and that the comment stripper does not hide a real violation, while
       // still ignoring genuine prose.
       expect(_legacyOnlyRe.hasMatch(stripComments('// StateNotifierProvider')),
           isFalse);

@@ -1,15 +1,13 @@
 name: flutter
 
-# FIRST CI for this package. Before AOID objective 50 TRD 50-01 there was no
-# .github/ directory at all, despite 18 apps depending on eden-platform-flutter.
-# Every gate written by 50-02..50-14 (the riverpod firewall, the D3 no-leak
-# gates, the token-in-URL regression gate) was decorative until this existed.
+# FIRST CI for this package. Before this existed there was no .github/
+# directory at all, despite 18 apps depending on eden-platform-flutter.
+# Every gate in the suite (the riverpod firewall, the no-leak gates, the
+# token-in-URL regression gate) was decorative until this job ran them.
 #
 # ADVISORY, not required-for-merge — yet. The suite has a standing failure
-# ("No GoRouter in context"; eden was 201/202 at AOID Objective 12, and 250/253
-# at the 50-01 capture). Later TRDs in AOID objective 50 diff against
-# aoid/.planning/baseline/50-eden-flutter-baseline.txt rather than asserting a
-# green bar. Promote this to a required check once that set is empty.
+# ("No GoRouter in context"). Promote this to a required check once the known
+# set below is empty.
 #
 # HOW THIS STAYS A REAL GATE WHILE THE SUITE IS RED
 # Two knobs, both deliberate, neither of them `continue-on-error` (which would
@@ -30,12 +28,9 @@ name: flutter
 #                  a regression and a fix cancelling out is exactly the case
 #                  you most want to see.
 #
-# .github/known-test-failures.txt is the eden-local mirror of
-# aoid/.planning/baseline/50-eden-flutter-baseline.txt (which carries the full
-# 253-test set; this file carries only the failures). When you fix one, DELETE
-# its line in the same PR — that is what makes the ratchet tighten instead of
-# rot. When it is empty, drop the --no-fatal-* flags above, delete this block,
-# and mark the check required.
+# When you fix one of the known failures, DELETE its line in the same PR — that
+# is what makes the ratchet tighten instead of rot. When it is empty, drop the
+# --no-fatal-* flags above, delete this block, and mark the check required.
 
 on:
   push:
@@ -63,8 +58,20 @@ jobs:
           channel: stable
           cache: true
 
+      # --no-example is REQUIRED, not an optimisation. `flutter pub get`
+      # resolves example/ as well, and example/pubspec.yaml has path
+      # dependencies on TWO sibling repositories (../../eden-ui-flutter and
+      # ../../eden-platform-api-dart) that this checkout does not contain.
+      # Without the flag the step dies at dependency resolution — before
+      # analyze or test run at all — and the whole job is red no matter what
+      # the code does. That is what happened on every run from 2026-08-04 to
+      # 2026-08-19.
+      #
+      # The example app is therefore NOT covered by this job. Covering it means
+      # checking out both siblings here; worth doing, but it is a separate
+      # change and should not be a silent precondition of the package's own CI.
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --no-example
 
       # Fatal on errors only — see the header for why, and for the exit plan.
       - name: Analyze

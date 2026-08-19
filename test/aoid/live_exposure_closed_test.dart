@@ -1,6 +1,6 @@
 // The C3 exposure, closed at the two places it actually lives.
 //
-// 50-CONTEXT.md premise correction C3 composes three verified facts into one
+// the design notes premise correction C3 composes three verified facts into one
 // live production exposure:
 //   1. SecureTokenStorage._writeOrDelete downgraded ANY secure-storage failure
 //      to shared_preferences — localStorage on web (covered by
@@ -208,7 +208,7 @@ void main() {
 
     test('the WEB session itself carries no refresh token — so AuthNotifier'
         '._persistTokens cannot leak it downstream', () async {
-      // AuthNotifier._persistTokens (auth_provider.dart, owned by 50-04) does
+      // AuthNotifier._persistTokens (auth_provider.dart, owned by the spec) does
       // `_tokenStorage.writeRefreshToken(session.refreshToken)` for every
       // non-cookie-bound session. If the session carried the real token, the
       // strategy's own restraint would be undone one layer up.
@@ -229,7 +229,7 @@ void main() {
       'a login on WEB CLEARS a legacy refresh token already in storage',
       () async {
         // Escalation item 1 (tokens already in real users' localStorage) is not
-        // closed by this TRD, but a web login must at least not leave the stale
+        // closed by this work, but a web login must at least not leave the stale
         // one behind.
         final fake = FakeAoidEndpoint(issuer: _issuer);
         final storage = RecordingTokenStorage()

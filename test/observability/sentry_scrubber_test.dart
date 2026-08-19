@@ -1,4 +1,4 @@
-// opsCluster obj-31 TRD 31-08 (TELE-03) — PII-scrubber tests.
+// opsCluster — PII-scrubber tests.
 //
 // The scrubbers are pure top-level functions, so they are tested directly here
 // in the shared package. That is the point of putting them in ONE place: the
@@ -159,7 +159,7 @@ void main() {
       }
     });
   });
-  // opsCluster obj-31 TRD 31-12 (TELE-15). These assert the OPTION-shaping half
+  // opsCluster. These assert the OPTION-shaping half
   // of initSentry, which is otherwise only observable by booting the SDK.
   //
   // The default matters: sentry's own default is ['.*'] (attach sentry-trace +
@@ -193,7 +193,7 @@ void main() {
     });
   });
 
-  // The single option that decides whether obj-31's correlation must-have can
+  // The single option that decides whether the telemetry work correlation must-have can
   // be met at all. Sentry's own default is false; every AOCyber backend speaks
   // W3C/OTel, so false means the Go side starts a fresh trace and the join
   // silently never happens.

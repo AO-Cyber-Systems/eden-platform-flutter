@@ -34,7 +34,7 @@ final class AoidTokenResponse {
 
   /// The NEW access token. This is what a tenant switch must be verified
   /// against — the id_token's `tnt` deliberately does not follow the switch
-  /// (aoid `internal/oauth/tokens.go:41-50`).
+  /// (aoid the token claims`).
   final String accessToken;
 
   /// The ROTATED refresh token, when the deployment holds one client-side.
@@ -52,7 +52,7 @@ final class AoidTokenResponse {
 ///
 /// ## `active_tenant` is a FORM FIELD, not a header
 ///
-/// aoid `internal/oauth/http/token.go:109-127` reads it from the POST body.
+/// aoid the token endpoint reads it from the POST body.
 /// Keeping it in the body is what makes this a CORS **simple request** with no
 /// preflight. Verified live 2026-08-01 against `auth.aocyber.ai`: `/oauth/token`
 /// answers preflight `204` with `access-control-allow-origin: *` and sets no
@@ -61,7 +61,7 @@ final class AoidTokenResponse {
 /// **Do not "tidy" it into an `Active-Tenant` request header.** Any header
 /// beyond a CORS-safelisted content type provokes a preflight and breaks every
 /// browser caller at once. (The prohibited spelling is deliberately not written
-/// out here: TRD 50-13's gate greps this file for it, and a warning comment
+/// out here: the spec gate greps this file for it, and a warning comment
 /// containing the very string it forbids would trip a check meant to catch a
 /// real header. The property itself is proven by test-list item 2, which
 /// asserts the OUTGOING header map's key set — a far stronger check than a
@@ -87,7 +87,7 @@ class AoidTokenClient {
 
   /// Refreshes the token pair, optionally SWITCHING the active tenant.
   ///
-  /// [activeTenant] accepts ONLY an [AoidActiveTenantSlug] (TRD 50-03). Passing
+  /// [activeTenant] accepts ONLY an [AoidActiveTenantSlug]. Passing
   /// the id_token's home-tenant UUID is a COMPILE error here rather than a
   /// confusing runtime `invalid_grant` — this is the one call site where that
   /// mistake would actually be made, and D5 exists to make it unwritable.
@@ -169,7 +169,7 @@ class AoidTokenClient {
 
     final error = body['error'];
 
-    // ── THE ONE BRANCH THIS TRD EXISTS FOR ──────────────────────────────────
+    // ── THE ONE BRANCH THIS the spec EXISTS FOR ──────────────────────────────────
     //
     // `invalid_grant` on a call that CARRIED `active_tenant` is a tenant
     // DENIAL, not an authentication failure. Routing it to `AoidError` — as
@@ -179,7 +179,7 @@ class AoidTokenClient {
     // AODex's Dio 401 interceptor act on.
     //
     // DISAMBIGUATION IS BY REQUEST CONTEXT, NOT BY RESPONSE. AOID makes the
-    // two byte-identical on purpose (service.go:906-913) so the endpoint is
+    // two byte-identical on purpose (the token service) so the endpoint is
     // not a membership oracle, so there is nothing in `response` to read. The
     // residual ambiguity — a refresh token that died DURING a switch — is
     // resolved toward NOT signing the user out, and self-corrects on the next

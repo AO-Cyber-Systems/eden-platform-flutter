@@ -74,7 +74,7 @@ class FakePlatformRepository implements PlatformRepository {
   }
 
   // Pre-existing methods on PlatformRepository that older test_helpers.dart
-  // missed (added by TRD 10-03 for cross-repo unblocking — see SUMMARY).
+  // missed (added by the spec for cross-repo unblocking — see SUMMARY).
   // Both throw UnimplementedError; tests that exercise these paths must
   // configure a result/error explicitly via subclass.
   @override
@@ -82,7 +82,7 @@ class FakePlatformRepository implements PlatformRepository {
     throw UnimplementedError('configure FakePlatformRepository subclass for SSO');
   }
 
-  // Configurable for social-login tests (09-04). Default: echo a canned auth
+  // Configurable for social-login tests. Default: echo a canned auth
   // URL embedding the provider so callers can assert routing.
   String? initiateSocialLoginResult;
   Object? initiateSocialLoginError;

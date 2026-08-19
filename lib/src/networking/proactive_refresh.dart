@@ -77,7 +77,7 @@ class ProactiveRefresh {
 
     // Single-flight: wrap the refresh in a stored Future. Concurrent callers
     // attach to the same Future. Once it resolves (or fails, INCLUDING a
-    // timeout), clear the slot so the next call re-enters. The .timeout() is
+    // timeout), clear the slot so the next call re-enters. The.timeout() is
     // what prevents a refresh wedged at tab-suspend from poisoning the slot —
     // see [refreshTimeout]. (The underlying restoreSession() may keep running
     // in the background; that is harmless — what matters is that callers stop

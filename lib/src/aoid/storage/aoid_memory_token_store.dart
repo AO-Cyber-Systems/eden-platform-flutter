@@ -16,7 +16,7 @@ import 'aoid_token_store.dart';
 ///
 /// > A silent no-op produces a session that mysteriously fails to restore. The
 /// > next engineer debugs it as a persistence bug, re-adds the write, and the
-/// > exposure 50-CONTEXT.md C3 documents comes straight back. A throw fails at
+/// > exposure the design notes C3 documents comes straight back. A throw fails at
 /// > the point of the mistake and names the remedy.
 ///
 /// Passing `null` is always legal — logout must be able to clear
@@ -40,7 +40,7 @@ class AoidMemoryTokenStore implements AoidTokenStore {
     if (value == null) return;
 
     throw UnsupportedError(
-      'AOID refresh tokens are never held by a web client (50-CONTEXT.md D4). '
+      'AOID refresh tokens are never held by a web client. '
       'Use Mode A: hand the authorization code to your own backend, which '
       'holds the client secret and sets an httpOnly SameSite cookie. '
       'This throws rather than silently dropping the write, because a silent '

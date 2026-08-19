@@ -11,7 +11,7 @@
 /// for and do not use.
 ///
 /// Error reporting must not drag a state-management dependency in behind it, so
-/// it gets its own door. Added for opsCluster obj-31 TRD 31-08, where the
+/// it gets its own door. Added for opsCluster, where the
 /// barrel import blocked aodex's adoption of the shared init outright.
 library;
 

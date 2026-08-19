@@ -1,20 +1,20 @@
-// D6 GATE (AOID objective 50, SDK-08). No eden code may read an access or
+// D6 GATE. No eden code may read an access or
 // refresh token out of a callback URL, and none may construct a URL
 // containing one. Tokens in a URL leak to browser history, Referer headers,
 // proxy access logs and — for any Process.run launcher — shell history.
 //
 // The callback carries an authorization CODE, which is exchanged over POST
-// for tokens in a response BODY (eden-platform-go 50-05).
+// for tokens in a response BODY.
 //
 // If this test fails, do not relax the pattern. Fix the call site.
 //
-// SCOPE: all of lib/, recursively — NOT a list of the two files TRD 50-10
-// happened to touch. TRD 50-12 adds another callback handler in the next wave
+// SCOPE: all of lib/, recursively — NOT a list of the two files the spec
+// happened to touch. the spec adds another callback handler in the next wave
 // and must be covered automatically, without anyone remembering to opt in.
 //
 // WHAT THIS GATE CANNOT DO (read before trusting it):
 // A name-based grep cannot catch a token smuggled under a benign parameter
-// name — eden-platform-go 50-05 proved exactly that (its D6-M2/D6-M4
+// name — eden-platform-go proved exactly that (its D6-M2/D6-M4
 // mutations shipped the token as `?tok=<access>` while a `grep access_token=`
 // gate stayed green). That class of defect is covered instead by the
 // VALUE-based assertions in test/social_auth_service_test.dart
@@ -48,7 +48,7 @@ bool _isCommentLine(String line) {
 }
 
 /// READ SIDE: a token pulled out of a URL's parameters, under any receiver
-/// name (`uri.queryParameters[...]`, `params[...]`, `qp[...]`, ...).
+/// name (`uri.queryParameters[...]`, `params[...]`, `qp[...]`,...).
 final _readPatterns = <RegExp, String>{
   RegExp(
     r"""queryParameters\s*\[\s*['"](access_token|refresh_token)['"]\s*\]""",
@@ -60,7 +60,7 @@ final _readPatterns = <RegExp, String>{
 };
 
 /// WRITE SIDE: a URL being CONSTRUCTED with a token in it. This is the half
-/// that stops the SDK from starting to produce the pattern 50-05 just removed
+/// that stops the SDK from starting to produce the pattern the spec just removed
 /// from the server.
 final _writePatterns = <RegExp, String>{
   RegExp(
@@ -84,7 +84,7 @@ List<Violation> scanSource(String path, String source) {
 
     // The write-side pattern is checked against string/URL context only. A
     // JSON body key (`decoded['access_token']`) is NOT a URL and is the
-    // CORRECT way to receive a token — 50-05's exchange returns exactly that.
+    // CORRECT way to receive a token — the spec exchange returns exactly that.
     _writePatterns.forEach((re, reason) {
       if (!re.hasMatch(line)) return;
       // `access_token":` inside a documented JSON shape is a body, not a URL.
@@ -171,7 +171,7 @@ void main() {
         reason:
             'SECURITY REGRESSION (AOID SDK-08 / D6): the SDK is building '
             'a URL with a token in it — the exact pattern eden-platform-go '
-            '50-05 removed from the server. Tokens go in POST bodies.\n'
+            'the spec removed from the server. Tokens go in POST bodies.\n'
             '${v.join('\n')}',
       );
     });
@@ -257,7 +257,7 @@ final state = uri.queryParameters['state'];
         offenders,
         isEmpty,
         reason:
-            'TRD 50-10 deleted SSOAuthService partly because '
+            'the spec deleted SSOAuthService partly because '
             "Process.run('cmd', ['/c','start', url]) with a URL taken from a "
             'redirect is a shell-injection-shaped surface. Use '
             'flutter_web_auth_2.\n${offenders.join('\n')}',

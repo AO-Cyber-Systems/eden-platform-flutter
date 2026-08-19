@@ -1,6 +1,6 @@
 // COMPANION-AV05-AOID-JIT-05 — AOID id_token capture + surface TDD suite.
 //
-// Test list (05-TRD.md §"Test list", eden-platform-flutter items 1–3):
+// Test list (the design notes §"Test list", eden-platform-flutter items 1–3):
 //   1. token response WITH an id_token ⇒ session.idToken == that value. [MH-3]
 //   2. token response WITHOUT an id_token ⇒ session.idToken == null (no
 //      crash). [backward-compat]

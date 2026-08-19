@@ -1,4 +1,4 @@
-// TRD 50-13, task 2 — AoidTenantController.
+// the spec, task 2 — AoidTenantController.
 //
 // TEST LIST (written first; RED before GREEN, one at a time).
 //
@@ -26,7 +26,7 @@
 //   8   a transport failure mid-switch leaves the session intact and
 //       `switching` back to false
 //
-// RESIDUE / SIGN-OUT (the shape this TRD is named after). A→B alone cannot
+// RESIDUE / SIGN-OUT (the shape this work is named after). A→B alone cannot
 // prove these; the RETURN LEG is where a `==`-filtered update or a cached
 // belief bites:
 //   R1  A -> B -> A: the return leg is NOT suppressed. activeTenant ends at A,
@@ -50,7 +50,7 @@
 //       rotated away, which signs the user out on the next refresh. Persist
 //       first, verify second.
 //
-// Fixtures are INLINE and HAND-BUILT (no_llm_test_data), reusing TRD 50-03's
+// Fixtures are INLINE and HAND-BUILT (no_llm_test_data), reusing the spec
 // JWT assembly so the decoded claims are trustworthy.
 
 import 'dart:async';
@@ -425,7 +425,7 @@ void main() {
   });
 
   group('a RETRIED switch cannot stomp state mid-flight', () {
-    // 50-12 found that its start() mints fresh PKCE and OVERWRITES the stored
+    // the spec found that its start() mints fresh PKCE and OVERWRITES the stored
     // verifier, so a silent riverpod retry would clobber an in-flight same-tab
     // fallback — breaking a login the user could still have completed. The
     // analogous hazard here is the refresh token: a successful grant has
@@ -555,7 +555,7 @@ void main() {
     );
   });
 
-  group('RESIDUE — the sign-out bug this TRD is named after', () {
+  group('RESIDUE — the sign-out bug this work is named after', () {
     test('R1 — A -> B -> A: the RETURN LEG is not suppressed. Three switches, '
         'three notifications, and the belief ends where it started', () async {
       final h = _modeB();

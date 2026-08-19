@@ -41,7 +41,7 @@ class AoidSecureTokenStore implements AoidTokenStore {
         'AoidSecureTokenStore is native-only. On web, flutter_secure_storage_web '
         'stores the ciphertext AND its AES key in window.localStorage, so a '
         'refresh token there is readable by any XSS — the configuration '
-        '50-CONTEXT.md D4 forbids. Use AoidMemoryTokenStore + Mode A.',
+        'the design notes forbids. Use AoidMemoryTokenStore + Mode A.',
       );
     }
   }

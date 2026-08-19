@@ -58,7 +58,7 @@ class CompanyNotifier extends Notifier<CompanyState> {
   /// 2. **The bootstrap stays a microtask.** Calling `loadCompanies` directly
   ///    here would change initialisation ordering, and any helper that reads
   ///    `state` synchronously would throw outright — `state` does not exist
-  ///    until `build()` RETURNS (measured at the auth epicentre, 50-21).
+  ///    until `build()` RETURNS.
   ///
   /// This class keeps no fields outside `state`, so [build] has nothing to
   /// reset. That is not a general licence: a riverpod 3 [Notifier] instance is
@@ -99,13 +99,13 @@ class CompanyNotifier extends Notifier<CompanyState> {
   ///
   /// | link | 1st sign-out | 2nd sign-out (already clear) |
   /// |---|---:|---:|
-  /// | `authProvider`          | 1 | 1 (50-21 fixed this one) |
+  /// | `authProvider`          | 1 | 1 (the spec fixed this one) |
   /// | `companyStateProvider`  | 1 | **0** |
   /// | `currentCompanyProvider`| 1 | **0** |
   /// | `navStateProvider`      | 1 | **0** |
   /// | `selectedNavProvider`   | 1 | **0** |
   ///
-  /// So this is NOT a riverpod 3 regression and NOT a 50-06 regression:
+  /// So this is NOT a riverpod 3 regression and NOT a migration regression:
   /// `StateNotifier.updateShouldNotify` defaults to `!identical(old, current)`,
   /// which for a class with no value `==` is the same predicate riverpod 3
   /// uses. The defect predates the version bump. See §3.8 and §3.10.
@@ -113,7 +113,7 @@ class CompanyNotifier extends Notifier<CompanyState> {
   /// What is lost on a suppressed repeat is the SIGNAL, not the value — the
   /// state is already the cleared sentinel. That still matters, because the
   /// chain's downstream links act on the signal: `entitlements_provider`
-  /// clears off it (50-23), and any consumer holding a `ref.listen` on this
+  /// clears off it, and any consumer holding a `ref.listen` on this
   /// provider to drop caches or reset analytics identity never hears it.
   ///
   /// Deliberately scoped to the notifier. Giving [CompanyState] an

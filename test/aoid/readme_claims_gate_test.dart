@@ -1,8 +1,8 @@
-// ANTI-ROT GATE for lib/src/aoid/README.md (AOID objective 50, TRD 50-14).
+// ANTI-ROT GATE for lib/src/aoid/README.md.
 //
 // The README documents an SDK that eighteen packages depend on, and two of its
 // claims exist because both have ALREADY caused real confusion in this
-// codebase (50-CONTEXT.md names them as explicit documentation requirements):
+// codebase:
 //
 //   1. `EdenFeatureGate` is UI hinting ONLY. It is not a permission check.
 //   2. AOID's `ent` claim and eden-biz's /api/v1/entitlements/bootstrap are
@@ -23,7 +23,7 @@
 //
 // # Why predicates and not greps
 //
-// Objective 50 has now found the same defect in nine TRDs: `grep -c "PHRASE"`
+// the issuer has now found the same defect in nine TRDs: `grep -c "PHRASE"`
 // cannot tell which declaration it matched, survives the phrase drifting into
 // a comment, and passes vacuously when the file is missing. So the claims are
 // named predicates over the file's text, shared between the real README (items
@@ -34,7 +34,7 @@
 import 'dart:io';
 
 // The ONE entrypoint the README tells consumers to use. Importing it here is
-// itself an assertion: if the fold that 50-24 performed is ever half-reverted,
+// itself an assertion: if the fold that the spec performed is ever half-reverted,
 // this file stops compiling and takes the whole gate with it.
 import 'package:eden_platform_flutter/eden_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +47,7 @@ typedef ReadmeClaim = ({String name, bool Function(String) holds, String breaks}
 
 /// Collapses whitespace so a claim cannot be broken by a line wrap.
 ///
-/// This is not cosmetic. TRD 50-03 lost a doc gate to exactly this: the prose
+/// This is not cosmetic. the spec lost a doc gate to exactly this: the prose
 /// had wrapped as `tenant\n/// axis` and `contains('tenant axis')` went red on
 /// a correct document. A gate that fails on reflow gets weakened, and a
 /// weakened gate stops catching the real deletion.
@@ -62,7 +62,7 @@ bool _has(String src, String needle) =>
 /// misspelling a consumer cannot compile or register.
 bool _hasExact(String src, String needle) => normalize(src).contains(needle);
 
-/// The claims, in the order the TRD's test list names them (items 2-8).
+/// The claims, in the order the test list names them (items 2-8).
 ///
 /// Each predicate demands the claim's SUBSTANCE, not one phrasing: where a
 /// single sentence could be reworded harmlessly, the predicate accepts any of
@@ -84,7 +84,7 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         'It is a client-side widget reading client-side state: an attacker '
         'flips it in devtools. Every entitlement it hides must be re-checked '
         'on the server, and this section is the only place that says so. '
-        '50-CONTEXT.md names this as a required doc item BECAUSE IT HAS '
+        'the design notes names this as a required doc item BECAUSE IT HAS '
         'ALREADY CAUSED REAL CONFUSION.',
   ),
   (
@@ -105,7 +105,7 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         'different systems with different owners: `ent` comes from '
         'identity_memberships and means identity/role; eden-biz '
         '/api/v1/entitlements/bootstrap means plan/billing. They share only a '
-        'word. 50-CONTEXT.md names this as a required doc item BECAUSE IT HAS '
+        'word. the design notes names this as a required doc item BECAUSE IT HAS '
         'ALREADY CAUSED REAL CONFUSION.',
   ),
   (
@@ -120,25 +120,25 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         // The forbidden thing is specifically a REFRESH token on WEB. A
         // README that says "localStorage is forbidden" without naming the
         // token would also forbid the ~1s authorization-code transit, which
-        // is accepted by construction (50-12).
+        // is accepted by construction.
         _has(src, 'refresh token'),
     breaks: 'Without this, a consumer picks a mode by guessing, and the '
         'fourth option — a refresh token in web localStorage — looks like a '
         'convenient way to survive a page reload. It is durably readable by '
-        'any XSS. D4 forbids it and 50-02 removed the CAPABILITY at four '
+        'any XSS. D4 forbids it and the spec removed the CAPABILITY at four '
         'separate write paths; this section is the only thing telling a '
         'consumer not to rebuild it in their own app.',
   ),
   (
-    name: 'item 5 — the forbidden posture SHIPPED until objective 50 (the '
+    name: 'item 5 — the forbidden posture SHIPPED until the issuer (the '
         'history, not just the rule)',
     holds: (src) => _has(src, 'shipped until'),
     breaks: 'THIS IS THE SINGLE MOST USEFUL SENTENCE IN THE DOCUMENT for a '
         'future reader deciding whether the storage restriction is real. A '
         'rule with no history reads as caution and gets traded away the first '
         'time someone hits a storage failure on web. A rule that says "this '
-        'is what we actually shipped, to real users, until objective 50" does '
-        'not. 50-02 measured it: four write paths, one of which nobody knew '
+        'is what we actually shipped, to real users, until the issuer" does '
+        'not. the spec measured it: four write paths, one of which nobody knew '
         'about. Deleting this sentence invites the pattern back.',
   ),
   (
@@ -177,7 +177,7 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         _hasExact(src, 'edenbiz://auth') &&
         _hasExact(src, 'auth.html') &&
         _has(src, 'exact'),
-    breaks: 'AOID EXACT-MATCHES redirect URIs (internal/oauth/service.go:457). '
+    breaks: 'AOID EXACT-MATCHES redirect URIs (the token service). '
         'A consumer that invents a trailing slash, or types `aodex://auth` '
         'instead of `aodex://auth-callback`, gets a rejected authorize request '
         'and no useful error. This table is the only place a consumer can '
@@ -281,7 +281,7 @@ void main() {
           isFalse,
           reason:
               'The README contains `$uri/`. AOID compares redirect URIs by '
-              'EXACT STRING (internal/oauth/service.go:457) and '
+              'EXACT STRING (the token service) and '
               'config/oauth-clients.yaml registers `$uri` with NO trailing '
               'slash. A consumer copying the slashed form from this document '
               'gets invalid_request from the authorize endpoint, with no '
@@ -412,7 +412,7 @@ void main() {
           reason:
               '$gone exists again. The README tells every consumer to import '
               'eden_platform.dart and states these barrels were deleted by '
-              '50-24. A resurrected barrel splits the surface again and makes '
+              'the spec. A resurrected barrel splits the surface again and makes '
               'the README\'s first section wrong.',
         );
       }
@@ -422,7 +422,7 @@ void main() {
   // ── anti-rot, part 2: BEHAVIOURAL claims ─────────────────────────────────
   //
   // The group above binds NAMES and PATHS. That is necessary and not
-  // sufficient: it was FALSIFIED during 50-14 by a break that left every
+  // sufficient: it was FALSIFIED during the spec by a break that left every
   // documented symbol resolving and every cited file in place, while the
   // source silently contradicted the document.
   //
@@ -491,10 +491,10 @@ void main() {
 
     test('the TWO RETRY POSTURES are still structurally different — the '
         'README\'s "Known limitations" table describes a real seam', () {
-      // 50-12 returns a SEALED VALUE and never throws, so riverpod 3's
-      // automatic retry is structurally unreachable. 50-13 THROWS, defended by
+      // the spec returns a SEALED VALUE and never throws, so riverpod 3's
+      // automatic retry is structurally unreachable. the spec THROWS, defended by
       // an opt-in policy. The README contrasts them explicitly and calls the
-      // sealed form the stronger of the two. If 50-15's recorded follow-up
+      // sealed form the stronger of the two. If the spec recorded follow-up
       // converts the tenant switch to a sealed return, THIS TEST GOES RED and
       // the table must be rewritten — which is the intended handoff, not a
       // breakage.
@@ -531,7 +531,7 @@ void main() {
       );
 
       // Posture 2 — a throw, defended by an opt-in policy. Deliberately NOT
-      // the sealed form: 50-13's contract mandated the throw in three places
+      // the sealed form: the spec contract mandated the throw in three places
       // whose gates were already proven.
       expect(
         const AoidTenantDenied(),
@@ -541,7 +541,7 @@ void main() {
             'TWO postures and says the tenant switch THROWS, defended by '
             '`aoidTenantSwitchRetry`. If this became a sealed value, the seam '
             'the table describes has closed — rewrite that table (this is '
-            '50-15\'s recorded follow-up landing), do not delete this test.',
+            'the spec\'s recorded follow-up landing), do not delete this test.',
       );
       expect(
         const AoidTenantDenied(),

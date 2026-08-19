@@ -1,4 +1,4 @@
-// HAND-BUILT AOID token fixtures for TRD 50-03.
+// HAND-BUILT AOID token fixtures for the spec.
 //
 // Every token below is assembled here, in Dart, from a literal payload map. No
 // token was copied from a real AOID deployment and none was generated. The
@@ -7,7 +7,7 @@
 // eden-biz/go/internal/aoidverify/direct_verifier.go), so a real signature
 // would imply a guarantee the SDK does not make.
 //
-// Payload shapes mirror aoid `internal/oauth/tokens.go`:
+// Payload shapes mirror aoid the token claims
 //   AccessTokenClaims — iss sub aud exp iat jti + tnt scope client_id aal ent
 //   IDTokenClaims     — iss sub aud exp iat     + tnt nonce email email_verified name
 //

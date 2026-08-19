@@ -1,4 +1,4 @@
-// AoidLoginForm — SEALED (50-CONTEXT.md D3, TRD 50-11).
+// AoidLoginForm — SEALED.
 //
 // This widget owns its own text controllers and posts the password DIRECTLY to
 // the AOID issuer over TLS. There is deliberately NO parameter through which
@@ -12,7 +12,7 @@
 // nothing to forget to guard.
 //
 // A "convenience" API letting an app supply its own password field defeats
-// objective 49's containment guarantee and must not be built.
+// the issuer containment guarantee and must not be built.
 //
 // Gate: test/aoid/widgets/sealed_form_no_leak_test.dart — a source-level test,
 // because the property is the absence of a member and no runtime assertion can
@@ -28,7 +28,7 @@
 // `AsyncValue.when()` tests `isLoading` before `hasError`, an error arm is
 // unreachable for those 38 seconds — a failed credential submit would render a
 // spinner rather than a result. That is the wrong behaviour for any auth
-// surface, and here it is worse than cosmetic: 49-06's `MaxAttempts = 5` is
+// surface, and here it is worse than cosmetic: the spec `MaxAttempts = 5` is
 // DURABLE and carried forward on handle rotation, so ten automatic retries
 // would burn a ceremony the user could still have completed. This form
 // therefore drives AoidNativeFlow directly and rebuilds with setState.
@@ -49,10 +49,10 @@ const kAoidAccentRuleKey = ValueKey<String>('aoid.login.accent-rule');
 /// The sealed AOID password step.
 ///
 /// ```dart
-/// final flow = AoidNativeFlow(client: ..., clientId: ..., tenantId: ...,
-///                             redirectUri: ...);
+/// final flow = AoidNativeFlow(client:..., clientId:..., tenantId:...,
+///                             redirectUri:...);
 /// await flow.begin(codeChallenge: pkce.challenge);
-/// // ...
+/// //...
 /// AoidLoginForm(controller: flow);
 /// ```
 ///
@@ -67,7 +67,7 @@ class AoidLoginForm extends StatefulWidget {
   });
 
   /// Drives the ceremony. Exposes step / next / availableMethods / outcome —
-  /// NEVER the credential. (`AoidNativeFlow`, TRD 50-08.)
+  /// NEVER the credential. (`AoidNativeFlow`, the spec.)
   final AoidNativeFlow controller;
 
   /// Copy and chrome. Input-only; carries no function-typed field.
@@ -115,7 +115,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
       //
       // The email is passed RAW. AOID normalises internally exactly as its own
       // password step does; normalising here too would key a DIFFERENT
-      // rate-limit bucket than the factor actually consumes (49-02, 49-08).
+      // rate-limit bucket than the factor actually consumes.
       await widget.controller.submitPassword(
         email: _emailCtrl.text,
         password: _passwordCtrl.text,
@@ -130,9 +130,9 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// Every message here comes from a closed vocabulary, and nothing in it is
   /// built from request input. That is not only a D3 rule — AOID answers an
   /// unknown email, a wrong password, an account with no password credential
-  /// and a locked account BYTE-IDENTICALLY (49-04, re-proved over real HTTP by
-  /// 49-08). Manufacturing a richer reason in UI copy would reconstruct the
-  /// account-existence oracle objective 49 spent a TRD removing.
+  /// and a locked account BYTE-IDENTICALLY (the spec, re-proved over real HTTP by
+  /// the spec). Manufacturing a richer reason in UI copy would reconstruct the
+  /// account-existence oracle the issuer spent real effort removing.
   String? _notice() {
     final state = widget.controller.state;
     if (state is AoidFlowAwaitingFactor && state.lastAttemptRejected) {
@@ -148,8 +148,8 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
       return 'Sign-in could not be completed.';
     }
     if (state is AoidFlowRedirectRequired) {
-      // NOT an error (50-CONTEXT D7): social IdPs, PIV/CAC and the
-      // FedRAMP-High / IL5 isolation tiers all finish in a system browser.
+      // NOT an error: social IdPs, PIV/CAC and the
+      // restrictive isolation tiers all finish in a system browser.
       return 'Continue in your browser to finish signing in.';
     }
     return null;

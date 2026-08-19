@@ -36,17 +36,17 @@ class Authenticated extends AuthResult {
 /// The server needs another factor before authentication can complete.
 ///
 /// [continuationToken] is the CURRENT handle and MAY DIFFER from the one the
-/// caller presented — AOID objective 49 rotates `auth_session` on every step
-/// as its session-fixation defence (49-06).
+/// caller presented — AOID rotates `auth_session` on every step
+/// as its session-fixation defence.
 ///
 /// **Callers MUST replace their stored handle with this value.**
 ///
 /// Re-presenting the previous one yields `invalid_session` and will look like
 /// a server bug.
 ///
-/// [availableMethods] may be EMPTY: objective 49 deliberately does not emit
+/// [availableMethods] may be EMPTY: the issuer deliberately does not emit
 /// `available_methods` before a factor has succeeded, because doing so would
-/// make the endpoint an enumeration oracle (49-07). Render a picker only when
+/// make the endpoint an enumeration oracle. Render a picker only when
 /// it is non-empty.
 class FactorRequired extends AuthResult {
   /// The rotated `auth_session` handle to present on the next step.
@@ -77,7 +77,7 @@ class FactorRequired extends AuthResult {
 /// DEPRECATED. Retained as a SUBCLASS of [FactorRequired] so existing
 /// implementations keep compiling unchanged — notably AOID's portal, which
 /// constructs this `const` at
-/// `aoid/portal/lib/src/auth/aoid_auth_strategy.dart:133`. Because it is a
+/// the portal's own strategy implementation. Because it is a
 /// subclass, a `case FactorRequired(...)` arm already matches it; no consumer
 /// has to change. Prefer [FactorRequired], which carries the rotated handle
 /// and the method list.
@@ -88,27 +88,27 @@ class TwoFactorRequired extends FactorRequired {
 }
 
 /// This factor cannot be completed in-app: a social IdP, PIV/CAC, or a tenant
-/// whose isolation tier forbids native login (49-04 gate 7 — FedRAMP-High
-/// `cryptographic` and IL5 `physical`). The caller opens [authorizationUrl] in
+/// whose isolation tier forbids native login (a restrictive isolation tier —
+/// `cryptographic` or `physical`). The caller opens [authorizationUrl] in
 /// a system browser and completes via the redirect flow.
 ///
-/// This is NOT an error (50-CONTEXT.md D7). Do not render it as one, and do
+/// This is NOT an error. Do not render it as one, and do
 /// not map it onto [AuthStatus.error].
 ///
 /// Wire origin: AOID answers `400 {"error":"redirect_to_web",
-/// "error_description":"…","authorization_url":"…"}` (49-08). The wire code is
+/// "error_description":"…","authorization_url":"…"}`. The wire code is
 /// spelled `redirect_to_web`, per draft-ietf-oauth-first-party-apps-03 and
-/// 49-04, and that is the ONLY spelling — 50-CONTEXT.md D8's informal prose
+/// the spec, and that is the ONLY spelling — the design notes' informal prose
 /// name for this case is not a wire value and must never appear in code.
 class RedirectRequired extends AuthResult {
   /// Where to send the system browser. Built by AOID from the ceremony's own
-  /// binding, so it carries no credential (49-08 asserts the query key set
+  /// binding, so it carries no credential (the spec asserts the query key set
   /// structurally).
   final Uri authorizationUrl;
 
   /// TELEMETRY ONLY. Never branch UI on this and never show it to a user.
-  /// Objective 49's error mapper is deliberately lossy so the client cannot
-  /// become an account-existence or tenancy-tier oracle (49-04).
+  /// the issuer error mapper is deliberately lossy so the client cannot
+  /// become an account-existence or tenancy-tier oracle.
   final String? reason;
 
   const RedirectRequired(this.authorizationUrl, {this.reason});
@@ -120,7 +120,7 @@ class RedirectRequired extends AuthResult {
 /// Reserve this for TERMINAL failures. [AuthNotifier] clears its continuation
 /// token here, so a RECOVERABLE factor error (a wrong TOTP code the user may
 /// retry) returned as [Failed] makes the ceremony unrecoverable — return
-/// [FactorRequired] with the rotated handle instead. 50-08 owns that mapping.
+/// [FactorRequired] with the rotated handle instead. the spec owns that mapping.
 class Failed extends AuthResult {
   final String reason;
   const Failed(this.reason);
@@ -142,15 +142,15 @@ abstract class AuthStrategy {
   /// native login). That is a normal outcome, NOT a failure — see
   /// [RedirectRequired].
   ///
-  /// [credentials] is an opaque map (e.g. `{'email': ..., 'password': ...}`)
+  /// [credentials] is an opaque map (e.g. `{'email':..., 'password':...}`)
   /// so strategies aren't constrained to email+password.
   Future<AuthResult> initiateLogin(Map<String, String> credentials);
 
   /// Complete a multi-step login. [continuationToken] is the value returned
   /// by the previous step in [FactorRequired.continuationToken] — always the
-  /// most recent one, because AOID rotates it on every step (49-06). [proof]
+  /// most recent one, because AOID rotates it on every step. [proof]
   /// carries the factor (e.g. `{'totp': '123456'}` or
-  /// `{'webauthn_assertion': ...}`).
+  /// `{'webauthn_assertion':...}`).
   ///
   /// May return [FactorRequired] again for an N-th factor, [RedirectRequired]
   /// if the remaining factor needs a browser hop, [Authenticated], or [Failed].

@@ -1,4 +1,4 @@
-// TRD 50-12 test-list items 1-4 — the per-consumer configuration for the
+// the test list items 1-4 — the per-consumer configuration for the
 // browser hop.
 //
 // The four things asserted here are each a one-line setting with a total
@@ -230,7 +230,7 @@ void main() {
         reason:
             'a shared library must not ship a per-app bundle identifier. '
             'social_auth_service.dart:37 shipped a personal one to 18 '
-            'packages; TRD 50-10 removed it and 50-12 must not reintroduce '
+            'packages; the spec removed it and the spec must not reintroduce '
             'the shape. Use AoidRedirectOptions.callbackScheme.\n'
             '${hits.join('\n')}',
       );

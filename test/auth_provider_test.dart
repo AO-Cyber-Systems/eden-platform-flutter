@@ -411,10 +411,10 @@ void main() {
       expect(secureStore['refresh_token'], isNull);
     });
 
-    // --- AOID objective 50 TRD 50-04: the widened AuthResult family ---
+    // --- AOID the spec: the widened AuthResult family ---
 
     test('RedirectRequired does not put the notifier into an error state — a '
-        'browser hop is a first-class path (50-CONTEXT.md D7)', () async {
+        'browser hop is a first-class path', () async {
       SharedPreferences.setMockInitialValues({});
       final authorizationUrl = Uri.parse(
         'https://auth.aocyber.ai/oauth/authorize'
@@ -438,7 +438,7 @@ void main() {
       await container.read(authProvider.notifier).login('a@b.com', 'pass');
 
       final state = container.read(authProvider);
-      // The defect this TRD removes: a user who merely needs a browser hop
+      // The defect this work removes: a user who merely needs a browser hop
       // being shown "login failed".
       expect(state.status, isNot(AuthStatus.error));
       expect(state.errorMessage, isNull);
@@ -487,7 +487,7 @@ void main() {
     });
 
     test('rotation across sequential completeLogin: the SECOND call presents '
-        'the ROTATED handle, not the original (49-06 rotates auth_session on '
+        'the ROTATED handle, not the original (the spec rotates auth_session on '
         'every step)', () async {
       SharedPreferences.setMockInitialValues({});
       // Hand-built. Records what it is presented so the test can assert the
@@ -540,7 +540,7 @@ void main() {
     });
 
     test('a mid-ceremony FactorRequired surfaces next + availableMethods so '
-        'the UI can render a factor picker (49-07)', () async {
+        'the UI can render a factor picker', () async {
       SharedPreferences.setMockInitialValues({});
       const factor = FactorRequired(
         continuationToken: 'as_2',
@@ -562,7 +562,7 @@ void main() {
 
       expect(container.read(authProvider).status, AuthStatus.refreshing);
       expect(container.read(authProvider.notifier).continuationToken, 'as_2');
-      // The picker data itself rides on the result, not on AuthState — 50-11's
+      // The picker data itself rides on the result, not on AuthState — the spec
       // AoidMfaForm reads it from the FactorRequired the strategy returned.
       expect(factor.next, 'mfa');
       expect(factor.availableMethods, ['totp', 'webauthn']);
@@ -620,7 +620,7 @@ void main() {
   });
 
   // ===================================================================
-  // AOID objective 50, TRD 50-21 — the riverpod 3 `Notifier` port.
+  // AOID, the spec — the riverpod 3 `Notifier` port.
   //
   // AuthNotifier moved from `StateNotifier<AuthState>` (flutter_riverpod's
   // legacy.dart shim) to `Notifier<AuthState>`, and `authProvider` from
@@ -629,7 +629,7 @@ void main() {
   // silently break, each against a fixture where the defect WOULD have shown.
   // ===================================================================
 
-  group('50-21 riverpod 3 Notifier port', () {
+  group('the spec riverpod 3 Notifier port', () {
     test('authProvider resolves an AuthNotifier whose three dependencies came '
         'from build(), and whose initial state is unknown', () async {
       SharedPreferences.setMockInitialValues({});
@@ -655,7 +655,7 @@ void main() {
       // override is the observable one.
       expect(c.read(authProvider.notifier).usesStrategy, true);
       await settle();
-      // ...and it actually drove the injected strategy, not the repository.
+      //...and it actually drove the injected strategy, not the repository.
       expect(strategy.restoreCalls, 1);
       expect(repository.refreshCalls, 0);
     });
@@ -746,7 +746,7 @@ void main() {
       repository.loginResult = buildSession();
       final c = createContainer();
       // Replicated INLINE. company_provider, nav_provider and
-      // entitlements_provider are owned by 50-22/50-23 in this same wave, so
+      // entitlements_provider are owned by other work in this same wave, so
       // this must not import them — but this is their exact listener shape.
       var clears = 0;
       c.listen<AuthState>(authProvider, (previous, next) {
@@ -822,7 +822,7 @@ void main() {
 
       expect(c.read(authProvider.notifier).continuationToken, isNull,
           reason: 'the instance is REUSED, so only build() clears this; '
-              'objective 49 rotates auth_session per step and a surviving '
+              'the issuer rotates auth_session per step and a surviving '
               'handle belongs to an abandoned ceremony');
       // The dead handle must also be unusable, not merely unreadable.
       await expectLater(
@@ -904,7 +904,7 @@ void main() {
       // `unknown` forever, hanging every gated route behind a spinner".
       expect(c.read(authProvider).status, AuthStatus.unauthenticated);
       expect(storage.readRefreshCalls, 1);
-      // ...and it clears rather than leaving an unreadable token behind.
+      //...and it clears rather than leaving an unreadable token behind.
       expect(storage.clearCalls, greaterThanOrEqualTo(1));
     });
 
@@ -1219,7 +1219,7 @@ void main() {
       expect(code.contains(banned), false,
           reason: 'no $banned may remain in the CODE of the epicentre '
               '(comments may still reference it as history)');
-      // ...and the shim must be gone from the comments too, not merely unused.
+      //...and the shim must be gone from the comments too, not merely unused.
       expect(src.contains("import 'package:$legacyImport'"), false);
     });
   });
@@ -1333,7 +1333,7 @@ class _ProfileRepository extends FakePlatformRepository {
 /// presented and serves a scripted sequence of results, one per
 /// [completeLogin] call. Written out literally rather than generated — the
 /// point is to assert the SEQUENCE of presented handles, which is the only
-/// thing that distinguishes real `auth_session` rotation (49-06) from a
+/// thing that distinguishes real `auth_session` rotation from a
 /// notifier that happens to complete a login.
 class _RecordingStrategy implements AuthStrategy {
   _RecordingStrategy({

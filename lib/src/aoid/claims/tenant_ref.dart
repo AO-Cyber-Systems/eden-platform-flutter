@@ -4,8 +4,8 @@
 //   access token  tnt = the SLUG   of the ACTIVE tenant   (follows switching)
 //   id_token      tnt = the UUID   of the HOME   tenant   (stable across it)
 //
-// Source of truth: aoid `internal/oauth/tokens.go` :20-27 (AccessTokenClaims)
-// and :41-50 (IDTokenClaims), settled by `internal/oauth/service.go` :928.
+// Source of truth: `tokens.go`:20-27 (AccessTokenClaims)
+// and :41-50 (IDTokenClaims), settled by `service.go`:928.
 //
 // WARNING for anyone reading the Go source. The struct-level doc comment
 // sitting immediately above `AccessTokenClaims` (tokens.go:15-18) says the
@@ -18,7 +18,7 @@
 //     tenantSlug, err := s.lookupTenantSlug(ctx, activeTenantID)
 //
 // Read the field comment and service.go, not the struct header. (Correcting the
-// Go comment is TRD 50-07's job.)
+// Go comment is a separate job.)
 //
 // So the hazard is not hypothetical: the authoritative source contradicts
 // itself in adjacent lines, and a reader who trusts the wrong half builds a
@@ -32,7 +32,7 @@
 // on both, an implicit conversion, or a converter between them
 // (`toActiveSlug()`, `asHomeId()`, `AoidActiveTenantSlug.from(...)`). A UUID is
 // not a slug; the conversion is not merely lossy, it is meaningless. The
-// ABSENCE of interchangeability IS the feature. (AOID objective 50, D5.)
+// ABSENCE of interchangeability IS the feature.
 //
 // Proven by `test/aoid/claims/no_conflation_compile_gate_test.dart`, which runs
 // the analyzer over a probe fixture and asserts the diagnostics — including a

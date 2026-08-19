@@ -1,6 +1,6 @@
 // THE D4 GATE — on web, no AOID code path can persist a refresh token.
 //
-// This file is not hygiene. 50-CONTEXT.md premise correction C3 records that
+// This file is not hygiene. the design notes premise correction C3 records that
 // the forbidden configuration was SHIPPING: SecureTokenStorage fell back to
 // shared_preferences (localStorage on web) on any secure-storage failure, its
 // own comment arguing that was fine "because flutter_secure_storage_web also
@@ -10,8 +10,8 @@
 // against the production eden-biz web console. Net: AOID refresh tokens were
 // durably readable by any XSS on that console.
 //
-// D4 (50-CONTEXT.md) ranks the postures and lists "refresh token in web
-// localStorage" as forbidden. TRD 50-02 removes the CAPABILITY rather than
+// D4 ranks the postures and lists "refresh token in web
+// localStorage" as forbidden. the spec removes the CAPABILITY rather than
 // discouraging its use, and this file is what keeps it removed.
 //
 // WHAT THIS FILE DOES **NOT** PROVE:
@@ -19,7 +19,7 @@
 //   nothing here executes on a browser. Coverage comes from the injected
 //   `isWeb` seam that every store/session constructor accepts (default
 //   `kIsWeb`), copied from lib/src/networking/connect_cookie_interceptor.dart
-//   :55-67, which ships `connectCookieInterceptorWebForTest` for exactly this
+//:55-67, which ships `connectCookieInterceptorWebForTest` for exactly this
 //   reason. These tests prove the WEB BRANCH behaves correctly, not that a
 //   real browser was exercised.
 //
@@ -136,7 +136,7 @@ void main() {
     });
   });
 
-  group('D4 — AoidSecureTokenStore refuses to exist on web', () {
+  group('AoidSecureTokenStore refuses to exist on web', () {
     // Item 7 — the failure is CONSTRUCTION, not the first write. A wiring-time
     // failure surfaces in a test; a first-write failure surfaces in production.
     test('constructing with isWeb:true throws UnsupportedError', () {
@@ -164,7 +164,7 @@ void main() {
 
     // Item 8 — assert the VALUE of the message, so the reader is sent to the
     // decision rather than left with a bare type.
-    test('the thrown message names D4 and "refresh token"', () {
+    test('the thrown message states the prohibition and names "refresh token"', () {
       Object? caught;
       try {
         AoidSecureTokenStore(SpyTokenStorage(), isWeb: true);
@@ -174,14 +174,14 @@ void main() {
 
       expect(caught, isA<UnsupportedError>());
       final message = (caught! as UnsupportedError).message ?? '';
-      expect(message, contains('D4'));
+      expect(message, contains('forbids'));
       expect(message, contains('refresh token'));
       // And it must point at the remedy, not just the prohibition.
       expect(message, contains('AoidMemoryTokenStore'));
     });
   });
 
-  group('D4 — no web session holds a client-held refresh token', () {
+  group('no web session holds a client-held refresh token', () {
     // Item 9, table-driven over EVERY posture. Each row states the expectation
     // explicitly rather than relying on a single blanket matcher, so a row
     // that changes meaning has to be edited deliberately.
@@ -223,7 +223,7 @@ void main() {
       });
     }
 
-    // Exhaustiveness guard: if a later TRD (50-09 owns the full mode matrix)
+    // Exhaustiveness guard: if later work (the full mode matrix lives elsewhere)
     // adds a fourth posture, the loop above covers it automatically and the
     // switch stops being exhaustive at compile time. This asserts the set we
     // believe we are covering, so a silent widening is caught here too.
@@ -235,7 +235,7 @@ void main() {
       );
     });
 
-    test('Mode B on web names D4 in its refusal', () {
+    test('Mode B on web states the prohibition in its refusal', () {
       Object? caught;
       try {
         AoidSession.deviceKeychain(
@@ -247,7 +247,7 @@ void main() {
         caught = e;
       }
       expect(caught, isA<UnsupportedError>());
-      expect((caught! as UnsupportedError).message ?? '', contains('D4'));
+      expect((caught! as UnsupportedError).message ?? '', contains('forbids'));
     });
   });
 
