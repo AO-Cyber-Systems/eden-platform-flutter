@@ -8,7 +8,7 @@
 // ## Riverpod-free ON PURPOSE, and it is not vestigial
 //
 // `AoidTenantController` is a plain `ChangeNotifier`. That is a decision, not
-// a leftover from the firewall the spec deleted:
+// a leftover from the firewall the barrel consolidation deleted:
 //
 // * riverpod 3 RETRIES a failed provider automatically — 10 attempts over a
 //   38.2-second window — declining only for `ProviderException` and `Error`
@@ -128,8 +128,8 @@ final class AoidRefreshGrantBackend implements AoidTenantSwitchBackend {
 
 /// **Modes A and C** — the session cookie is swapped SERVER-side.
 ///
-/// Mode A hands the switch to the consuming app's own backend (the the spec
-/// `AoidCodeSink` seam's sibling; the spec builds AODex's endpoint against this
+/// Mode A hands the switch to the consuming app's own backend (the
+/// `AoidCodeSink` seam's sibling; the app's backend builds AODex's endpoint against this
 /// shape). Mode C is same-origin, so the browser's own cookie carries it.
 /// Neither returns a refresh token to the client, and neither may call
 /// `replaceSession` — persisting the empty strings would clobber real values.

@@ -34,7 +34,7 @@ enum ThemeMode { system, light, dark }
 
 /// Persisted user preferences, on riverpod 3's [Notifier].
 ///
-/// This is the CONTROL CASE of the spec Stage B unit: unlike
+/// This is the CONTROL CASE of the Stage B unit: unlike
 /// [CompanyNotifier] and [NavNotifier] it holds no `Ref`, registers no
 /// `ref.listen`, schedules no bootstrap microtask and has no `clear()`. It
 /// therefore isolates the port's *mechanics* with the wiring removed.

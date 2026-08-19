@@ -1,4 +1,4 @@
-// Per-consumer configuration for the AOID browser hop (the spec, D7).
+// Per-consumer configuration for the AOID browser hop (the redirect flow, D7).
 //
 // Every field here is a one-line setting with a total-failure blast radius,
 // and every one of them is invisible until it happens to a user. The package
@@ -20,7 +20,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart'
 /// A shared library cannot guess a per-app bundle identifier.
 /// `social_auth_service.dart:37` shipped a hardcoded PERSONAL one — a real
 /// developer's reverse-DNS bundle id — to every consumer of this package;
-/// the spec removed it and this type must not reintroduce the shape. Unset
+/// The SSO removal removed it and this type must not reintroduce the shape. Unset
 /// is a compile error (`required`); blank or malformed fails fast at
 /// construction, not at the browser hop, where the failure would be a
 /// mystery.

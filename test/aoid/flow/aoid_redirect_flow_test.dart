@@ -1,7 +1,7 @@
 // the test list items 5-12 — the code-only browser hop.
 //
 // Item 6 is written first and deliberately: it is the D6 invariant for this
-// new callback handler. the spec repo-wide gate covers the SOURCE of this file
+// new callback handler. The SSO removal's repo-wide gate covers the SOURCE of this file
 // textually; item 6 covers the BEHAVIOUR.
 
 import 'dart:async';

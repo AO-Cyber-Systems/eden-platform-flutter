@@ -12,7 +12,7 @@
 // nothing to forget to guard.
 //
 // A "convenience" API letting an app supply its own password field defeats
-// the issuer containment guarantee and must not be built.
+// The issuer containment guarantee and must not be built.
 //
 // Gate: test/aoid/widgets/sealed_form_no_leak_test.dart — a source-level test,
 // because the property is the absence of a member and no runtime assertion can
@@ -28,7 +28,7 @@
 // `AsyncValue.when()` tests `isLoading` before `hasError`, an error arm is
 // unreachable for those 38 seconds — a failed credential submit would render a
 // spinner rather than a result. That is the wrong behaviour for any auth
-// surface, and here it is worse than cosmetic: the spec `MaxAttempts = 5` is
+// surface, and here it is worse than cosmetic: the issuer's `MaxAttempts = 5` is
 // DURABLE and carried forward on handle rotation, so ten automatic retries
 // would burn a ceremony the user could still have completed. This form
 // therefore drives AoidNativeFlow directly and rebuilds with setState.
@@ -67,7 +67,7 @@ class AoidLoginForm extends StatefulWidget {
   });
 
   /// Drives the ceremony. Exposes step / next / availableMethods / outcome —
-  /// NEVER the credential. (`AoidNativeFlow`, the spec.)
+  /// NEVER the credential. (See `AoidNativeFlow`.)
   final AoidNativeFlow controller;
 
   /// Copy and chrome. Input-only; carries no function-typed field.
@@ -130,8 +130,8 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// Every message here comes from a closed vocabulary, and nothing in it is
   /// built from request input. That is not only a D3 rule — AOID answers an
   /// unknown email, a wrong password, an account with no password credential
-  /// and a locked account BYTE-IDENTICALLY (the spec, re-proved over real HTTP by
-  /// the spec). Manufacturing a richer reason in UI copy would reconstruct the
+  /// and a locked account BYTE-IDENTICALLY (re-proved over real HTTP by
+  /// deliberately lossy). Manufacturing a richer reason in UI copy would reconstruct the
   /// account-existence oracle the issuer spent real effort removing.
   String? _notice() {
     final state = widget.controller.state;

@@ -613,7 +613,7 @@ void main() {
               'before the subscription exists');
 
       // The derived providers keep their identifiers: the migration moves the
-      // widgets that read them, and the specs cite them.
+      // widgets that read them, and the tests cite them.
       expect(code.contains('final currentCompanyProvider = Provider<PlatformCompany?>'),
           true);
       expect(code.contains('final companiesProvider = Provider<List<PlatformCompany>>'),

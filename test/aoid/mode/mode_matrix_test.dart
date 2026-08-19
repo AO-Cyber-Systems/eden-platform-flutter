@@ -15,7 +15,7 @@
 //   lib/src/networking/connect_cookie_interceptor.dart:55-67, which ships
 //   `connectCookieInterceptorWebForTest` for exactly this reason. These tests
 //   prove the WEB BRANCH behaves correctly. They do not prove a real browser
-//   was exercised. Live-browser coverage is the spec.
+//   was exercised. Live-browser coverage is out of scope here.
 //
 // READING ORDER MATTERS. The positive controls come FIRST. Every "is false" /
 // "throws" assertion below would pass vacuously against
@@ -43,7 +43,7 @@ import 'package:eden_platform_flutter/src/models/platform_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../claims/fixtures/aoid_claim_fixtures.dart' as claim_fixtures;
-// Was '../riverpod_free_gate_test.dart' until the spec deleted that file (it
+// Was '../riverpod_free_gate_test.dart' until the barrel consolidation deleted that file (it
 // asserted the property the design notes rejected). The helper itself has
 // nothing to do with riverpod and was relocated, not resurrected.
 import '../source_utils.dart' show stripComments;
@@ -316,7 +316,7 @@ void main() {
       });
     });
 
-    test('mode -> posture is a BIJECTION onto the spec\'s three postures — the spec '
+    test('mode -> posture is a BIJECTION onto the token store\'s three postures — the deployment-mode layer '
         'maps onto that vocabulary, it does not replace it', () {
       final postures = AoidDeploymentMode.values.map((m) => m.posture).toSet();
       expect(postures, hasLength(3));
@@ -380,7 +380,7 @@ void main() {
     });
   });
 
-  group('the web refusal has ONE home — the spec\'s constructor guard', () {
+  group('the web refusal has ONE home — the token store\'s constructor guard', () {
     // The mode package must not carry its own isWeb branch. Two guards drift
     // silently: both still compile when they disagree.
     test('aoid_deployment_mode.dart routes the refusal through '
@@ -401,7 +401,7 @@ void main() {
         reason:
             'a branch on isWeb here is a SECOND D4 guard. It can drift out of '
             'sync with AoidSecureTokenStore\'s and the drift compiles. Route '
-            'the refusal through the spec instead. Matched: '
+            'the refusal through the token store instead. Matched: '
             '${kIsWebBranch.firstMatch(code)?.group(0)}',
       );
     });

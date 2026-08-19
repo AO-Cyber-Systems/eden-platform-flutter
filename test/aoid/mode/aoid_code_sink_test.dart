@@ -10,8 +10,8 @@
 // WHAT THIS FILE DOES **NOT** PROVE.
 //   No real backend is contacted. The cookie attributes asserted below are
 //   asserted against the FIXTURE, which is this file's statement of the contract
-//   the spec Go endpoint must implement — not proof that it does. Live coverage
-//   is the spec.
+//   the backend's Go endpoint must implement — not proof that it does. Live coverage
+//   is out of scope here.
 //
 // ignore_for_file: avoid_relative_lib_imports
 
@@ -25,7 +25,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-// Was '../riverpod_free_gate_test.dart' until the spec deleted that file (it
+// Was '../riverpod_free_gate_test.dart' until the barrel consolidation deleted that file (it
 // asserted the property the design notes rejected). The helper itself has
 // nothing to do with riverpod and was relocated, not resurrected.
 import '../source_utils.dart' show stripComments;
@@ -45,7 +45,7 @@ const kAuthorizationCode = 'authz-code-single-use-0001';
 const kCodeVerifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
 const kRedirectUri = 'https://app.aodex.example/auth/callback';
 
-/// The Set-Cookie THIS the spec REQUIRES of the app's backend. Recorded here because
+/// The Set-Cookie THIS CONTRACT REQUIRES of the app's backend. Recorded here because
 /// the fixture is where the contract becomes executable.
 const kConformantSetCookie =
     'aodex_session=opaque-session-value-0001; Path=/; HttpOnly; SameSite=Lax; '
@@ -273,7 +273,7 @@ void main() {
           isNull,
           reason:
               'this work ships the NARROWEST Mode A contract: 2xx + Set-Cookie. '
-              'Adopting tokens from the body is a widening the spec has not agreed '
+              'Adopting tokens from the body is a widening the backend has not agreed '
               'to.',
         );
       },

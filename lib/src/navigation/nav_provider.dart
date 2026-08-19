@@ -104,8 +104,8 @@ class NavNotifier extends Notifier<NavState> {
           .listNavItems(accessToken, companyId);
       // Post-await guard on the SUCCESS path.
       //
-      // This is the crash doc/riverpod-3-migration.md §3.2.4 deferred to this
-      // the spec, and it is latent in production today for any consumer that lets
+      // This is the crash doc/riverpod-3-migration.md §3.2.4 deferred, and it
+      // is latent in production today for any consumer that lets
       // nav go unlistened mid-load: riverpod 3 pauses and tears down an
       // element with no listeners (§3.2.1), and the assignment below then
       // throws `Bad state: Tried to use NavNotifier after 'dispose' was

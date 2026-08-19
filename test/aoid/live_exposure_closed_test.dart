@@ -208,7 +208,7 @@ void main() {
 
     test('the WEB session itself carries no refresh token — so AuthNotifier'
         '._persistTokens cannot leak it downstream', () async {
-      // AuthNotifier._persistTokens (auth_provider.dart, owned by the spec) does
+      // AuthNotifier._persistTokens (auth_provider.dart) does
       // `_tokenStorage.writeRefreshToken(session.refreshToken)` for every
       // non-cookie-bound session. If the session carried the real token, the
       // strategy's own restraint would be undone one layer up.

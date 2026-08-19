@@ -16,7 +16,7 @@ enum AoidErrorCode {
   invalidRequest,
 
   /// EVERY client-resolution failure — unknown client, native login not
-  /// enabled for it, origin not on its allowlist. 400. the issuer makes all
+  /// enabled for it, origin not on its allowlist. 400. The issuer makes all
   /// of them byte-identical so the endpoint cannot enumerate registrations.
   invalidClient,
 
@@ -25,7 +25,7 @@ enum AoidErrorCode {
 
   /// A factor is still outstanding. 401.
   ///
-  /// This is USUALLY NOT AN ERROR: the spec `Verify` answers
+  /// This is USUALLY NOT AN ERROR: the issuer's `Verify` answers
   /// `insufficient_authorization` with the ROTATED handle in the body on every
   /// intermediate step, and a failed factor answers it identically. Both are
   /// [AoidNativeContinue], not a throw. An `AoidError` with this code is
@@ -38,7 +38,7 @@ enum AoidErrorCode {
   /// NEVER surfaces as an `AoidError`. It is a first-class RESULT
   /// (`AoidNativeRedirect` wrapping `RedirectRequired`), because a social IdP,
   /// a PIV card, or a restrictive tenancy tier reaching this on a
-  /// CORRECT password is normal (the spec gate 7). The code is in this enum
+  /// CORRECT password is normal (the issuer gate 7). The code is in this enum
   /// because it is part of the wire vocabulary, not because it is a failure.
   redirectToWeb,
 }
@@ -47,7 +47,7 @@ enum AoidErrorCode {
 ///
 /// [AoidErrorCode.invalidSession] covers replay, expiry, an unknown handle,
 /// a cross-tenant presentation, a cross-client presentation AND attempt-cap
-/// exhaustion, indistinguishably. the issuer folds them together on purpose
+/// exhaustion, indistinguishably. The issuer folds them together on purpose
 /// so the endpoint cannot be used as an account-existence or
 /// tenancy-membership oracle. **Do not widen this.** If you find yourself
 /// adding a `reason`, a `cause`, or a second message per branch, you are

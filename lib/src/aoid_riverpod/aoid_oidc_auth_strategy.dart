@@ -232,7 +232,7 @@ class AoidOidcAuthStrategy implements AuthStrategy {
 
     await tokenStorage.writeAccessToken(accessToken);
 
-    // D4 / SDK-11. Until AOID this line was
+    // Until a later change this line was
     //     await tokenStorage.writeRefreshToken(refreshToken);
     // with no guard at all — and AoidConfig.fromEnvironment() defaulted AOID
     // login ON against the eden-biz WEB console in production. Every web
@@ -245,7 +245,7 @@ class AoidOidcAuthStrategy implements AuthStrategy {
     // CLEARED so a token written by an earlier build does not linger. Clearing
     // is always legal on every AoidTokenStore. Web sessions restore through
     // Mode A (the app's backend holds the refresh token and sets an httpOnly
-    // SameSite cookie) — assembled by the spec — or not at all.
+    // SameSite cookie) — or not at all.
     if (_isWeb) {
       await tokenStorage.writeRefreshToken(null);
     } else {

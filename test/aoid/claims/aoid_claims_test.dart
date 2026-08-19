@@ -20,7 +20,7 @@ const _sourcePath = 'lib/src/aoid/claims/aoid_claims.dart';
 ///
 /// Load-bearing: a doc comment reflows across line breaks the moment it is
 /// edited, so a phrase assertion made against the raw text is a coin flip.
-/// the spec hit exactly this — its "MUST replace their stored handle" gate
+/// The strategy contract hit exactly this — its "MUST replace their stored handle" gate
 /// would have returned 0 purely because the phrase had wrapped.
 String _normalizeDoc(String raw) => raw
     .split('\n')
@@ -32,7 +32,7 @@ String _normalizeDoc(String raw) => raw
 /// The doc comment attached to [declaration], normalized, and nothing else.
 ///
 /// Scoped on purpose. A file-wide `grep -c "UI HINTING ONLY"` cannot tell WHICH
-/// declaration it matched — the spec `TELEMETRY ONLY` gate passed while the
+/// declaration it matched — the strategy contract's `TELEMETRY ONLY` gate passed while the
 /// comment sat on the wrong class. A doctrine warning that has drifted off the
 /// thing it warns about is worse than absent, because it reads as covered.
 String _docCommentOn(String declaration) {
@@ -311,7 +311,7 @@ void main() {
           reason:
               'the doctrine must sit on $cls itself. A file-wide grep would '
               'still pass with this warning parked on the other class, which '
-              'is exactly the failure mode the spec hit.',
+              'is exactly the failure mode the strategy contract hit.',
         );
         expect(doc, contains('re-verifies'));
         expect(

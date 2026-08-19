@@ -1,7 +1,7 @@
 // Copyright 2026 AOCyber. All rights reserved.
 //
 // PlatformShell widget tests — covers the actions / userMenuBuilder slots
-// added for AOID portal adoption (the spec aoid-12-01) plus a backward-compat
+// added for AOID portal adoption, plus a backward-compat
 // regression that the legacy sidebar-only chrome still renders when no
 // slot is configured.
 
@@ -248,7 +248,7 @@ void main() {
 
 /// Pins [authProvider] at a fixed [AuthState] for widget tests.
 ///
-/// the spec moved AuthNotifier from `StateNotifier` to riverpod 3's
+/// The riverpod migration moved AuthNotifier from `StateNotifier` to riverpod 3's
 /// `Notifier`, which has no constructor injection — the initial state comes
 /// from `build()` instead of a `super(...)` call plus a constructor body.
 ///

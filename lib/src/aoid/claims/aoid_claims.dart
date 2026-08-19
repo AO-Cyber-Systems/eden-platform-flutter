@@ -9,7 +9,7 @@
 //
 // If you find yourself wanting a unified type "for convenience", that is the
 // bug asking to be reintroduced. See tenant_ref.dart's header and AOID
-// the issuer, D5.
+// The issuer, D5.
 //
 // Decoding uses `JWT.decode` from `dart_jsonwebtoken`, already a dependency and
 // already used for exactly this purpose at
@@ -133,7 +133,7 @@ final class AoidAccessClaims {
   final DateTime expiresAt;
 
   /// UNVERIFIED decode of an access token. See the class doc: UI HINTING ONLY,
-  /// the server always re-verifies.
+  /// The server always re-verifies.
   ///
   /// Throws [AoidClaimsFormatException] — which carries no token material — if
   /// [jwt] is not a decodable access token.

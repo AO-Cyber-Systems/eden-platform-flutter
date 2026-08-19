@@ -11,7 +11,7 @@
 // LONGER AN ENFORCED INVARIANT. It was one while `lib/aoid.dart` existed as a
 // riverpod-free barrel for a riverpod-3 consumer to import across a version
 // boundary. AOID removed that boundary by
-// migrating the package to riverpod 3, the spec folded the barrel into
+// migrating the package to riverpod 3, the barrel consolidation folded the barrel into
 // eden_platform.dart, and the gate that enforced the property was DELETED
 // rather than weakened — it asserted precisely what D2 rejected. Adding a
 // riverpod import here is a design choice to argue on its merits now, not a

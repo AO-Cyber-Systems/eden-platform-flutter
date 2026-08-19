@@ -1,6 +1,6 @@
 // Tests for the AUTHORIZATION-CODE social login flow.
 //
-// AOID, the spec (SDK-08 / D6). This file previously asserted the
+// AOID social auth. This file previously asserted the
 // opposite contract — that `sessionFromCallbackUrl` parsed `access_token` and
 // `refresh_token` out of the callback query string. That contract was the
 // vulnerability. eden-platform-go stopped the server sending tokens;
@@ -481,7 +481,7 @@ void main() {
     final hidingPlaces = <String, String>{
       'the canonical parameter name':
           '$_redirectUri?code=C&state=S&access_token=$smuggled',
-      'a benign parameter name (the the spec D6-M2 smuggling case)':
+      'a benign parameter name (the the server D6-M2 smuggling case)':
           '$_redirectUri?t=$smuggled&code=C&state=S',
       'an innocuous-looking parameter':
           '$_redirectUri?profile=$smuggled&code=C&state=S',
@@ -531,7 +531,7 @@ void main() {
     );
   });
 
-  group('fragment-shaped redirect (hash-routed SPA — the spec composes the query '
+  group('fragment-shaped redirect (hash-routed SPA — the server composes the query '
       'INSIDE the fragment)', () {
     test('code + state are read out of the fragment query', () async {
       final rec = _Recorder();

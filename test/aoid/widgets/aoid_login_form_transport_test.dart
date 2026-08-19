@@ -1,4 +1,4 @@
-// THE CONTAINMENT PROOF for the sealed AOID forms (the spec, items 8-14).
+// THE CONTAINMENT PROOF for the sealed AOID forms (the widgets layer, items 8-14).
 //
 // The companion file `sealed_form_no_leak_test.dart` proves the forms hand out
 // no API. That is only half the guarantee: a widget with no callbacks could
@@ -421,7 +421,7 @@ void main() {
 
     testWidgets('14b. AoidMfaForm renders sensibly when availableMethods is '
         'EMPTY — the normal early state', (tester) async {
-      // the issuer refuses to emit a per-identity method list before a factor has
+      // The issuer refuses to emit a per-identity method list before a factor has
       // succeeded, because that turns the endpoint into an enumeration oracle.
       // So the empty list is the COMMON path, not an edge case, and a picker
       // that rendered empty chrome (or threw) would be a bug in the common path.

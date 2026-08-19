@@ -15,7 +15,7 @@ import 'aoid_code_sink.dart';
 
 /// Posts `{code, code_verifier}` to the consuming app's own backend.
 ///
-/// ## THE WIRE CONTRACT (the spec implements the other side of this)
+/// ## THE WIRE CONTRACT (the app's backend implements the other side of this)
 ///
 /// ```
 /// POST <exchangeUrl>
@@ -32,15 +32,15 @@ import 'aoid_code_sink.dart';
 ///
 /// **The response BODY is not read.** That is deliberate and is the narrowest
 /// contract that makes Mode A work: 2xx plus a cookie. A richer JSON body would
-/// be a shape the spec has to match blindly, and any token in it would be a token
+/// be a shape the app's backend has to match blindly, and any token in it would be a token
 /// this client is not supposed to hold.
 ///
 /// ## Form encoding, not JSON
 ///
 /// `application/x-www-form-urlencoded` is a CORS-safelisted content type;
 /// `application/json` is not and provokes an `OPTIONS` preflight when the
-/// frontend and backend are on different origins. Same reasoning as the spec
-/// native client, and the same house style as the spec `active_tenant` form
+/// frontend and backend are on different origins. Same reasoning as the native client's
+/// native client, and the same house style as the backend's `active_tenant` form
 /// field.
 ///
 /// ## Cookies and credentials on web
@@ -107,7 +107,7 @@ class HttpBffCodeSink implements AoidCodeSink {
   final http.Client _http;
   final bool _isWeb;
 
-  /// THE header map. One entry — same contract as the spec native client.
+  /// THE header map. One entry — same contract as the native client's native client.
   static const Map<String, String> _formHeaders = {
     'content-type': 'application/x-www-form-urlencoded',
   };

@@ -121,7 +121,7 @@ void main() {
 
   // ---------------------------------------------------------------------
   // Stage B riverpod-3 mechanics. `SettingsNotifier` is the CONTROL CASE of
-  // the spec: it holds no `Ref`, registers no `ref.listen`, schedules no
+  // The riverpod migration: it holds no `Ref`, registers no `ref.listen`, schedules no
   // bootstrap microtask and has no `clear()`. Everything below therefore
   // isolates the *mechanics* of the StateNotifier -> Notifier port, with the
   // wiring that company/nav carry removed as a variable. If a mechanic is

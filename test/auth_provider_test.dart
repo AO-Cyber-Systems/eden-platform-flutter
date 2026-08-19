@@ -411,7 +411,7 @@ void main() {
       expect(secureStore['refresh_token'], isNull);
     });
 
-    // --- AOID the spec: the widened AuthResult family ---
+    // --- AOID: the widened AuthResult family ---
 
     test('RedirectRequired does not put the notifier into an error state — a '
         'browser hop is a first-class path', () async {
@@ -562,7 +562,7 @@ void main() {
 
       expect(container.read(authProvider).status, AuthStatus.refreshing);
       expect(container.read(authProvider.notifier).continuationToken, 'as_2');
-      // The picker data itself rides on the result, not on AuthState — the spec
+      // The picker data itself rides on the result, not on AuthState — the widgets layer's
       // AoidMfaForm reads it from the FactorRequired the strategy returned.
       expect(factor.next, 'mfa');
       expect(factor.availableMethods, ['totp', 'webauthn']);
@@ -620,7 +620,7 @@ void main() {
   });
 
   // ===================================================================
-  // AOID, the spec — the riverpod 3 `Notifier` port.
+  // AOID — the riverpod 3 `Notifier` port.
   //
   // AuthNotifier moved from `StateNotifier<AuthState>` (flutter_riverpod's
   // legacy.dart shim) to `Notifier<AuthState>`, and `authProvider` from
@@ -629,7 +629,7 @@ void main() {
   // silently break, each against a fixture where the defect WOULD have shown.
   // ===================================================================
 
-  group('the spec riverpod 3 Notifier port', () {
+  group('the riverpod migration riverpod 3 Notifier port', () {
     test('authProvider resolves an AuthNotifier whose three dependencies came '
         'from build(), and whose initial state is unknown', () async {
       SharedPreferences.setMockInitialValues({});

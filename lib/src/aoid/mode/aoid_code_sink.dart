@@ -20,7 +20,7 @@ import '../aoid_session.dart';
 /// The verifier is NOT a credential in the confidential-client sense and it
 /// **MUST NOT be confused with the client secret**, which never leaves the
 /// app's backend. Do not "protect" the verifier in secure storage — that is how
-/// the web-storage exposure the spec removed comes back. Do not remove it
+/// the web-storage exposure the token store removed comes back. Do not remove it
 /// thinking it is a leak. Either change breaks Mode A.
 ///
 /// ## Only ONE party may spend the code

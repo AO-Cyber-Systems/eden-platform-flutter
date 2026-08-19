@@ -118,7 +118,7 @@ List<String> forbiddenHitsIn(String source, Map<String, String> needles) {
 /// This is the gate that actually pins the SURFACE: an absence list can only
 /// forbid the leaks somebody thought of, whereas asserting the constructor's
 /// parameters are EXACTLY a known set rejects the next leak too — including one
-/// with a name nobody has invented yet. the spec binds AODex's login screen to
+/// with a name nobody has invented yet. The migration binds AODex's login screen to
 /// this surface, so it is also the compatibility contract.
 String constructorParamsOf(String source, String className) {
   final code = stripComments(source);
@@ -220,7 +220,7 @@ void main() {
             'AoidNativeFlow that drives the ceremony (it exposes step/next/'
             'availableMethods, NEVER the credential) and `theme` is an '
             'input-only presentation struct. Every additional parameter is a '
-            'candidate leak and the spec binds AODex\'s login screen to this '
+            'candidate leak and the migration binds AODex\'s login screen to this '
             'exact surface.',
       );
     });

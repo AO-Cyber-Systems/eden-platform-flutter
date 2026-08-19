@@ -1,4 +1,4 @@
-// the spec, task 1 — THE REQUIRED MULTI-TENANT ISOLATION GATE
+// The tenant switch, task 1 — THE REQUIRED MULTI-TENANT ISOLATION GATE
 // (`wrong_tenant_assertion`, enforcement: required).
 //
 // The bug this file exists to prevent, stated once:
@@ -61,7 +61,7 @@
 //
 // FIXTURES ARE INLINE (resolved intent: fixture_strategy: inline) and
 // HAND-BUILT (no_llm_test_data). The JWT assembly and the tenant identifiers
-// are reused from the spec fixture module rather than re-invented, so the
+// are reused from the claims layer's fixture module rather than re-invented, so the
 // decoded claims are trustworthy and the slug/UUID pairing cannot drift.
 //
 // The shared test/auth/fixtures/fake_aoid_endpoint.dart is deliberately NOT

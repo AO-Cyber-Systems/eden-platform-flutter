@@ -7,7 +7,7 @@
 // red, which is a stronger guarantee than any export-line diff: `export 'x.dart'`
 // surviving says nothing about whether x.dart still declares the symbol.
 //
-// Test-list items 1, 2 and 3 of the spec.
+// Test-list items 1, 2 and 3.
 //
 // ITEM 2 IS A STAND-IN FOR A GATE IN ANOTHER REPOSITORY. politihub's APP-06 gate
 // greps consumer sources for `^import 'package:(http|dio)/` and requires the dio
@@ -71,7 +71,7 @@ void main() {
 
       // Function/getter-shaped exports cannot be named as a Type, so reference
       // them as values. connect_cookie_interceptor and sentry_init are the two
-      // the spec singles out as present on the full barrel and absent from
+      // the test list singles out as present on the full barrel and absent from
       // networking.dart — the asymmetry that makes the two barrels non-nested.
       expect(full.connectCookieInterceptor, isNotNull);
       expect(full.initSentry, isNotNull);
@@ -84,7 +84,7 @@ void main() {
   group('item 2 — networking.dart still exposes the dio symbols', () {
     test('the politihub APP-06 dio re-export is intact, symbol for symbol', () {
       // Every symbol in networking.dart's `show` clause. This list is derived
-      // from the file, not from memory: the spec asserts "fourteen dio symbols"
+      // from the file, not from memory: the test list asserts "fourteen dio symbols"
       // in five places and the measured count is ELEVEN. Trusting the prose
       // would have written a wrong assertion here.
       final dioSymbols = <String, Type>{
@@ -134,7 +134,7 @@ void main() {
       expect(net.Options(headers: const {'a': 'b'}).headers, isNotNull);
     });
 
-    test('the full barrel ALSO exposes the dio symbols (added by the spec), and '
+    test('the full barrel ALSO exposes the dio symbols (added by the barrel consolidation), and '
         'they are the SAME declarations — no ambiguity for a consumer '
         'importing both entrypoints', () {
       // Purely additive convenience. Identity of the declarations is what makes

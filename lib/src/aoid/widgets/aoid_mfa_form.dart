@@ -9,7 +9,7 @@
 // name one.
 //
 // A "convenience" API letting an app supply its own code field defeats
-// the issuer containment guarantee and must not be built.
+// The issuer containment guarantee and must not be built.
 //
 // Gate: test/aoid/widgets/sealed_form_no_leak_test.dart (tests 3, 4 and 5).
 //
@@ -59,7 +59,7 @@ class AoidMfaForm extends StatefulWidget {
   });
 
   /// Drives the ceremony. Exposes step / next / availableMethods / outcome —
-  /// NEVER the credential. (`AoidNativeFlow`, the spec.)
+  /// NEVER the credential. (See `AoidNativeFlow`.)
   final AoidNativeFlow controller;
 
   /// Copy and chrome. Input-only; carries no function-typed field.
