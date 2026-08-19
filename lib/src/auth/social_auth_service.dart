@@ -233,7 +233,7 @@ class SocialAuthService {
   static SocialCallback parseCallbackUrl(String callbackUrl) {
     final uri = Uri.parse(callbackUrl);
 
-    // the spec appends the query INSIDE the fragment for a fragment-shaped
+    // The server appends the query INSIDE the fragment for a fragment-shaped
     // redirect_uri (`https://host/#/auth/complete?code=…`), which is what a
     // hash-routed SPA router parses. Uri.queryParameters is empty in that case,
     // so fall back to the fragment's own query string.
@@ -320,7 +320,7 @@ class SocialAuthService {
     }
 
     if (response.statusCode != 200) {
-      // the spec makes expired / replayed / wrong-audience / unknown deliberately
+      // The server makes expired / replayed / wrong-audience / unknown deliberately
       // indistinguishable (400 "invalid request") so the endpoint is not an
       // oracle. 405 means the request was not a POST.
       throw AuthError(

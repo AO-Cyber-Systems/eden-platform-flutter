@@ -99,7 +99,7 @@ class CompanyNotifier extends Notifier<CompanyState> {
   ///
   /// | link | 1st sign-out | 2nd sign-out (already clear) |
   /// |---|---:|---:|
-  /// | `authProvider`          | 1 | 1 (the spec fixed this one) |
+  /// | `authProvider`          | 1 | 1 (the riverpod migration fixed this one) |
   /// | `companyStateProvider`  | 1 | **0** |
   /// | `currentCompanyProvider`| 1 | **0** |
   /// | `navStateProvider`      | 1 | **0** |

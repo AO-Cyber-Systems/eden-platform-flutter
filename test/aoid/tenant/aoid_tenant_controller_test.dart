@@ -1,4 +1,4 @@
-// the spec, task 2 — AoidTenantController.
+// The tenant switch, task 2 — AoidTenantController.
 //
 // TEST LIST (written first; RED before GREEN, one at a time).
 //
@@ -50,7 +50,7 @@
 //       rotated away, which signs the user out on the next refresh. Persist
 //       first, verify second.
 //
-// Fixtures are INLINE and HAND-BUILT (no_llm_test_data), reusing the spec
+// Fixtures are INLINE and HAND-BUILT (no_llm_test_data), reusing the claims layer's
 // JWT assembly so the decoded claims are trustworthy.
 
 import 'dart:async';
@@ -425,7 +425,7 @@ void main() {
   });
 
   group('a RETRIED switch cannot stomp state mid-flight', () {
-    // the spec found that its start() mints fresh PKCE and OVERWRITES the stored
+    // The redirect flow found that its start() mints fresh PKCE and OVERWRITES the stored
     // verifier, so a silent riverpod retry would clobber an in-flight same-tab
     // fallback — breaking a login the user could still have completed. The
     // analogous hazard here is the refresh token: a successful grant has

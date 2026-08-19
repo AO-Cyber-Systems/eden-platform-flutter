@@ -8,7 +8,7 @@
 // `lib/aoid.dart` was a riverpod-free barrel a riverpod-3 consumer had to be
 // able to import while this package was still on riverpod 2. That version
 // boundary is gone, the barrel was folded into
-// eden_platform.dart by the spec, and the closure-walking gate went with it.
+// eden_platform.dart, and the closure-walking gate went with it.
 // The file still names no riverpod symbol; that is now a preference, not a gate.
 //
 // NO DEPENDENCY ON flutter_secure_storage — deliberately. This package pins
@@ -33,7 +33,7 @@
 /// | C — same-origin | [none] | nowhere; the session is cookie-bound |
 ///
 /// There is no fourth value for "web localStorage". That is the configuration
-/// D4 forbids and premise correction C3 records as having shipped; the spec
+/// D4 forbids and premise correction C3 records as having shipped; the token store
 /// removed the capability rather than adding a flag to discourage it.
 enum AoidRefreshTokenPosture {
   /// **Mode A.** The app's own backend holds the refresh token and hands the

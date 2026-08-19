@@ -230,7 +230,7 @@ void main() {
         reason:
             'a shared library must not ship a per-app bundle identifier. '
             'social_auth_service.dart:37 shipped a personal one to 18 '
-            'packages; the spec removed it and the spec must not reintroduce '
+            'packages; the SSO removal removed it and the redirect flow must not reintroduce '
             'the shape. Use AoidRedirectOptions.callbackScheme.\n'
             '${hits.join('\n')}',
       );

@@ -1,4 +1,4 @@
-// the spec — the client half of the issuer /oauth/native/* contract.
+// The client half of the issuer /oauth/native/* contract.
 //
 // TEST LIST (written first; RED before GREEN, one at a time).
 //
@@ -8,9 +8,9 @@
 //   F3  replay / expiry / unknown-handle / cross-tenant produce BYTE-IDENTICAL
 //       responses — status, every header, and the raw body. If the FAKE
 //       distinguishes them, the client's own lossiness test (item 8) passes
-//       vacuously. This is the the spec lesson: a negative test that asserts
+//       vacuously. The lesson: a negative test that asserts
 //       exactly what a broken implementation also produces proves nothing.
-//   F4  the fake rejects a JSON content-type, exactly as the spec isFormContent
+//   F4  the fake rejects a JSON content-type, exactly as the issuer's isFormContent
 //       does ("NEVER accept JSON request bodies on OAuth endpoints")
 //
 // Client (task 2):
@@ -23,14 +23,14 @@
 //   4   verify() POSTs the full field set form-encoded
 //   5   a terminal verify() returning {"authorization_code": "..."} yields the
 //       code  — NOTE: the wire key is `authorization_code`, NOT `code`; the
-//       the spec said `code` and the issuer shipped `authorization_code`
+//       the plan said `code` and the issuer shipped `authorization_code`
 //   6   the handle ROTATES: two sequential verify() calls send two DIFFERENT
 //       auth_session values, the second being the one the first response
 //       returned — asserted on the RECORDED REQUEST BODIES
 //   7   {"error":"invalid_session"} yields AoidError with code invalidSession
 //   8   the error surface does not distinguish replay from expiry from
 //       unknown-handle — same code AND same message
-//   9   {"error":"redirect_to_web","authorization_url":"…"} maps to the spec
+//   9   {"error":"redirect_to_web","authorization_url":"…"} maps to the strategy contract's
 //       RedirectRequired, NOT to a failure and NOT to an AoidError
 //   10  invalid_client and invalid_request map to their codes
 //   11  no secret in any message: neither the password, the TOTP code, nor the
@@ -45,7 +45,7 @@
 //   15  positive control: the same ceremony continued with tenant A's
 //       tenant_id succeeds  (written BEFORE 14)
 //   16  a mid-ceremony 401 carrying a rotated auth_session is a CONTINUATION,
-//       not a failure — the single most important divergence from the spec
+//       not a failure — the single most important divergence from the plan
 //   17  a REJECTED factor (401 + rotated handle, no `next`) is also a
 //       continuation, and carries no reason
 //   18  attempt-cap exhaustion (400 invalid_session, no successor) is an
@@ -57,7 +57,7 @@
 import 'dart:convert';
 
 // This file used to take the AOID surface from `aoid.dart` and `RedirectRequired`
-// from `eden_platform.dart`. the spec folded the two AOID barrels into
+// from `eden_platform.dart`. The barrel consolidation folded the two AOID barrels into
 // eden_platform.dart, so both now arrive through one import — which is the
 // single-entrypoint outcome the fold exists to produce.
 import 'package:eden_platform_flutter/eden_platform.dart';
@@ -220,7 +220,7 @@ void main() {
         );
 
         // And pin WHAT they agree on, so a mutation moving all four together
-        // still fails (the spec section 2's independent-assertion lesson).
+        // still fails (the issuer section 2's independent-assertion lesson).
         expect(replay.statusCode, 400);
         final decoded = jsonDecode(replay.body) as Map<String, dynamic>;
         expect(decoded.keys.toSet(), {'error', 'error_description'});
@@ -230,7 +230,7 @@ void main() {
     );
 
     test(
-      'F4 the fake rejects a JSON content-type, as the spec isFormContent does',
+      'F4 the fake rejects a JSON content-type, as the issuer isFormContent does',
       () async {
         // A raw String body is required here: package:http REFUSES to encode a
         // Map body under a non-form content type (see F5). So this probe has to
@@ -262,9 +262,9 @@ void main() {
     });
 
     test(
-      'F6 a charset parameter would still satisfy isFormContent (the spec splits on ;)',
+      'F6 a charset parameter would still satisfy isFormContent (the issuer splits on ;)',
       () async {
-        // the spec isFormContent splits on ';' before comparing, so
+        // The issuer's isFormContent splits on ';' before comparing, so
         // "application/x-www-form-urlencoded; charset=utf-8" is accepted.
         //
         // MEASURED: http ^1.2.0 does NOT append a charset — item 3 pins that
@@ -326,7 +326,7 @@ void main() {
         expect(req.fields['redirect_uri'], kFakeRedirectUri);
         expect(req.fields['code_challenge'], kFakeCodeChallenge);
         expect(req.fields['code_challenge_method'], 'S256');
-        // RFC 6749 §3.3: SPACE-delimited, and the spec splits on space.
+        // RFC 6749 §3.3: SPACE-delimited, and the issuer splits on space.
         expect(req.fields['scope'], 'openid profile email');
         expect(req.fields['nonce'], 'fixture-nonce-01');
         // The ACTIVE tenant SLUG rides on `tenant`, mirroring /oauth/authorize
@@ -344,7 +344,7 @@ void main() {
     test('2 start() sends NO application header other than the content type — '
         'the CORS simple-request guard', () async {
       await startCeremony();
-      // THE assertion. the spec built a per-client origin allowlist that only
+      // THE assertion. The issuer built a per-client origin allowlist that only
       // works because these are CORS SIMPLE requests: a preflight is an
       // OPTIONS with no body, so client_id would be unresolvable. ONE custom
       // header turns every browser caller into a preflighted one.
@@ -548,13 +548,13 @@ void main() {
           expect(other.toString(), replay.toString());
         }
         // Pin WHAT they agree on, so a mutation moving all four together still
-        // fails (the spec section 2's independent-assertion lesson).
+        // fails (the issuer section 2's independent-assertion lesson).
         expect(replay.code, AoidErrorCode.invalidSession);
       },
     );
 
     test(
-      '9 redirect_to_web maps to the spec RedirectRequired, not to a failure',
+      '9 redirect_to_web maps to the strategy contract RedirectRequired, not to a failure',
       () async {
         fake.scriptNativeCeremony([const FakeNativeRedirect()]);
         await startCeremony();
@@ -818,7 +818,7 @@ void main() {
       );
 
       final cont = res as AoidNativeContinue;
-      // the spec: a wrong password costs ONE attempt and yields a fresh handle.
+      // The issuer: a wrong password costs ONE attempt and yields a fresh handle.
       // Returning Failed here would clear the continuation token and destroy
       // a recoverable ceremony (deferred item 2).
       expect(cont.advanced, isFalse);
@@ -884,7 +884,7 @@ void main() {
       // Item 8 could not see it: it compares four causes that the SERVER
       // already answers with identical descriptions, so a client reflecting
       // that string produces four identical messages too. It asserts exactly
-      // what the broken implementation also produces (the spec lesson).
+      // what the broken implementation also produces (the issuer's lesson).
       // Item 11 could not see it either: the fixture's description carried
       // no secret, so a reflected description leaked nothing (the nil-only-
       // fixture trap).

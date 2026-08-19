@@ -2,7 +2,7 @@
 // relocation. 18 packages and ~450 import sites
 // depend on that surface; the relocation must be invisible to all of them.
 //
-// Why this file exists instead of the diffstat check the spec specified:
+// Why this file exists instead of the diffstat check the original split specified:
 //   The gate was
 //       git diff --stat origin/main -- lib/eden_platform.dart
 //     -> "insertions only, zero deletions"
@@ -120,7 +120,7 @@ void main() {
     },
   );
 
-  // ── the spec, test-list items 8 and 9: THE FOLD'S CONTRACT ────────────────
+  // ── the barrel consolidation, test-list items 8 and 9: THE FOLD'S CONTRACT ────────────────
   //
   // `lib/aoid.dart` and `lib/aoid_riverpod.dart` are DELETED. Everything they
   // exported now ships from `eden_platform.dart` alone. This group is what
@@ -128,7 +128,7 @@ void main() {
   // through the single entrypoint imported at the top of this file, so a
   // half-applied fold is a compile error here.
   group('item 8 — the whole AOID SDK resolves from eden_platform.dart alone', () {
-    test('client, config, endpoints and strategy — the four the spec names', () {
+    test('client, config, endpoints and strategy — the four the test list names', () {
       expect(
         PkceGenerator.generate().codeVerifier.length,
         greaterThanOrEqualTo(43),
@@ -147,7 +147,7 @@ void main() {
     });
 
     test('one symbol from each POPULATED part-barrel', () {
-      // NOTE — the spec asks for "one symbol from each of the seven
+      // NOTE — the test list asks for "one symbol from each of the seven
       // part-barrels". That was UNSATISFIABLE when written: three of the seven
       // (widgets, redirect and tenant) were deliberately
       // EMPTY placeholders whose owning TRDs had not run yet. They exported
@@ -157,7 +157,7 @@ void main() {
       // The widgets and redirect work have both since run and filled parts/widgets.dart and
       // parts/redirect.dart, so both are named here now and dropped from the
       // pending list below — exactly the handoff that test's failure message
-      // prescribes. NOTE for whoever merges the next parallel the spec: this map is
+      // prescribes. NOTE for whoever merges the next parallel change: this map is
       // ADDITIVE and the pending list is SUBTRACTIVE. Resolving a conflict here
       // by taking one side wholesale silently un-ships the other side's barrel.
       final byPartBarrel = <String, Object?>{
@@ -172,14 +172,14 @@ void main() {
             AoidNativeClient,
         'parts/native.dart  -> transport/aoid_error.dart': AoidError,
         'parts/native.dart  -> flow/aoid_native_flow.dart': AoidNativeFlow,
-        // Filled by the spec. The sealed forms are only useful if a consuming
+        // The sealed forms are only useful if a consuming
         // app can actually name them from the one import, so this entry is the
         // reason the barrel export exists at all.
         'parts/widgets.dart -> widgets/aoid_login_form.dart': AoidLoginForm,
         'parts/widgets.dart -> widgets/aoid_mfa_form.dart': AoidMfaForm,
         'parts/widgets.dart -> widgets/aoid_login_theme.dart':
             const AoidLoginTheme(),
-        // Filled by the spec.
+
         'parts/redirect.dart -> flow/aoid_redirect_options.dart':
             AoidRedirectOptions,
         'parts/redirect.dart -> flow/aoid_redirect_flow.dart': AoidRedirectFlow,
@@ -217,7 +217,7 @@ void main() {
           isTrue,
           reason:
               'missing part-barrel lib/src/aoid/parts/$name.dart — a '
-              'downstream the spec has nowhere to write',
+              'downstream work has nowhere to write',
         );
         expect(
           barrel,
@@ -228,7 +228,7 @@ void main() {
     });
 
     test('the remaining unfilled part-barrels are empty BY DESIGN, each naming '
-        'its owning the spec — and as of the spec there are none left', () {
+        'its owning TRD — and as of the migration there are none left', () {
       // Without this, "tenant.dart exports nothing" is indistinguishable from
       // "someone deleted its exports". Each placeholder must say whose it is.
       //
@@ -277,7 +277,7 @@ void main() {
           isTrue,
           reason:
               'parts/$name.dart is not in the pending list yet exports '
-              'nothing — either its owning the spec was un-shipped by a bad merge '
+              'nothing — either its owning change was un-shipped by a bad merge '
               'resolution, or it belongs back in `pending`',
         );
       }
@@ -289,12 +289,12 @@ void main() {
       expect(
         File('lib/aoid.dart').existsSync(),
         isFalse,
-        reason: 'lib/aoid.dart was folded into eden_platform.dart by the spec',
+        reason: 'lib/aoid.dart was folded into eden_platform.dart by the barrel consolidation',
       );
       expect(
         File('lib/aoid_riverpod.dart').existsSync(),
         isFalse,
-        reason: 'lib/aoid_riverpod.dart was folded in by the spec',
+        reason: 'lib/aoid_riverpod.dart was folded in by the barrel consolidation',
       );
       //...and the firewall gate that guarded the split went with it. It
       // asserted that the AOID surface never resolves a riverpod symbol —

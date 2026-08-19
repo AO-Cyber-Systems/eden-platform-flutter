@@ -1,6 +1,6 @@
-// The AOID browser hop, code-only (the spec, SDK-04, D6 + D7).
+// The AOID browser hop, code-only (the redirect flow, SDK-04, D6 + D7).
 //
-// the issuer cannot embed everything: social IdPs block embedded login
+// The issuer cannot embed everything: social IdPs block embedded login
 // outright and PIV needs OS-level certificate selection, so both force a hop
 // to a real browser. D7 makes that a FIRST-CLASS path rather than an error
 // case — AoidFlowRedirectRequired is what produces it, and this is the

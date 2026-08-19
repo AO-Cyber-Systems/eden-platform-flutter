@@ -22,7 +22,7 @@
 //      riverpod 2 and break on the migrated providers.
 //
 // GOTCHA for whoever reads this next: the standing "No GoRouter found in
-// context" failure in platform_sidebar_test.dart is PRE-EXISTING (the spec
+// context" failure in platform_sidebar_test.dart is PRE-EXISTING (the original split's
 // baseline) and is NOT this file's business. Nothing here renders a widget.
 
 import 'dart:io';
@@ -34,7 +34,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_helpers.dart';
 
-/// The nine widget consumers named in the spec file tree as DO-NOT-EDIT.
+/// The nine widget consumers named in the file tree as DO-NOT-EDIT.
 const _widgetFiles = <String>[
   'lib/src/navigation/sidebar.dart',
   'lib/src/auth/login_screen.dart',
@@ -92,7 +92,7 @@ void main() {
     return container;
   }
 
-  group('the mechanism the nine widgets rely on (the spec test 5)', () {
+  group('the mechanism the nine widgets rely on (the barrel consolidation test 5)', () {
     test('ref.read(p.notifier) returns the MIGRATED notifier type for all five '
         'providers', () async {
       final container = makeContainer();
@@ -153,7 +153,7 @@ void main() {
       expect(container.read(featureFlagProvider('anything')), isA<bool>());
       container.read(featureQuotaProvider('analytics'));
 
-      // Deny-by-default, pinned by the spec and re-asserted from the widget's own
+      // Deny-by-default, pinned here and re-asserted from the widget's own
       // call site: an unknown feature is NOT permitted.
       expect(container.read(canUseFeatureProvider('no-such-feature')), isFalse);
     });

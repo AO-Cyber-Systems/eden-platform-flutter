@@ -5,7 +5,7 @@
 // a riverpod 3.x consumer. AOID migrated all
 // five notifiers to the 3.x Notifier API, so that incompatibility NO LONGER
 // EXISTS — see doc/riverpod-3-migration.md. This file's old header named that
-// migration as the precondition for reunification; the spec is where it came
+// migration as the precondition for reunification; the barrel consolidation is where it came
 // true.
 //
 // It is KEPT, not deleted, for two reasons:
@@ -59,7 +59,7 @@ export 'package:dio/dio.dart'
     show Dio, Interceptor, RequestOptions, RequestInterceptorHandler,
          ResponseInterceptorHandler, ErrorInterceptorHandler, Response,
          DioException, HttpClientAdapter, ResponseBody,
-         // Added for politihub-navigators Obj 7 the spec (header-based futures).
+         // Added for a consumer's header-based futures.
          // Body-field idempotency (ADR-0007) doesn't require this for Obj 7
          // itself; this re-export lands in parallel for future use such as
          // per-request `Idempotency-Key` headers, per-request timeouts, or

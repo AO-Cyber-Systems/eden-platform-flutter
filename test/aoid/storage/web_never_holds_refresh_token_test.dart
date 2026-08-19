@@ -11,7 +11,7 @@
 // durably readable by any XSS on that console.
 //
 // D4 ranks the postures and lists "refresh token in web
-// localStorage" as forbidden. the spec removes the CAPABILITY rather than
+// localStorage" as forbidden. The token store removes the CAPABILITY rather than
 // discouraging its use, and this file is what keeps it removed.
 //
 // WHAT THIS FILE DOES **NOT** PROVE:

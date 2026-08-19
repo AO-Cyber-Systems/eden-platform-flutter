@@ -7,20 +7,20 @@
 // `lib/aoid.dart` was a riverpod-free barrel that a riverpod-3 consumer had to
 // be able to import while this package was still on riverpod 2. That version
 // boundary is gone, the barrel was folded into
-// eden_platform.dart by the spec, and the closure-walking gate that enforced
+// eden_platform.dart, and the closure-walking gate that enforced
 // it was deleted with it. The file still names no riverpod symbol, which is
 // worth keeping on its own merits — but it is now a preference, not a gate.
 //
 // ## Where the web refusal lives — READ BEFORE EDITING
 //
 // There is NO `if (isWeb)` in this file, and adding one is a regression even if
-// it is correct. Mode B on web is refused by CONSTRUCTING the spec
+// it is correct. Mode B on web is refused by CONSTRUCTING the token store's
 // `AoidSecureTokenStore`, whose constructor throws on web. That keeps the D4
 // refusal in exactly ONE place. A second, independent check here would drift
 // out of sync with it the first time either is edited, and the drift is silent:
 // two guards that disagree still both compile.
 //
-// `isWeb` appears below only as a parameter being PASSED THROUGH to the spec
+// `isWeb` appears below only as a parameter being PASSED THROUGH to the token store's
 // guards, never as a branch condition.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -44,7 +44,7 @@ import '../storage/aoid_token_store.dart';
 ///
 /// The absent fourth value is the point. Premise correction C3 records that
 /// configuration as having SHIPPED, readable by any XSS on the eden-biz
-/// console. the spec removed the capability rather than adding a flag that
+/// console. That capability was removed rather than adding a flag that
 /// discourages it; this enum has no way to name it.
 enum AoidDeploymentMode {
   /// **Mode A — BFF / confidential client. The default for web.**
@@ -136,7 +136,7 @@ final class AoidModeWiring {
 /// Resolves [mode] and the platform to a token store and a session shape.
 ///
 /// **THE single mode-selection point.** There is no `if (isWeb)` here — see
-/// this file's header. Mode B on web is refused by the spec
+/// this file's header. Mode B on web is refused outright
 /// [AoidSecureTokenStore] constructor, which throws [UnsupportedError] citing
 /// D4.
 ///
@@ -154,7 +154,7 @@ final class AoidModeWiring {
 ///
 /// Throws:
 /// - [UnsupportedError] for [AoidDeploymentMode.publicPkce] when [isWeb] is
-///   true and a delegate was supplied — the spec guard, citing D4.
+///   true and a delegate was supplied — the token store's guard, citing D4.
 /// - [ArgumentError] for [AoidDeploymentMode.publicPkce] when
 ///   [nativeSecureStorage], [accessToken] or [refreshToken] is missing. Mode B
 ///   is not selectable without them **on any platform**, so this is a refusal
@@ -172,7 +172,7 @@ AoidModeWiring aoidWiringFor({
     case AoidDeploymentMode.publicPkce:
       // The store is built FIRST, and its constructor IS this function's web
       // refusal. Do not hoist an `if (isWeb)` above it "to give a better
-      // message" — that is a second guard, and the spec already names D4 and
+      // message" — that is a second guard, and the token store's already names D4 and
       // the remedy.
       final delegate = nativeSecureStorage;
       if (delegate == null) {
@@ -199,8 +199,8 @@ AoidModeWiring aoidWiringFor({
       return AoidModeWiring._(
         mode: mode,
         tokenStore: store,
-        // Throws on web too — a second the spec guard on the session side, not a
-        // second CONDITION: both are `isWeb` checks living in the spec files.
+        // Throws on web too — a second the token store guard on the session side, not a
+        // second CONDITION: both are `isWeb` checks living in different files.
         session: AoidSession.deviceKeychain(
           accessToken: accessToken,
           refreshToken: refreshToken,

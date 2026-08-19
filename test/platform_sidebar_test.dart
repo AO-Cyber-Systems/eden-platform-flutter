@@ -17,7 +17,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // the spec moved NavNotifier from `StateNotifier` to riverpod 3's
+          // The riverpod migration moved NavNotifier from `StateNotifier` to riverpod 3's
           // `Notifier`, so `overrideWith` now takes a zero-argument factory
           // rather than a `(ref) =>...` create callback. This override is the
           // real notifier, exactly as before.
@@ -136,7 +136,7 @@ void main() {
 
 /// A NavNotifier that starts with pre-set state instead of empty.
 ///
-/// the spec moved NavNotifier from `StateNotifier` to riverpod 3's `Notifier`,
+/// The riverpod migration moved NavNotifier from `StateNotifier` to riverpod 3's `Notifier`,
 /// which has no constructor injection — the initial state comes from `build()`
 /// rather than a `super(...)` call plus a constructor-body assignment.
 ///
@@ -155,7 +155,7 @@ class _PresetNavNotifier extends NavNotifier {
 
 /// Pins [authProvider] at a fixed [AuthState] for widget tests.
 ///
-/// the spec moved AuthNotifier from `StateNotifier` to riverpod 3's
+/// The riverpod migration moved AuthNotifier from `StateNotifier` to riverpod 3's
 /// `Notifier`, which has no constructor injection — the initial state comes
 /// from `build()` instead of a `super(...)` call plus a constructor body.
 ///

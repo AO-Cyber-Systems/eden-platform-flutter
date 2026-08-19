@@ -1,6 +1,6 @@
 // Tests for SecureTokenStorage default implementation in eden_platform_flutter.
 //
-// Per the spec RESEARCH Pattern 1 (CLI-01): wraps flutter_secure_storage
+// Pattern 1: wraps flutter_secure_storage
 // with read/write/clear + transparent migration from shared_preferences.
 //
 // Per RESEARCH Pitfall 1: pinned to flutter_secure_storage 9.2.4 (NOT 10.x —
@@ -274,7 +274,7 @@ void main() {
   });
 
   // ==========================================================================
-  // AOID / the spec — the refresh-token carve-out.
+  // AOID — the refresh-token carve-out.
   //
   // Until that change, _writeOrDelete caught EVERY secure-storage failure and wrote
   // to shared_preferences instead, with a comment arguing that was acceptable
@@ -438,7 +438,7 @@ void main() {
       final value = await storage.readRefreshToken();
 
       // The pre-existing value is still returned — purging tokens users
-      // already hold is explicitly out of scope for the spec and escalated in
+      // already hold is explicitly out of scope for the token store and escalated in
       // the SUMMARY. What must not happen is making a SECOND persisted copy.
       expect(value, 'legacy-refresh-in-localstorage');
       expect(

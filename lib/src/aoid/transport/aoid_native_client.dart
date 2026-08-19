@@ -4,7 +4,7 @@
 //
 // RIVERPOD-FREE and Flutter-free. It imports lib/src/auth/auth_strategy.dart
 // for RedirectRequired; that file imports only platform_models.dart, which
-// imports nothing, so lib/aoid.dart's closure stays clean (the spec verified this
+// imports nothing, so lib/aoid.dart's closure stays clean (the strategy contract verified this
 // and handed the note to this work).
 
 import 'dart:convert';
@@ -30,7 +30,7 @@ sealed class AoidNativeResponse {
 ///
 /// Wire: `200 {"authorization_code":"…"}` — **exactly one key**.
 ///
-/// NOTE THE SPELLING. The key is `authorization_code`, not `code`. the spec
+/// NOTE THE SPELLING. The key is `authorization_code`, not `code`. The issuer's
 /// `nativeSuccessBody` has a single field and its comment explains why a spare
 /// `auth_session` cannot ride along: it would leave a live handle after the
 /// ceremony ended.
@@ -53,7 +53,7 @@ final class AoidNativeCode extends AoidNativeResponse {
 ///
 /// [advanced] distinguishes "the factor succeeded, here is the next step" from
 /// "the factor did not succeed, present the same step again". That is the ONLY
-/// signal AOID gives, and deliberately so: the spec proved a wrong password and a
+/// signal AOID gives, and deliberately so: the issuer proved a wrong password and a
 /// correct password needing MFA share their status, their code and every
 /// header, and differ ONLY in `next` / `available_methods`. Do not try to
 /// recover a richer reason — there isn't one, and inventing one rebuilds the
@@ -82,7 +82,7 @@ final class AoidNativeContinue extends AoidNativeResponse {
   /// is non-empty; an empty list is correct, not an error.
   final List<String> availableMethods;
 
-  /// WebAuthn assertion options, verbatim. Passed through untouched — the spec
+  /// WebAuthn assertion options, verbatim. Passed through untouched — the issuer
   /// proved re-encoding reorders keys and re-escapes unicode, and the
   /// assertion signature covers those bytes.
   final Map<String, dynamic>? webauthnChallenge;
@@ -111,8 +111,8 @@ final class AoidNativeRedirect extends AoidNativeResponse {
 ///
 /// Uses `package:http`, matching `AoidOidcAuthStrategy` and the whole existing
 /// fixture suite. **Do not introduce `dio` here** even though it is in the
-/// pubspec: mixing transports forks `FakeAoidEndpoint`, which the spec and
-/// the spec all extend.
+/// pubspec: mixing transports forks `FakeAoidEndpoint`, which the native and
+/// The redirect flow all extend.
 class AoidNativeClient {
   const AoidNativeClient({
     required AoidEndpoints endpoints,
@@ -125,7 +125,7 @@ class AoidNativeClient {
 
   /// THE header map. One entry, forever.
   ///
-  /// This is the entire CORS contract. the spec built a PER-CLIENT origin
+  /// This is the entire CORS contract. The issuer built a PER-CLIENT origin
   /// allowlist that resolves `client_id` from the request BODY, which only
   /// works because these are CORS **simple requests**: a preflight is an
   /// `OPTIONS` with no body, so `client_id` would be unresolvable and the
@@ -138,7 +138,7 @@ class AoidNativeClient {
   ///
   /// So: no `X-AOID-Tenant`, no `X-Requested-With`, no bearer, no correlation
   /// id. `tenant_id` and `client_id` go in the FORM BODY. Do not "tidy" a
-  /// field into a header. Server-side this is enforced by the spec
+  /// field into a header. Server-side this is enforced by the issuer
   /// `TestNativeHandlersReadNoCustomRequestHeader`; client-side by
   /// test-list item 2, which asserts this map's KEY SET.
   ///
@@ -149,7 +149,7 @@ class AoidNativeClient {
   /// the socket layer, and a browser adds its own; all are CORS-safelisted or
   /// forbidden header names the user agent controls, so none of them
   /// preflights. On web, `BrowserClient` sends only what is in this map.)
-  /// the spec `isFormContent` splits on `;` before comparing, so a charset
+  /// The issuer's `isFormContent` splits on `;` before comparing, so a charset
   /// parameter would be tolerated too — but none is sent.
   static const Map<String, String> _formHeaders = {
     'content-type': 'application/x-www-form-urlencoded',
@@ -178,7 +178,7 @@ class AoidNativeClient {
       'redirect_uri': redirectUri,
       'code_challenge': codeChallenge,
       'code_challenge_method': codeChallengeMethod,
-      // RFC 6749 §3.3 — SPACE-delimited. the spec splits on space.
+      // RFC 6749 §3.3 — SPACE-delimited. The issuer splits on space.
       if (scopes.isNotEmpty) 'scope': scopes.join(' '),
       if (nonce != null && nonce.isNotEmpty) 'nonce': nonce,
       // The ACTIVE tenant SLUG, on `tenant`, mirroring /oauth/authorize.
@@ -197,7 +197,7 @@ class AoidNativeClient {
   ///
   /// **Never retry this call automatically on [AoidErrorCode.invalidSession].**
   /// The presented handle is already consumed; a retry burns the successor and
-  /// walks into the spec durable `MaxAttempts = 5` cap, destroying a ceremony
+  /// walks into the issuer's durable `MaxAttempts = 5` cap, destroying a ceremony
   /// that was still recoverable.
   Future<AoidNativeResponse> verify({
     required String authSession,

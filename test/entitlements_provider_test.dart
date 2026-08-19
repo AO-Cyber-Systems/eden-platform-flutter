@@ -696,7 +696,7 @@ void main() {
         'a de-consted clear() cannot pass for a whole-class fix', () async {
       // `clear()` is NOT the only place this notifier assigns the sentinel:
       // load()'s no-access-token early return does `state = const
-      // EntitlementsState()` too. the spec measured that de-consting `clear()`
+      // EntitlementsState()` too. The riverpod migration measured that de-consting `clear()`
       // alone PASSES the entire clear-based chain test while leaving every
       // early-return path suppressed — a silent PARTIAL fix with a green
       // suite. This test is what tells the two remedies apart, and it is why
@@ -846,7 +846,7 @@ void main() {
       // The pump below is load-bearing: riverpod SCHEDULES disposal rather
       // than running it inside close(), so a synchronous read after detaching
       // observes the pre-disposal value and this assertion would pass even
-      // with isAutoDispose: true. the spec measured exactly that survival.
+      // with isAutoDispose: true. The riverpod migration measured exactly that survival.
       final container = await loggedInContainer(companyId: 'c1');
       final sub = container.listen<EntitlementsState>(
           entitlementsStateProvider, (_, _) {});
@@ -895,8 +895,8 @@ void main() {
 
     test('all five derived providers keep their identifiers, and so do the '
         'two entry points', () {
-      // the spec migrates feature_gate.dart, quota_bar.dart and plan_badge.dart,
-      // which read these by name. Renaming any of them breaks that the spec.
+      // The barrel consolidation migrates feature_gate.dart, quota_bar.dart and plan_badge.dart,
+      // which read these by name. Renaming any of them breaks them.
       for (final id in <String>[
         'final entitlementsRepositoryProvider =',
         'final entitlementsStateProvider =',
@@ -928,7 +928,7 @@ void main() {
 
       final legacyImport = "flutter_riverpod/${'legacy'}.dart";
       expect(src.contains("import 'package:$legacyImport'"), false,
-          reason: 'the Stage A shim import is removed — this is how the spec '
+          reason: 'the Stage A shim import is removed — this is how the barrel consolidation '
               'knows this notifier is done');
 
       expect(RegExp(r'final\s+Ref\s+ref\s*;').hasMatch(code), false,

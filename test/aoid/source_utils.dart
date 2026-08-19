@@ -1,7 +1,7 @@
 // Shared source-inspection helpers for the AOID suite's source-level gates.
 //
 // WHY THIS FILE EXISTS: `stripComments` used to live in
-// `test/aoid/riverpod_free_gate_test.dart`, which the spec DELETED — that file
+// `test/aoid/riverpod_free_gate_test.dart`, which the barrel consolidation DELETED — that file
 // asserted the AOID surface never resolves a riverpod symbol, the exact property
 // the design notes rejected, so it could not be kept in any form.
 //
@@ -21,7 +21,7 @@
 ///
 /// Source-level gates need this because a whole-file `contains` cannot tell a
 /// DECLARATION from a MENTION, and these files deliberately name the things they
-/// forbid in order to explain why they are forbidden. Every Stage B the spec hit the
+/// forbid in order to explain why they are forbidden. Every Stage B change hit the
 /// same problem.
 ///
 /// Block comments are removed first: doing it the other way round lets a `//`

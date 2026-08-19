@@ -115,7 +115,7 @@ class SecureTokenStorage implements TokenStorage {
     // on web is window.localStorage with the AES key alongside — the state D4
     // forbids. The pre-existing prefs value is deliberately left ALONE and
     // still returned: purging tokens users already hold needs a coordinated
-    // eden-biz change and is escalated by the spec SUMMARY, not done here.
+    // eden-biz change and is escalated separately, not done here.
     if (_isWeb && key == StorageKeys.kRefreshToken) {
       return legacy;
     }

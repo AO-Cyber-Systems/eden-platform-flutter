@@ -98,16 +98,16 @@ class TwoFactorRequired extends FactorRequired {
 /// Wire origin: AOID answers `400 {"error":"redirect_to_web",
 /// "error_description":"…","authorization_url":"…"}`. The wire code is
 /// spelled `redirect_to_web`, per draft-ietf-oauth-first-party-apps-03 and
-/// the spec, and that is the ONLY spelling — the design notes' informal prose
+/// and that is the ONLY spelling — the design notes' informal prose
 /// name for this case is not a wire value and must never appear in code.
 class RedirectRequired extends AuthResult {
   /// Where to send the system browser. Built by AOID from the ceremony's own
-  /// binding, so it carries no credential (the spec asserts the query key set
+  /// binding, so it carries no credential (the issuer asserts the query key set
   /// structurally).
   final Uri authorizationUrl;
 
   /// TELEMETRY ONLY. Never branch UI on this and never show it to a user.
-  /// the issuer error mapper is deliberately lossy so the client cannot
+  /// The issuer error mapper is deliberately lossy so the client cannot
   /// become an account-existence or tenancy-tier oracle.
   final String? reason;
 

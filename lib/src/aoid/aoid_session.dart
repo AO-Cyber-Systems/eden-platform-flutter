@@ -3,7 +3,7 @@
 // RIVERPOD-FREE BY CONSTRUCTION (see storage/aoid_token_store.dart's header).
 //
 // Earlier work built the custody dimension; later work completed the mode
-// dimension, adding — additively, without changing any the spec behaviour — the
+// dimension, adding — additively, without changing any the token store behaviour — the
 // deployment [mode], the [cookieBound] flag, and the AOID claims as
 // FIRST-CLASS FIELDS.
 //
@@ -14,7 +14,7 @@
 // `role: me.aal` overload — an assurance level is not a role, and the shared
 // module must not institutionalise the conflation.
 //
-// There is deliberately no single `claims` field either: the spec (D5) keeps
+// There is deliberately no single `claims` field either: the claims layer (D5) keeps
 // AoidAccessClaims and AoidIdClaims apart precisely so the access token's `tnt`
 // (ACTIVE tenant SLUG) and the id_token's `tnt` (HOME tenant UUID) cannot meet
 // at a common type. A unified field here would rebuild that meeting point.

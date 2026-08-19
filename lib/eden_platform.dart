@@ -24,7 +24,7 @@ export 'src/analytics/analytics_provider.dart';
 // That split had exactly one cause: `AoidOidcAuthStrategy` depends on riverpod,
 // and while this package pinned riverpod 2 a riverpod-3 consumer (AODex) could
 // not reach the AOID client through a riverpod-2 barrel. It was a VERSION
-// BOUNDARY, not a layering decision, and the spec own headers said so — both
+// BOUNDARY, not a layering decision, and the original split's own headers said so — both
 // barrels were labelled TRANSITIONAL and named the follow-up work that would
 // retire them. Stages A–C removed the boundary, so the split
 // was left defending nothing while still taxing every consumer with a choice of
@@ -97,7 +97,7 @@ export 'src/networking/connect_bearer_interceptor.dart';
 export 'src/networking/connect_cookie_interceptor.dart'
     show connectCookieInterceptor;
 export 'src/networking/proactive_refresh.dart';
-// The same dio re-export `networking.dart` carries, ADDED here by the spec.
+// The same dio re-export `networking.dart` carries.
 //
 // Why: before this, a consumer on the FULL barrel that wrote its own
 // `Interceptor` or a fake `HttpClientAdapter` had to either import package:dio

@@ -432,7 +432,7 @@ void main() {
   });
 
   // =====================================================================
-  // The multi-tenant isolation assertion (the spec test 7).
+  // The multi-tenant isolation assertion (the riverpod migration test 7).
   //
   // These providers are two links in
   //   auth -> company -> currentCompanyProvider -> nav -> entitlements

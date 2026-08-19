@@ -8,8 +8,8 @@
 //
 // If this test fails, do not relax the pattern. Fix the call site.
 //
-// SCOPE: all of lib/, recursively — NOT a list of the two files the spec
-// happened to touch. the spec adds another callback handler in the next wave
+// SCOPE: all of lib/, recursively — NOT a list of the two files the SSO removal
+// happened to touch. The redirect flow adds another callback handler in the next wave
 // and must be covered automatically, without anyone remembering to opt in.
 //
 // WHAT THIS GATE CANNOT DO (read before trusting it):
@@ -60,7 +60,7 @@ final _readPatterns = <RegExp, String>{
 };
 
 /// WRITE SIDE: a URL being CONSTRUCTED with a token in it. This is the half
-/// that stops the SDK from starting to produce the pattern the spec just removed
+/// that stops the SDK from starting to produce the pattern the server just removed
 /// from the server.
 final _writePatterns = <RegExp, String>{
   RegExp(
@@ -84,7 +84,7 @@ List<Violation> scanSource(String path, String source) {
 
     // The write-side pattern is checked against string/URL context only. A
     // JSON body key (`decoded['access_token']`) is NOT a URL and is the
-    // CORRECT way to receive a token — the spec exchange returns exactly that.
+    // CORRECT way to receive a token — the server's exchange returns exactly that.
     _writePatterns.forEach((re, reason) {
       if (!re.hasMatch(line)) return;
       // `access_token":` inside a documented JSON shape is a body, not a URL.
@@ -171,7 +171,7 @@ void main() {
         reason:
             'SECURITY REGRESSION (AOID SDK-08 / D6): the SDK is building '
             'a URL with a token in it — the exact pattern eden-platform-go '
-            'the spec removed from the server. Tokens go in POST bodies.\n'
+            'the server removed from the server. Tokens go in POST bodies.\n'
             '${v.join('\n')}',
       );
     });
@@ -257,7 +257,7 @@ final state = uri.queryParameters['state'];
         offenders,
         isEmpty,
         reason:
-            'the spec deleted SSOAuthService partly because '
+            'the SSO removal deleted SSOAuthService partly because '
             "Process.run('cmd', ['/c','start', url]) with a URL taken from a "
             'redirect is a shell-injection-shaped surface. Use '
             'flutter_web_auth_2.\n${offenders.join('\n')}',

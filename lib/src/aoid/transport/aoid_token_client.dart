@@ -61,7 +61,7 @@ final class AoidTokenResponse {
 /// **Do not "tidy" it into an `Active-Tenant` request header.** Any header
 /// beyond a CORS-safelisted content type provokes a preflight and breaks every
 /// browser caller at once. (The prohibited spelling is deliberately not written
-/// out here: the spec gate greps this file for it, and a warning comment
+/// out here: the tenant switch's gate greps this file for it, and a warning comment
 /// containing the very string it forbids would trip a check meant to catch a
 /// real header. The property itself is proven by test-list item 2, which
 /// asserts the OUTGOING header map's key set — a far stronger check than a
@@ -169,7 +169,7 @@ class AoidTokenClient {
 
     final error = body['error'];
 
-    // ── THE ONE BRANCH THIS the spec EXISTS FOR ──────────────────────────────────
+    // ── THE ONE BRANCH THIS FILE EXISTS FOR ─────────────────────────────────
     //
     // `invalid_grant` on a call that CARRIED `active_tenant` is a tenant
     // DENIAL, not an authentication failure. Routing it to `AoidError` — as

@@ -74,7 +74,7 @@ class FakePlatformRepository implements PlatformRepository {
   }
 
   // Pre-existing methods on PlatformRepository that older test_helpers.dart
-  // missed (added by the spec for cross-repo unblocking — see SUMMARY).
+  // missed (added for cross-repo unblocking).
   // Both throw UnimplementedError; tests that exercise these paths must
   // configure a result/error explicitly via subclass.
   @override

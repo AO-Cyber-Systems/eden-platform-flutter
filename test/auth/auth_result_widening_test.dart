@@ -1,4 +1,4 @@
-// Proves AOID the spec: the `AuthResult` sealed family is
+// Proves the `AuthResult` sealed family is
 // widened ADDITIVELY to carry what the issuer `/oauth/native/*` ceremony
 // actually returns.
 //
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('availableMethods defaults to empty — the issuer deliberately does '
-        'not emit available_methods before a factor has succeeded (the spec: '
+        'not emit available_methods before a factor has succeeded (the issuer: '
         'pre-success emission makes the endpoint an enumeration oracle)', () {
       const FactorRequired result = FactorRequired(
         continuationToken: 'as_1',
@@ -259,7 +259,7 @@ void main() {
     });
 
     test('the auth_session rotation contract is written into the source, not '
-        'only into the spec', () {
+        'not only in prose', () {
       final String strategy = strategySource.readAsStringSync();
       final int start = strategy.indexOf('class FactorRequired');
       expect(start, greaterThan(-1));

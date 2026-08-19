@@ -4,7 +4,7 @@
 // URL builders would guarantee drift. AoidOidcAuthStrategy still has its own
 // inline `Uri.parse('$issuer/oauth/authorize')` getters — those predate this
 // type and are left alone here because this work changes no behaviour; folding
-// them onto AoidEndpoints belongs to the spec that next touches that file.
+// them onto AoidEndpoints belongs to whoever next touches that file.
 //
 // Paths are AOID's, per the issuer router.
 //

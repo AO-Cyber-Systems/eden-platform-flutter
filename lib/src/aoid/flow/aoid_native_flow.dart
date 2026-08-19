@@ -1,4 +1,4 @@
-// The AOID native ceremony state machine — the CONTROLLER the spec sealed
+// The AOID native ceremony state machine — the CONTROLLER the widgets layer's sealed
 // AoidLoginForm drives.
 //
 // RIVERPOD-FREE and Flutter-free: reachable from lib/aoid.dart.
@@ -31,7 +31,7 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   final String next;
 
   /// Factors the identity can satisfy. MAY BE EMPTY; render a picker only when
-  /// it is not. the issuer refuses to emit this before a factor has succeeded
+  /// it is not. The issuer refuses to emit this before a factor has succeeded
   /// because doing so makes the endpoint an enumeration oracle.
   final List<String> availableMethods;
 
@@ -43,8 +43,8 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
   ///
   /// This flag is the ENTIRE signal, deliberately. AOID answers an unknown
   /// email, a wrong password, an account with no password credential and a
-  /// locked account **byte-identically** (the spec, re-proved over real HTTP by
-  /// the spec). There is no richer reason to surface, and manufacturing one —
+  /// locked account **byte-identically** (re-proved over real HTTP by
+  /// deliberately lossy). There is no richer reason to surface, and manufacturing one —
   /// even in UI copy — reconstructs the account-existence oracle the issuer
   /// spent real effort removing.
   final bool lastAttemptRejected;
@@ -58,7 +58,7 @@ final class AoidFlowAwaitingFactor extends AoidFlowState {
 final class AoidFlowRedirectRequired extends AoidFlowState {
   const AoidFlowRedirectRequired(this.result);
 
-  /// the spec `AuthResult` variant. `reason` is TELEMETRY ONLY, never UI copy.
+  /// The strategy contract's `AuthResult` variant. `reason` is TELEMETRY ONLY, never UI copy.
   final RedirectRequired result;
 }
 
@@ -71,7 +71,7 @@ final class AoidFlowComplete extends AoidFlowState {
 
 /// The ceremony is over and cannot be continued — but the USER can start a new
 /// one. Replay, expiry, an unknown handle, a cross-tenant presentation and
-/// the spec durable `MaxAttempts = 5` cap all land here, indistinguishably.
+/// The issuer's durable `MaxAttempts = 5` cap all land here, indistinguishably.
 ///
 /// Deliberately NOT an exception: exhausting the attempt cap is an ordinary
 /// end to a session, and "start again" is the whole of the correct UX. Do NOT
@@ -87,7 +87,7 @@ final class AoidFlowRestartRequired extends AoidFlowState {
 /// **The ceremony is not known to be over.** `AoidOidcAuthStrategy`
 ///.restoreSession swallows every non-200 as `null`, which signs the user out
 /// on a blip; this state exists so that defect cannot be written here. On a
-/// 503 specifically, the spec write gate fires BEFORE the service is called, so
+/// 503 specifically, the issuer's write gate fires BEFORE the service is called, so
 /// the handle was never consumed and re-submitting the same factor is correct.
 /// On a 500 or a dead socket the handle MAY have been consumed — a retry then
 /// answers `invalid_session` and lands in [AoidFlowRestartRequired], which is
@@ -129,7 +129,7 @@ final class AoidFlowFailed extends AoidFlowState {
 /// which strips comments and then scans for a credential getter or a
 /// credential field, with a positive control proving both predicates can fire.
 ///
-/// the spec sealed `AoidLoginForm` owns its own `TextEditingController` and
+/// The widgets layer's sealed `AoidLoginForm` owns its own `TextEditingController` and
 /// calls [submitPassword] directly. That call boundary is where D3's
 /// containment is realised.
 class AoidNativeFlow {
@@ -159,7 +159,7 @@ class AoidNativeFlow {
   /// Where the ceremony stands. The login form renders from this and nothing else.
   AoidFlowState get state => _state;
 
-  /// The terminal authorization code, once there is one. the spec Mode A sink
+  /// The terminal authorization code, once there is one. The deployment-mode layer's Mode A sink
   /// spends it at `/oauth/token`.
   String? get authorizationCode => _state is AoidFlowComplete
       ? (_state as AoidFlowComplete).authorizationCode
@@ -240,7 +240,7 @@ class AoidNativeFlow {
 
   /// Runs ONE request and folds the outcome into [_state].
   ///
-  /// There is deliberately NO retry here. the spec `MaxAttempts = 5` is durable
+  /// There is deliberately NO retry here. The issuer's `MaxAttempts = 5` is durable
   /// and carried forward on rotation, so an automatic retry burns the
   /// successor and can destroy a ceremony the user could still have completed.
   Future<void> _step(

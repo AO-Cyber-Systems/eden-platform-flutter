@@ -8,7 +8,7 @@
 //
 // Why the source-structure assertions below are scoped to a single declaration
 // rather than grepping the whole file: a file-wide grep cannot tell WHICH
-// declaration it matched. the spec `TELEMETRY ONLY` gate survived a mutation
+// declaration it matched. The strategy contract's `TELEMETRY ONLY` gate survived a mutation
 // that moved the comment onto the wrong class. Swapping this file's two doc
 // comments would be exactly that defect — and would be an actively harmful
 // swap, since the doc comment IS the disambiguation. So every assertion here
@@ -34,7 +34,7 @@ String _codeOnly(String src) => src
 
 /// Strips comment markers and collapses whitespace, so a phrase assertion is
 /// not defeated (nor a negative assertion satisfied) purely by where the text
-/// happened to wrap. the spec lost a gate to exactly that.
+/// happened to wrap. The strategy contract lost a gate to exactly that.
 String _normalizeComment(String raw) => raw
     .split('\n')
     .map((l) {

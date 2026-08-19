@@ -23,7 +23,7 @@
 //
 // # Why predicates and not greps
 //
-// the issuer has now found the same defect in nine TRDs: `grep -c "PHRASE"`
+// The issuer has now found the same defect in nine TRDs: `grep -c "PHRASE"`
 // cannot tell which declaration it matched, survives the phrase drifting into
 // a comment, and passes vacuously when the file is missing. So the claims are
 // named predicates over the file's text, shared between the real README (items
@@ -34,7 +34,7 @@
 import 'dart:io';
 
 // The ONE entrypoint the README tells consumers to use. Importing it here is
-// itself an assertion: if the fold that the spec performed is ever half-reverted,
+// itself an assertion: if the fold that the barrel consolidation performed is ever half-reverted,
 // this file stops compiling and takes the whole gate with it.
 import 'package:eden_platform_flutter/eden_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +47,7 @@ typedef ReadmeClaim = ({String name, bool Function(String) holds, String breaks}
 
 /// Collapses whitespace so a claim cannot be broken by a line wrap.
 ///
-/// This is not cosmetic. the spec lost a doc gate to exactly this: the prose
+/// This is not cosmetic. The claims layer lost a doc gate to exactly this: the prose
 /// had wrapped as `tenant\n/// axis` and `contains('tenant axis')` went red on
 /// a correct document. A gate that fails on reflow gets weakened, and a
 /// weakened gate stops catching the real deletion.
@@ -125,7 +125,7 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
     breaks: 'Without this, a consumer picks a mode by guessing, and the '
         'fourth option — a refresh token in web localStorage — looks like a '
         'convenient way to survive a page reload. It is durably readable by '
-        'any XSS. D4 forbids it and the spec removed the CAPABILITY at four '
+        'any XSS. D4 forbids it and the token store removed the CAPABILITY at four '
         'separate write paths; this section is the only thing telling a '
         'consumer not to rebuild it in their own app.',
   ),
@@ -138,7 +138,7 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         'rule with no history reads as caution and gets traded away the first '
         'time someone hits a storage failure on web. A rule that says "this '
         'is what we actually shipped, to real users, until the issuer" does '
-        'not. the spec measured it: four write paths, one of which nobody knew '
+        'not. The token store measured it: four write paths, one of which nobody knew '
         'about. Deleting this sentence invites the pattern back.',
   ),
   (
@@ -412,7 +412,7 @@ void main() {
           reason:
               '$gone exists again. The README tells every consumer to import '
               'eden_platform.dart and states these barrels were deleted by '
-              'the spec. A resurrected barrel splits the surface again and makes '
+              'the barrel consolidation. A resurrected barrel splits the surface again and makes '
               'the README\'s first section wrong.',
         );
       }
@@ -422,7 +422,7 @@ void main() {
   // ── anti-rot, part 2: BEHAVIOURAL claims ─────────────────────────────────
   //
   // The group above binds NAMES and PATHS. That is necessary and not
-  // sufficient: it was FALSIFIED during the spec by a break that left every
+  // sufficient: it was FALSIFIED during the migration by a break that left every
   // documented symbol resolving and every cited file in place, while the
   // source silently contradicted the document.
   //
@@ -532,7 +532,7 @@ void main() {
       );
 
       // Posture 2 — a throw, defended by an opt-in policy. Deliberately NOT
-      // the sealed form: the spec contract mandated the throw in three places
+      // the sealed form: the contract mandated the throw in three places
       // whose gates were already proven.
       expect(
         const AoidTenantDenied(),
@@ -542,7 +542,7 @@ void main() {
             'TWO postures and says the tenant switch THROWS, defended by '
             '`aoidTenantSwitchRetry`. If this became a sealed value, the seam '
             'the table describes has closed — rewrite that table (this is '
-            'the spec\'s recorded follow-up landing), do not delete this test.',
+            'the recorded follow-up landing), do not delete this test.',
       );
       expect(
         const AoidTenantDenied(),

@@ -1,4 +1,4 @@
-// HAND-BUILT AOID token fixtures for the spec.
+// HAND-BUILT AOID token fixtures.
 //
 // Every token below is assembled here, in Dart, from a literal payload map. No
 // token was copied from a real AOID deployment and none was generated. The

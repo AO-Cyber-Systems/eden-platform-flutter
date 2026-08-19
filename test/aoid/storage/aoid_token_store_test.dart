@@ -257,7 +257,7 @@ void main() {
     });
   });
 
-  // the spec <verify> block specifies
+  // The token store's <verify> block specifies
   //   grep -c "flutter_secure_storage" lib/src/aoid/storage/*.dart -> 0
   // which cannot do this job in EITHER direction:
   //   - it is a raw substring count, so the header comments in
@@ -266,7 +266,7 @@ void main() {
   //     delete the explanation — strictly worse code;
   //   - and it only looks at one directory, so a file under lib/src/aoid/
   //     reaching flutter_secure_storage through `../auth/…` passes it. That is
-  //     the exact hole the spec found in the equivalent riverpod grep.
+  //     the exact hole the original split found in the equivalent riverpod grep.
   // The closure walk below is the real invariant. It is scoped to this file's
   // part-barrel so it does not touch a file another wave-2 change owns.
   group('dependency footprint (the pin conflict this design sidesteps)', () {

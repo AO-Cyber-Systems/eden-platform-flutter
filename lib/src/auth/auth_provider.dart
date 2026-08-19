@@ -114,7 +114,7 @@ class AuthNotifier extends Notifier<AuthState> {
     // still clears in-flight ceremony state on a rebuild. Both hold a live
     // server-side handle:
     //   * `_continuationToken` is an objective-49 `auth_session` handle, which
-    //     the issuer rotates on EVERY step. A handle surviving the rebuild that was
+    //     The issuer rotates on EVERY step. A handle surviving the rebuild that was
     //     meant to discard it lets a later completeLogin present a token from
     //     an abandoned ceremony.
     //   * `_pendingRedirectUrl` carries an OAuth authorization URL with its
@@ -303,7 +303,7 @@ class AuthNotifier extends Notifier<AuthState> {
         }
         state = AuthState.authenticated(session);
       case FactorRequired(:final continuationToken):
-        // the issuer rotates `auth_session` on EVERY step. This
+        // The issuer rotates `auth_session` on EVERY step. This
         // write is the rotation capture: the handle we just received replaces
         // the one we presented. Removing it makes the second completeLogin
         // present a consumed handle and fail with invalid_session. Pinned by
