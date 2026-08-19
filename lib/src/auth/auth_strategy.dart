@@ -120,7 +120,8 @@ class RedirectRequired extends AuthResult {
 /// Reserve this for TERMINAL failures. [AuthNotifier] clears its continuation
 /// token here, so a RECOVERABLE factor error (a wrong TOTP code the user may
 /// retry) returned as [Failed] makes the ceremony unrecoverable — return
-/// [FactorRequired] with the rotated handle instead. the spec owns that mapping.
+/// [FactorRequired] with the rotated handle instead. The strategy implementation
+/// owns that mapping.
 class Failed extends AuthResult {
   final String reason;
   const Failed(this.reason);

@@ -193,7 +193,7 @@ void main() {
         );
         expect(req.bodyFields['code'], 'HANDOFF123');
         expect(req.bodyFields['redirect_uri'], _redirectUri);
-        // The code must NOT re-enter a request line — the spec reads it with
+        // The code must NOT re-enter a request line — the issuer reads it with
         // r.PostFormValue, so a query-string code would silently fail.
         expect(req.url.query, isEmpty);
       },

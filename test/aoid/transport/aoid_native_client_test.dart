@@ -713,7 +713,7 @@ void main() {
         expect(
           (unavailable as AoidTransportError).retryAfterSeconds,
           30,
-          reason: 'the spec answers a replica with 503 + Retry-After',
+          reason: 'the issuer answers a replica with 503 + Retry-After',
         );
       },
     );

@@ -114,7 +114,7 @@ class AuthNotifier extends Notifier<AuthState> {
     // still clears in-flight ceremony state on a rebuild. Both hold a live
     // server-side handle:
     //   * `_continuationToken` is an objective-49 `auth_session` handle, which
-    //     the spec rotates on EVERY step. A handle surviving the rebuild that was
+    //     the issuer rotates on EVERY step. A handle surviving the rebuild that was
     //     meant to discard it lets a later completeLogin present a token from
     //     an abandoned ceremony.
     //   * `_pendingRedirectUrl` carries an OAuth authorization URL with its

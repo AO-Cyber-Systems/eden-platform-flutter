@@ -491,10 +491,11 @@ void main() {
 
     test('the TWO RETRY POSTURES are still structurally different — the '
         'README\'s "Known limitations" table describes a real seam', () {
-      // the spec returns a SEALED VALUE and never throws, so riverpod 3's
-      // automatic retry is structurally unreachable. the spec THROWS, defended by
-      // an opt-in policy. The README contrasts them explicitly and calls the
-      // sealed form the stronger of the two. If the spec recorded follow-up
+      // The redirect flow returns a SEALED VALUE and never throws, so riverpod
+      // 3's automatic retry is structurally unreachable. The tenant switch
+      // THROWS, defended by an opt-in policy. The README contrasts them
+      // explicitly and calls the sealed form the stronger of the two. If the
+      // recorded follow-up
       // converts the tenant switch to a sealed return, THIS TEST GOES RED and
       // the table must be rewritten — which is the intended handoff, not a
       // breakage.
