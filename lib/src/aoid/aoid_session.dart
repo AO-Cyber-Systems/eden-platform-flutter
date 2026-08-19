@@ -7,9 +7,9 @@
 // deployment [mode], the [cookieBound] flag, and the AOID claims as
 // FIRST-CLASS FIELDS.
 //
-// The claims are two fields, not one. the portal's own strategy
-//.dart:65,223-226` hangs AOID claims off the session with an `Expando`
-// side-table: invisible to the type system, and it dies with the session
+// The claims are two fields, not one. The portal's own strategy hangs AOID
+// claims off the session with an `Expando` side-table: invisible to the type
+// system, and it dies with the session
 // object. That pattern is deliberately NOT copied here. Neither is that file's
 // `role: me.aal` overload — an assurance level is not a role, and the shared
 // module must not institutionalise the conflation.

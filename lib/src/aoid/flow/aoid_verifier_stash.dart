@@ -1,5 +1,4 @@
-// Persists ONLY the PKCE code_verifier across a full-page redirect on web
-//.
+// Persists ONLY the PKCE code_verifier across a full-page redirect on web.
 //
 // AoidOidcAuthStrategy._pendingPkce is an INSTANCE FIELD cleared in a `finally`
 // (aoid_oidc_auth_strategy.dart:65,119-120,151-154). That is correct for the
