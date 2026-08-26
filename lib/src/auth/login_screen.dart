@@ -8,6 +8,12 @@ class PlatformLoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSignUpTap;
   final VoidCallback? onLoginSuccess;
 
+  /// Optional "Forgot password?" affordance. When null NOTHING renders — not a
+  /// disabled button, not a SizedBox — so existing consumers are byte-identical.
+  /// The staff web app (politihub/flutter/lib/features/login/login_screen.dart)
+  /// passes nothing and must not grow a dead control.
+  final VoidCallback? onForgotPasswordTap;
+
   /// When true (the default, for back-compat), the "OR" divider and the
   /// Microsoft + Google SSO buttons are rendered below the email/password
   /// form. Pass `false` to render an email-only login form — used by
@@ -20,6 +26,7 @@ class PlatformLoginScreen extends ConsumerStatefulWidget {
     this.onSignUpTap,
     this.onLoginSuccess,
     this.showSsoButtons = true,
+    this.onForgotPasswordTap,
   });
 
   @override
@@ -29,7 +36,12 @@ class PlatformLoginScreen extends ConsumerStatefulWidget {
 
 class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+
+  // EdenSecretField is value-driven, not controller-driven: its constructor
+  // takes `required String value` + `onChanged` and exposes no controller.
+  // Its own internal TextEditingController is the source of truth while the
+  // user types; this field mirrors it so _login() and rebuilds can read it.
+  String _password = '';
   bool _loading = false;
   String? _error;
 
@@ -61,7 +73,7 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
     // Client-side validation: don't fire a network round-trip (or clear the
     // form) when either field is empty — surface an inline message instead.
     final email = _emailController.text.trim();
-    final password = _passwordController.text;
+    final password = _password;
     if (email.isEmpty || password.isEmpty) {
       setState(() {
         _error = 'Enter your email and password.';
@@ -164,15 +176,62 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // ACCESSIBLE NAME, and it is load-bearing rather than decoration.
+                // EdenSecretField renders its label as a sibling Text with no fold, so
+                // an unwrapped field is announced as a bare "password" with NO NAME —
+                // the exact defect eden_input.dart:86-100 documents and fixes for
+                // EdenInput. The `label:` here supplies that name at the call site,
+                // which keeps the fix in eden-platform-flutter and needs no eden-ui
+                // change and no EDEN_UI_FLUTTER_SHA bump.
+                //
+                // Do NOT set `textField: true` here: that declares a SECOND text-field
+                // node above the TextField's own and Flutter web then emits two <input>
+                // elements for one field. MEASURED: this shape yields exactly ONE
+                // textField node.
+                //
+                // Do NOT wrap this in MergeSemantics either, however obvious it looks.
+                // MEASURED: MergeSemantics folds EdenSecretField's reveal IconButton
+                // into the field's own node, producing a single node that is
+                // simultaneously tf=true AND btn=true carrying tooltip "Reveal secret".
+                // That leaves the show/hide control with no independent focus stop for
+                // assistive tech and makes activating the field ambiguous. EdenInput can
+                // use MergeSemantics safely only because its suffix is a NON-interactive
+                // Icon (eden_input.dart:79). The cost of this shape is that the name is
+                // announced as "Password Password" (the Semantics label plus the sibling
+                // label Text); a clean single name needs EdenSecretField itself to use
+                // InputDecoration.labelText, which is an eden-ui change and out of scope.
                 Semantics(
                   identifier: 'eden-login-password',
-                  textField: true,
-                  child: EdenInput(
-                    controller: _passwordController,
+                  label: 'Password',
+                  child: EdenSecretField(
+                    value: _password,
                     label: 'Password',
-                    obscureText: true,
+                    // NO setState. EdenSecretField.didUpdateWidget
+                    // (eden_secret_field.dart:68-74) assigns _controller.text
+                    // whenever `value` changes, and TextEditingController.text=
+                    // collapses the selection unconditionally. Rebuilding on every
+                    // keystroke would therefore move the caret on every keystroke.
+                    // The widget's internal controller is the source of truth while
+                    // typing; `value` only has to be correct at rebuild time, and it
+                    // is, because every keystroke has already written it here.
+                    onChanged: (v) => _password = v,
+                    // NO onCopy — registering it renders a copy-to-clipboard button
+                    // on a password field (eden_secret_field.dart:243-253).
                   ),
                 ),
+                if (widget.onForgotPasswordTap != null) ...[
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Semantics(
+                      identifier: 'eden-login-forgot-password',
+                      button: true,
+                      child: TextButton(
+                        onPressed: widget.onForgotPasswordTap,
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Semantics(
                   identifier: 'eden-login-submit',
@@ -238,7 +297,6 @@ class _PlatformLoginScreenState extends ConsumerState<PlatformLoginScreen> {
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 }

@@ -21,7 +21,10 @@ class PlatformSignUpScreen extends ConsumerStatefulWidget {
 class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+
+  // EdenSecretField is value-driven, not controller-driven — see the same
+  // note in login_screen.dart. This mirrors its internal controller.
+  String _password = '';
   bool _loading = false;
   String? _error;
 
@@ -33,7 +36,7 @@ class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
     try {
       await ref.read(authProvider.notifier).signUp(
             _emailController.text.trim(),
-            _passwordController.text,
+            _password,
             _nameController.text.trim(),
           );
       widget.onSignUpSuccess?.call();
@@ -108,13 +111,23 @@ class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Accessible name supplied at the call site — EdenSecretField's
+                // label is a sibling Text with no fold, so an unwrapped field is
+                // announced with NO NAME (eden_input.dart:86-100 documents the same
+                // defect for EdenInput). No `textField: true` (it would stack a
+                // second node and emit two <input>s on web) and deliberately NO
+                // MergeSemantics (it folds the reveal IconButton into the field's
+                // node, costing the toggle its independent focus stop). See the
+                // fuller note in login_screen.dart.
                 Semantics(
                   identifier: 'eden-signup-password',
-                  textField: true,
-                  child: EdenInput(
-                    controller: _passwordController,
+                  label: 'Password',
+                  child: EdenSecretField(
+                    value: _password,
                     label: 'Password',
-                    obscureText: true,
+                    // NO setState — see login_screen.dart for the caret rationale.
+                    onChanged: (v) => _password = v,
+                    // NO onCopy — it would render a copy button on a password.
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -148,7 +161,6 @@ class _PlatformSignUpScreenState extends ConsumerState<PlatformSignUpScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 }
