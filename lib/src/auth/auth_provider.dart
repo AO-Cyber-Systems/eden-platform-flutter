@@ -352,13 +352,37 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  Future<void> restoreSession() async {
+  /// Re-establish the session from the persisted refresh token (or the
+  /// injected [AuthStrategy]).
+  ///
+  /// [force] bypasses the "already authenticated, nothing to do" short-circuit.
+  ///
+  /// That guard exists for the BOOT path, where `restoreSession` fires
+  /// unconditionally and must not clobber a session another flow already
+  /// established. But it reads `state`, and `state.isAuthenticated` only means
+  /// "we are holding an access token" — NOT "that token is still valid".
+  /// The moment an access token expires server-side the two diverge, and every
+  /// caller that needs a refresh *because* the current token is dead was
+  /// silently turned into a no-op:
+  ///
+  ///   - `ProactiveRefresh.refreshIfNeeded()` decodes `exp`, correctly sees the
+  ///     token is inside its refresh threshold, calls this — and got nothing.
+  ///   - An auth interceptor's reactive 401 handler calls this, gets nothing,
+  ///     observes `isAuthenticated` is *still* true, and retries the request
+  ///     with the same dead token — 401, retry, 401, forever. The originating
+  ///     request future never completes, so every screen waiting on it spins
+  ///     indefinitely instead of surfacing an error or bouncing to login.
+  ///
+  /// Callers that already KNOW the current token is unusable (a 401 came back,
+  /// or `exp` has passed) must pass `force: true`. Everything else — boot,
+  /// router redirects — keeps the default and the original behaviour.
+  Future<void> restoreSession({bool force = false}) async {
     // Strategy path: defer entirely to the injected strategy. Cookie-bound
     // flows have no refresh-token to read, so we skip the secure-storage
     // probe.
     final strategy = _strategy;
     if (strategy != null) {
-      if (state.isAuthenticated) return;
+      if (!force && state.isAuthenticated) return;
       state = AuthState.refreshing(session: state.session);
       try {
         final session = await strategy.restoreSession();
@@ -395,7 +419,7 @@ class AuthNotifier extends Notifier<AuthState> {
     // injection). Reading `state` after disposal throws in riverpod 3 where
     // riverpod 2 tolerated it, so the liveness check has to come FIRST.
     if (!ref.mounted) return;
-    if (state.isAuthenticated) return;
+    if (!force && state.isAuthenticated) return;
     if (refreshToken == null || refreshToken.isEmpty) {
       state = const AuthState.unauthenticated();
       return;
