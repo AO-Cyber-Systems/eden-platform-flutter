@@ -968,6 +968,79 @@ void main() {
       }
     });
 
+    // --- force: bypassing the "already authenticated" short-circuit ---
+    //
+    // The default guard (`if (state.isAuthenticated) return`) protects the BOOT
+    // path from clobbering a session another flow established. But
+    // `isAuthenticated` only means "we hold an access token", never "that token
+    // still works" — so once the access token expired server-side, every caller
+    // that needed a refresh BECAUSE the token was dead silently got a no-op:
+    // ProactiveRefresh (which had already decoded `exp`) and the reactive 401
+    // interceptor both called this and got nothing back, leaving the
+    // interceptor to retry forever with the same dead token.
+
+    test('restoreSession() WITHOUT force is a no-op while authenticated — the '
+        'boot-path guard still holds', () async {
+      SharedPreferences.setMockInitialValues({});
+      secureStore['refresh_token'] = 'sealed-refresh';
+      repository.refreshResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      expect(container.read(authProvider).status, AuthStatus.authenticated);
+      final callsAfterBoot = repository.refreshCalls;
+
+      await container.read(authProvider.notifier).restoreSession();
+      await settle();
+
+      expect(repository.refreshCalls, callsAfterBoot,
+          reason: 'an un-forced restore while authenticated must not re-refresh');
+    });
+
+    test('restoreSession(force: true) refreshes even while state still reports '
+        'authenticated — the expired-access-token case', () async {
+      SharedPreferences.setMockInitialValues({});
+      secureStore['refresh_token'] = 'sealed-refresh';
+      repository.refreshResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+
+      expect(container.read(authProvider).status, AuthStatus.authenticated,
+          reason: 'precondition: we look authenticated (holding a token)');
+      final callsAfterBoot = repository.refreshCalls;
+
+      await container.read(authProvider.notifier).restoreSession(force: true);
+      await settle();
+
+      expect(repository.refreshCalls, callsAfterBoot + 1,
+          reason: 'force MUST reach the repository even when isAuthenticated');
+      expect(container.read(authProvider).status, AuthStatus.authenticated);
+    });
+
+    test('restoreSession(force: true) whose refresh is rejected lands on '
+        'unauthenticated, so callers stop retrying and the router can bounce '
+        'to login', () async {
+      SharedPreferences.setMockInitialValues({});
+      secureStore['refresh_token'] = 'sealed-refresh';
+      repository.refreshResult = buildSession();
+      container = createContainer();
+      container.read(authProvider.notifier);
+      await settle();
+      expect(container.read(authProvider).status, AuthStatus.authenticated);
+
+      // Now the refresh token is dead too (the real "session fully expired").
+      repository.refreshError = AuthError('refresh token expired');
+
+      await container.read(authProvider.notifier).restoreSession(force: true);
+      await settle();
+
+      expect(container.read(authProvider).status, AuthStatus.unauthenticated,
+          reason: 'a forced refresh that fails must clear auth, not leave the '
+              'caller holding a dead token to retry with');
+    });
+
     test('a strategy login that resolves AFTER disposal writes no tokens — a '
         'torn-down notifier must not persist credentials', () async {
       // Added to close a SURVIVING mutation, and it took two attempts. The
