@@ -53,6 +53,48 @@ abstract class PlatformRepository {
   Future<PlatformUser> updateProfile(String accessToken, String displayName, String avatarUrl);
 }
 
+/// User-visible copy for a non-200 from the platform auth endpoints, keyed by
+/// the `method` segment of the Connect URL that `_authPost` builds.
+///
+/// TWO CONSTRAINTS GOVERN EVERY STRING IN THIS MAP. Both are easy to undo by
+/// "improving" the copy, so the reasoning lives here rather than only the
+/// conclusion:
+///
+/// 1. NO WIRE DETAIL REACHES THE PERSON. These strings are rendered verbatim
+///    in `PlatformLoginScreen`'s error box. An HTTP status code or a JSON
+///    response body is not an error message — it is the transport leaking into
+///    the UI. On 2026-09-24 a volunteer read
+///    `Auth Login failed (HTTP 401): {"error":"invalid email or password"}`
+///    nine times. The diagnostic is NOT discarded: it goes to
+///    `dart:developer`'s `log()` and onto `AuthError.cause`.
+///
+/// 2. NO MORE SPECIFIC ABOUT ACCOUNT EXISTENCE THAN THE SERVER IS. The server
+///    answers 401 with `{"error":"invalid email or password"}` for BOTH a wrong
+///    password and a wholly unknown address, and deliberately spends CPU on a
+///    dummy password verify so that the two take the same time — an
+///    account-existence oracle closed at real cost. Copy here that said "no
+///    account found", "that address is already registered" or "awaiting
+///    approval" would hand back in plain English exactly what that branch
+///    spends milliseconds concealing.
+///
+/// `RefreshToken`'s copy differs on purpose: a refresh 401 means a session
+/// expired, which is a genuinely different fact from "those credentials did not
+/// work", and it is what the app surfaces post-auth today.
+const Map<String, String> _authFailureCopy = {
+  'Login': "We couldn't sign you in. Check your email and password and try again.",
+  'SignUp': "We couldn't complete that sign-up. Check your details and try again.",
+  'RefreshToken': 'Your session has expired. Please sign in again.',
+};
+
+/// Copy for a `method` absent from [_authFailureCopy].
+///
+/// MUST NOT BE EMPTY, and neither may any entry above. `login_screen.dart`
+/// renders `auth.errorMessage ?? <fallback>`; `??` fires on null alone, so an
+/// empty message renders an EMPTY error box rather than eden's fallback
+/// sentence.
+const String _authFailureCopyFallback =
+    "We couldn't complete that request. Please try again.";
+
 class ConnectPlatformRepository implements PlatformRepository {
   ConnectPlatformRepository({required String baseUrl})
       : _baseUrl = baseUrl,
@@ -116,8 +158,14 @@ class ConnectPlatformRepository implements PlatformRepository {
         body: jsonEncode(body),
       );
       if (resp.statusCode != 200) {
+        // The diagnostic survives — for a DEVELOPER, in a log and on `cause`.
+        // It must never become the `message`, which is what the person reads.
+        final diagnostic =
+            'Auth $method failed (HTTP ${resp.statusCode}): ${resp.body}';
+        log(diagnostic, name: 'ConnectPlatformRepository');
         throw AuthError(
-          'Auth $method failed (HTTP ${resp.statusCode}): ${resp.body}',
+          _authFailureCopy[method] ?? _authFailureCopyFallback,
+          cause: diagnostic,
         );
       }
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
