@@ -3,7 +3,8 @@ description: Example app for the Eden platform Flutter shell.
 publish_to: none
 
 environment:
-  sdk: ^3.11.1
+  sdk: ^3.13.4
+  flutter: ">=3.47.5"
 
 dependencies:
   flutter:

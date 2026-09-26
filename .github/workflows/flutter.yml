@@ -41,9 +41,9 @@ permissions:
   contents: read
 
 env:
-  # Pinned: the local toolchain is 3.41.4 stable. An unpinned CI that drifts
+  # Pinned: the local toolchain is 3.47.5 stable. An unpinned CI that drifts
   # ahead of every developer produces failures nobody can reproduce.
-  FLUTTER_VERSION: "3.41.4"
+  FLUTTER_VERSION: "3.47.5"
 
 jobs:
   analyze-and-test:
