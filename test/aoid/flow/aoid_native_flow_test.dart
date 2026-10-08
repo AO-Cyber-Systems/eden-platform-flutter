@@ -389,6 +389,113 @@ void main() {
       );
     });
 
+    // ---- The PASSKEY path (TRD 52-03) ----------------------------------
+    //
+    // signInWithPasskey hands the assertion from the authenticator to the
+    // request body as a LOCAL. A field holding it — instance, static or
+    // top-level — or the challenge's publicKey map is the first step toward
+    // exposing it, and is visible in a debugger dump even while private.
+    //
+    // Dart-formatted source puts class members at two spaces and top-level
+    // declarations at column 0; locals and parameters sit deeper. Indentation
+    // is therefore what separates a FIELD from a LOCAL here.
+
+    /// Any member-level or top-level VARIABLE declaration, initializer
+    /// included (it may span lines, up to its `;`).
+    final memberVariable = RegExp(
+      // At most two spaces of indentation, then modifiers.
+      r'^ {0,2}(?:(?:static|late|final|const|var|external)\s+)*'
+      // An optional type: a record type, or a (possibly generic) name; `?`.
+      r'(?:(?:\([^;=]*\)|[A-Za-z_$][\w$.]*(?:<[^;(){}=]*>)?)\??\s+)?'
+      // The name, then an optional initializer, then the terminating `;`.
+      // A method, getter or constructor never reaches `=`/`;` straight after
+      // its name, so it does not match.
+      r'[A-Za-z_$][\w$]*\s*(?:=[^;]*)?;',
+      multiLine: true,
+    );
+
+    /// What marks a declaration as holding the assertion or the options.
+    final assertionToken = RegExp(
+      r'responseJson|webauthn_response|AoidPasskeyAsserted|assertion|publicKey',
+      caseSensitive: false,
+    );
+
+    List<String> assertionFields(String src) => memberVariable
+        .allMatches(stripComments(src))
+        .map((m) => m.group(0)!.trim())
+        .where(assertionToken.hasMatch)
+        .toList();
+
+    test('the flow stores no passkey assertion (or publicKey) in a field', () {
+      expect(
+        assertionFields(source),
+        isEmpty,
+        reason:
+            'D3: the assertion travels authenticator -> request body as a '
+            'local. The widgets layer seals AoidLoginForm on this guarantee.',
+      );
+    });
+
+    test('the field matcher is not vacuous: it sees the real fields', () {
+      final declared = memberVariable
+          .allMatches(stripComments(source))
+          .map((m) => m.group(0)!)
+          .join('\n');
+      for (final name in const [
+        '_handle',
+        '_state',
+        '_lastBegin',
+        '_passkeyAdvertised',
+        '_atStarted',
+      ]) {
+        expect(declared, contains(name), reason: name);
+      }
+    });
+
+    test('POSITIVE CONTROL: the assertion-field predicate fires on planted '
+        'fields and ignores locals', () {
+      const planted = """
+String? _assertionAtTopLevel;
+
+class Probe {
+  static AoidPasskeyAsserted? _cached;
+  String? _lastResponseJson;
+  final Map<String, String> _body = {'webauthn_response': 'x'};
+  late final String _held =
+      const AoidPasskeyAsserted('x').responseJson;
+  (String, int)? _publicKeyPair;
+  Map<String, dynamic>? _publicKey;
+
+  Future<void> fine(String responseJson) async {
+    final local = responseJson;
+    final publicKey = <String, dynamic>{};
+    await send({'webauthn_response': local, 'k': publicKey});
+  }
+
+  Future<void> alsoFine(String responseJson) =>
+      send({'webauthn_response': responseJson});
+}
+""";
+      final hits = assertionFields(planted);
+      for (final name in const [
+        '_assertionAtTopLevel',
+        '_cached',
+        '_lastResponseJson',
+        '_body',
+        '_held',
+        '_publicKeyPair',
+        '_publicKey',
+      ]) {
+        expect(
+          hits.where((h) => h.contains(name)),
+          isNotEmpty,
+          reason: '$name must be caught',
+        );
+      }
+      // Exactly the seven fields: no local, parameter or method body.
+      expect(hits, hasLength(7), reason: hits.join('\n'));
+    });
+
     test('the file states the D3 rule for the next reader', () {
       expect(source, contains('D3'));
     });
