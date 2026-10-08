@@ -33,21 +33,32 @@ import 'aoid_login_theme.dart';
 /// Unlisted values fall through to the identifier itself rather than being
 /// hidden: AOID is a first-party issuer, and silently dropping a method the
 /// user actually holds is worse than showing its wire name.
+///
+/// `webauthn` is an email-pinned security key; `webauthn_discoverable` is a
+/// passkey (a discoverable credential). They are different things to the
+/// user, so they carry different labels.
 const _methodLabels = <String, String>{
   'totp': 'Authenticator app',
   'backup_code': 'Backup code',
   'sms': 'Text message',
   'email': 'Email code',
   'webauthn': 'Security key',
-  'webauthn_discoverable': 'Security key',
+  'webauthn_discoverable': 'Passkey',
 };
 
 /// Factors this form can actually collect — the ones that are a typed code.
 ///
 /// AOID accepts a TOTP code and a backup code on the SAME `otp` field, so both
-/// submit identically. A security key is not a typed code and is completed by
-/// the platform authenticator path instead, so selecting it here
-/// says so rather than offering a text box that cannot work.
+/// submit identically.
+///
+/// A security key or passkey at THIS step (`webauthn`,
+/// `webauthn_discoverable`) is not a typed code, and it is NOT completed
+/// in-app yet: nothing in the SDK runs the MFA-step WebAuthn ceremony
+/// (Objective 52 open question Q3). Selecting one therefore shows a line of
+/// text rather than a text box that cannot work — a dead end, honestly
+/// labelled, not a working path. The passwordless passkey sign-in that DOES
+/// exist is a different ceremony: AoidLoginForm's "Sign in with a passkey"
+/// button, offered at the `started` stage before any password.
 const _codeMethods = <String>{'totp', 'backup_code', 'sms', 'email', 'mfa'};
 
 /// The sealed AOID second-factor step.

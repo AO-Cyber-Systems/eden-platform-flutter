@@ -102,6 +102,30 @@ const kLoggingSinks = <String, String>{
   r'\bSentry\b': 'D3: a Sentry breadcrumb or event leaves the device entirely.',
 };
 
+/// The passkey assertion and every way of handling it (TRD 52-04).
+///
+/// AoidLoginForm offers "Sign in with a passkey", but the ceremony — challenge,
+/// OS sheet, assertion, submit — runs inside `AoidNativeFlow.signInWithPasskey`
+/// and the form receives only a closed `AoidPasskeyOutcome`. A widget that
+/// names any of these is holding, or submitting, the assertion itself.
+const kPasskeyAssertion = <String, String>{
+  r'\bsubmitWebAuthn\b':
+      'D3: the widget is submitting a WebAuthn assertion itself. The flow '
+      'owns that call; the form calls signInWithPasskey and nothing else.',
+  r'webauthn_response':
+      'D3: the wire field that carries the assertion. Only the flow may '
+      'build that request body.',
+  r'\bresponseJson\b':
+      'D3: the assertion JSON. It is a local inside the flow and must never '
+      'reach widget code, where a field or a log line is one edit away.',
+  r'\bAoidPasskeyAsserted\b':
+      'D3: the authenticator\'s assertion type. Matching on it means the '
+      'widget received the assertion rather than an outcome.',
+  r'\bgetAssertion\b':
+      'D3: calling the authenticator directly hands the widget the assertion. '
+      'Pass the authenticator to signInWithPasskey instead.',
+};
+
 /// Returns which forbidden needles [source] actually contains, after comments
 /// are removed. Returning the LIST rather than a bool is what lets a failure
 /// name the specific leak.
@@ -522,6 +546,95 @@ void f(String password) {
             'POSITIVE CONTROL FAILED: the logging-sink predicate did not fire '
             'on a file that prints the password three different ways. Test 5 '
             'would be vacuous.',
+      );
+    });
+
+    // -----------------------------------------------------------------------
+    // 8. The passkey assertion never passes through the widget (TRD 52-04).
+    //
+    // The passkey entry is INSIDE the seal (Objective 52, locked decision 1),
+    // and so is the assertion: authenticator -> flow -> request body. The form
+    // hands `resolveAoidPasskeyAuthenticator()` to
+    // `controller.signInWithPasskey` and renders from the outcome. A future
+    // edit that routes the assertion through the widget fails here.
+    //
+    // Positive controls FIRST, as this file's convention and stripComments'
+    // doc comment require: the predicate must fire on a real violation, and
+    // must not fire on the same words inside comments.
+    // -----------------------------------------------------------------------
+    test('8. AoidLoginForm never names or handles the passkey assertion', () {
+      // (a) The TRD's own planted line.
+      expect(
+        forbiddenHitsIn('controller.submitWebAuthn(x);', kPasskeyAssertion),
+        [r'\bsubmitWebAuthn\b'],
+        reason:
+            'POSITIVE CONTROL FAILED: `controller.submitWebAuthn(x)` was not '
+            'detected. The real-source assertion below would then pass on a '
+            'widget that submits the assertion itself.',
+      );
+
+      // (b) A widget that does all of it, for real. Every needle must fire.
+      const planted = '''
+class _ProbeState extends State<Probe> {
+  Future<void> _go() async {
+    final attempt = await authenticator.getAssertion(publicKey);
+    if (attempt is AoidPasskeyAsserted) {
+      await widget.controller.submitWebAuthn(attempt.responseJson);
+    }
+  }
+  Map<String, String> get body => {'webauthn_response': ''};
+}
+''';
+      final hits = forbiddenHitsIn(planted, kPasskeyAssertion);
+      for (final needle in kPasskeyAssertion.keys) {
+        expect(
+          hits,
+          contains(needle),
+          reason:
+              'POSITIVE CONTROL FAILED: the needle `$needle` did not fire on a '
+              'widget that really handles the assertion. Fix the predicate, '
+              'never the expectation.',
+        );
+      }
+
+      // (c) The same words in COMMENTS must not fire: the form has to be able
+      // to explain what it refuses to do.
+      const commentary = '''
+// This form never calls controller.submitWebAuthn(x), never reads
+// responseJson and never sees an AoidPasskeyAsserted.
+/* webauthn_response and getAssertion belong to the flow. */
+class Sealed extends StatefulWidget {
+  const Sealed({super.key});
+}
+''';
+      expect(
+        forbiddenHitsIn(commentary, kPasskeyAssertion),
+        isEmpty,
+        reason:
+            'POSITIVE CONTROL FAILED (inverted): the gate fired on words that '
+            'appear only inside comments.',
+      );
+
+      // The real source.
+      final src = File(_loginFormPath).readAsStringSync();
+      for (final hit in forbiddenHitsIn(src, kPasskeyAssertion)) {
+        fail(
+          'AoidLoginForm contains `$hit`.\n\n${kPasskeyAssertion[hit]}\n\n'
+          'The passkey assertion is produced and consumed inside the SDK '
+          '(authenticator -> flow -> request body). Do not weaken this gate to '
+          'land a feature.',
+        );
+      }
+
+      // Non-vacuity: this is the file that runs the passkey path, so the gate
+      // is reading the right source rather than passing on an absence.
+      expect(
+        stripComments(src),
+        contains('signInWithPasskey('),
+        reason:
+            'AoidLoginForm no longer calls controller.signInWithPasskey. Test '
+            '8 guards that call\'s neighbourhood; if the passkey entry moved, '
+            'move the gate with it.',
       );
     });
   });
