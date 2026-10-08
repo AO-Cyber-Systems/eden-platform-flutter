@@ -35,11 +35,31 @@
 // AoidNativeFlow itself folds every refusal into a state rather than throwing
 // (see its `_step`), so there is no exception for a retry policy to act on
 // even if one were introduced later.
+//
+// THE PASSKEY ENTRY IS INSIDE THE SEAL (Objective 52, TRD 52-04).
+// "Sign in with a passkey" is part of this widget, not something an app wires
+// up: it adds no constructor parameter, no callback and no authenticator
+// argument. The form asks the SDK's own resolver for the platform
+// authenticator and hands it to `AoidNativeFlow.signInWithPasskey`, which
+// runs the whole ceremony — challenge, OS sheet, assertion, submit — and
+// answers a closed `AoidPasskeyOutcome`. The assertion is produced and
+// consumed inside the flow; this widget never holds it, never names it, and
+// could not log it if it tried (sealed_form_no_leak_test.dart, test 8).
+//
+// WHY THE BUTTON STARTS HIDDEN. `isSupported()` is asynchronous, and the
+// button is rendered only once it has answered `true` AND the issuer
+// advertised `webauthn_discoverable` at the `started` stage
+// (`controller.canUsePasskey`). Rendering it optimistically and hiding it on a
+// `false` would show, for a frame or more, a button that could be tapped and
+// could not work — which is exactly what locked decision 4 forbids. So on
+// web, Android, Windows, Linux, iOS < 16, macOS < 13, and on an app that did
+// not link the native half, it simply never appears.
 
 import 'package:eden_ui_flutter/eden_ui.dart';
 import 'package:flutter/material.dart';
 
 import '../flow/aoid_native_flow.dart';
+import '../passkey/aoid_passkey_resolver.dart';
 import 'aoid_login_theme.dart';
 
 /// Key on the AOCyber gold accent rule, so a test can sample the colour the
@@ -86,6 +106,23 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   final _passwordCtrl = TextEditingController();
 
   bool _submitting = false;
+
+  /// FALSE UNTIL PROVEN. Set only when the platform authenticator answered
+  /// `isSupported() == true`; see the file header for why it never starts
+  /// optimistic.
+  bool _passkeySupported = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _probePasskeySupport();
+  }
+
+  Future<void> _probePasskeySupport() async {
+    final supported = await resolveAoidPasskeyAuthenticator().isSupported();
+    // The answer may land after dispose.
+    if (mounted && supported) setState(() => _passkeySupported = true);
+  }
 
   @override
   void dispose() {
@@ -237,6 +274,15 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
             loading: _submitting,
             fullWidth: true,
           ),
+          if (_passkeySupported && widget.controller.canUsePasskey) ...[
+            const SizedBox(height: 12),
+            EdenButton(
+              label: copy.passkeyLabel,
+              variant: EdenButtonVariant.secondary,
+              onPressed: null,
+              fullWidth: true,
+            ),
+          ],
         ],
       ),
     );

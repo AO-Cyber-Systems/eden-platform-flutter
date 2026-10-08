@@ -36,6 +36,7 @@ class AoidLoginTheme {
     this.submitLabel = 'Sign in',
     this.emailLabel = 'Email',
     this.passwordLabel = 'Password',
+    this.passkeyLabel = 'Sign in with a passkey',
     this.mfaHeadline = 'Two-factor authentication',
     this.otpLabel = 'Authentication code',
     this.mfaSubmitLabel = 'Verify',
@@ -74,6 +75,15 @@ class AoidLoginTheme {
 
   /// Label for the password field.
   final String passwordLabel;
+
+  /// Label on the password step's passkey control.
+  ///
+  /// The control itself is not configurable: [AoidLoginForm] renders it only
+  /// where a platform passkey assertion can actually run (iOS 16+ and macOS
+  /// 13+ with the native half linked) and the issuer advertised
+  /// `webauthn_discoverable`. Everywhere else it is absent and this label is
+  /// unused.
+  final String passkeyLabel;
 
   /// Title above the second-factor step.
   final String mfaHeadline;
