@@ -169,6 +169,23 @@ class AoidNativeFlow implements NativeCeremony {
   /// Whether a factor can still be submitted.
   bool get canSubmit => _handle != null && _state is! AoidFlowComplete;
 
+  /// Whether the last START reply listed `webauthn_discoverable`. Remembered
+  /// rather than re-read from [state]: a rejected password rotates the handle
+  /// at the same stage and that reply carries no `available_methods`.
+  bool _passkeyAdvertised = false;
+
+  /// Whether the ceremony is at AOID's `started` stage — the only stage that
+  /// accepts `webauthn_discoverable_challenge`.
+  bool _atStarted = false;
+
+  /// Whether a passkey sign-in can be offered right now: the start reply
+  /// advertised `webauthn_discoverable`, the ceremony is still at the
+  /// `started` stage, and there is a live handle.
+  ///
+  /// Survives a rejected password (same-stage rotation). Ends when a password
+  /// advances the ceremony (MFA).
+  bool get canUsePasskey => _passkeyAdvertised && _atStarted && canSubmit;
+
   /// Mint a ceremony. Call again after [AoidFlowRestartRequired].
   Future<void> begin({
     required String codeChallenge,
@@ -179,6 +196,8 @@ class AoidNativeFlow implements NativeCeremony {
   }) async {
     _handle = null;
     _state = const AoidFlowIdle();
+    _passkeyAdvertised = false;
+    _atStarted = false;
     await _step(
       () => _client.start(
         clientId: _clientId,
@@ -191,6 +210,13 @@ class AoidNativeFlow implements NativeCeremony {
         loginHint: loginHint,
       ),
     );
+    final started = _state;
+    if (started is AoidFlowAwaitingFactor) {
+      _atStarted = true;
+      _passkeyAdvertised = started.availableMethods.contains(
+        'webauthn_discoverable',
+      );
+    }
   }
 
   /// Submit the password factor.
@@ -237,6 +263,14 @@ class AoidNativeFlow implements NativeCeremony {
       // A 503 refuses BEFORE the service is called, so the handle survives.
       handleOnUnavailable: handle,
     );
+    // Only two outcomes leave AOID at the same stage: a rejected factor
+    // (rotation with no `next`) and a 503 (the service never saw the request,
+    // so the handle survived). Everything else moved the ceremony on or ended it.
+    final after = _state;
+    final sameStage =
+        (after is AoidFlowAwaitingFactor && after.lastAttemptRejected) ||
+        (after is AoidFlowUnavailable && _handle != null);
+    if (!sameStage) _atStarted = false;
   }
 
   /// Runs ONE request and folds the outcome into [_state].
