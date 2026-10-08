@@ -1,5 +1,5 @@
-// TRD 52-01 test-list items 12-15 — the resolver, its release-stripped test
-// seam, and the non-export gate.
+// Tests 12-15 — the resolver, its release-stripped test seam, and the
+// non-export gate.
 //
 // Items 14 and 15 are SOURCE gates. Per the suite's established rule (see
 // test/aoid/source_utils.dart), each carries a POSITIVE CONTROL: the same
@@ -172,7 +172,7 @@ set debugAoidPasskeyAuthenticatorOverride(AoidPasskeyAuthenticator? value) {
         isEmpty,
         reason:
             'exporting a passkey file hands app-owned Dart a way to obtain '
-            'or substitute the authenticator (locked decision 1)',
+            'or substitute the authenticator',
       );
     });
 
@@ -204,7 +204,7 @@ set debugAoidPasskeyAuthenticatorOverride(AoidPasskeyAuthenticator? value) {
   });
 }
 
-/// The three files TRD 52-01 creates under lib/src/aoid/passkey/.
+/// The three files under lib/src/aoid/passkey/.
 const List<String> _passkeyFiles = [
   'aoid_platform_passkey_authenticator.dart',
   'aoid_passkey_resolver.dart',

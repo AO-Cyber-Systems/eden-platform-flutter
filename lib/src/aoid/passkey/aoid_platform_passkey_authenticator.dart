@@ -1,13 +1,13 @@
-// The Dart half of the passkey platform channel (Objective 52, TRD 52-01).
+// The Dart half of the passkey platform channel.
 //
-// WHY A CHANNEL AND NOT THE `passkeys` PLUGIN (52-RESEARCH §3.3): this package
+// WHY A CHANNEL AND NOT THE `passkeys` PLUGIN: this package
 // is consumed by ~18 apps across every platform. `passkeys_web` calls
 // `window.close()` on any web app that has not loaded a third-party CDN
 // script, and `passkeys_android` adds Play Services + `minSdk 23` to every
 // Android consumer. A channel declared for iOS and macOS only changes no other
-// platform's build, and adds no pub dependency (NPK-06).
+// platform's build, and adds no pub dependency.
 //
-// THE CONTRACT IS FROZEN. The Swift half (darwin/, TRD 52-02) implements the
+// THE CONTRACT IS FROZEN. The Swift half (darwin/) implements the
 // same names; a rename on either side fails only at runtime
 // (MissingPluginException / a missing key). The contract, verbatim:
 //
@@ -31,7 +31,7 @@ import 'package:flutter/services.dart';
 
 import 'aoid_passkey_authenticator.dart';
 
-/// The frozen channel. Its name is part of the 52-01/52-02 contract.
+/// The frozen channel. Its name is part of the Dart/Swift contract.
 const MethodChannel _frozenChannel = MethodChannel(
   'eden_platform_flutter/aoid_passkey',
 );
@@ -57,7 +57,7 @@ const MethodChannel _frozenChannel = MethodChannel(
 /// `ASAuthorizationError.canceled`. Distinguishing them needs
 /// `.preferImmediatelyAvailableCredentials`, which also hides the cross-device
 /// (QR) sheet. Both map to [AoidPasskeyFailure.cancelled]; both readings are
-/// non-enumerating, so conflating them is the safe choice (52-RESEARCH §4, A3).
+/// non-enumerating, so conflating them is the safe choice.
 ///
 /// # Honest availability
 ///
@@ -65,7 +65,7 @@ const MethodChannel _frozenChannel = MethodChannel(
 /// Fuchsia answer [isSupported] `false` without a call, and a consumer whose
 /// app does not link the native half (no `pod install` / SwiftPM resolve)
 /// answers `false` too — on every call, never cached — so a passkey button is
-/// never rendered where it cannot work (52-CONTEXT locked decision 4).
+/// never rendered where it cannot work.
 ///
 /// # No OS text crosses the boundary
 ///

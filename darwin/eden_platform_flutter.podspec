@@ -1,5 +1,5 @@
 #
-# eden_platform_flutter — the iOS + macOS native half (Objective 52, TRD 52-02).
+# eden_platform_flutter — the iOS + macOS native half.
 #
 # Derived from `flutter create --template=plugin --platforms=ios,macos` at
 # Flutter 3.47.5, with its separate ios/ and macos/ podspecs merged into the
@@ -17,7 +17,7 @@
 # compile — narrow an `#if os(...)` or an `@available` instead.
 #
 # DEPENDENCIES: the Flutter engine and the AuthenticationServices system
-# framework. Nothing else — no third-party pod (NPK-06).
+# framework. Nothing else — no third-party pod.
 #
 Pod::Spec.new do |s|
   s.name             = 'eden_platform_flutter'

@@ -1,5 +1,4 @@
-// The platform passkey authenticator, as the AOID flow sees it (Objective 52,
-// TRD 52-01).
+// The platform passkey authenticator, as the AOID flow sees it.
 //
 // FLUTTER-FREE ON PURPOSE. This file imports nothing: the native flow
 // (lib/src/aoid/flow/) depends on it, and the flow is plain Dart. The Flutter
@@ -9,7 +8,7 @@
 // package:eden_platform_flutter/eden_platform.dart or any part-barrel
 // (test/aoid/passkey/aoid_passkey_resolver_test.dart pins that). The assertion
 // is produced and consumed inside the SDK: authenticator -> flow -> request
-// body. App-owned Dart never holds it (52-CONTEXT locked decision 1).
+// body. App-owned Dart never holds it.
 
 /// Why a passkey assertion was not produced.
 ///
@@ -20,7 +19,7 @@
 enum AoidPasskeyFailure {
   /// The user dismissed the system sheet, OR had no passkey for this relying
   /// party. Apple's modal flow reports both as `.canceled` and does not let us
-  /// tell them apart (52-RESEARCH §4); both readings are non-enumerating, so
+  /// tell them apart; both readings are non-enumerating, so
   /// the form treats them the same way: stay put, say nothing.
   cancelled,
 

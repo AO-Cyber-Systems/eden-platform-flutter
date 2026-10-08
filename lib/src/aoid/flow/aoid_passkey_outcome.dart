@@ -1,7 +1,7 @@
-// The closed result of one passkey sign-in attempt (Objective 52, TRD 52-03).
+// The closed result of one passkey sign-in attempt.
 //
 // EXPORTED through lib/src/aoid/parts/native.dart, unlike everything in
-// lib/src/aoid/passkey/: the sealed AoidLoginForm (52-04) renders from it, and
+// lib/src/aoid/passkey/: the sealed AoidLoginForm renders from it, and
 // it carries no credential material — only WHAT happened, in a closed
 // vocabulary.
 //

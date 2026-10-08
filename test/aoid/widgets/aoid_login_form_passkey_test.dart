@@ -1,7 +1,7 @@
-// TRD 52-04 — "Sign in with a passkey" INSIDE the sealed AoidLoginForm.
+// "Sign in with a passkey" INSIDE the sealed AoidLoginForm.
 //
-// The button is part of the seal (52-CONTEXT locked decision 1): no
-// constructor parameter, no callback, and the widget never sees the assertion.
+// The button is part of the seal: no constructor parameter, no callback, and
+// the widget never sees the assertion.
 // It calls `controller.signInWithPasskey(resolveAoidPasskeyAuthenticator())`
 // and renders from the closed `AoidPasskeyOutcome` it gets back, plus the
 // flow's state.
@@ -71,7 +71,7 @@ const String _assertionJson =
 const _email = 'ada@fake-aoid.test';
 const _password = 'correct-horse-battery-staple';
 
-// The closed passkey copy (TRD 52-04), byte for byte.
+// The closed passkey copy, byte for byte.
 const _rejected = 'That did not work. Check your details and try again.';
 const _unavailable =
     'Passkey sign-in is not available on this device right now. '
@@ -555,7 +555,7 @@ void main() {
       expect(flow.state, isA<AoidFlowUnavailable>());
       _expectOnlyNotice(_temporarilyUnavailable);
       expect(authenticator.received, isEmpty);
-      // The handle survived (52-03): either factor may be tried again.
+      // The handle survived: either factor may be tried again.
       expect(_passkeyButton, findsOneWidget);
       expect(_fieldsEnabled(tester), isTrue);
       expect(_submitEnabled(tester), isTrue);

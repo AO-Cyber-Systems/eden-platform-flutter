@@ -36,7 +36,7 @@
 // (see its `_step`), so there is no exception for a retry policy to act on
 // even if one were introduced later.
 //
-// THE PASSKEY ENTRY IS INSIDE THE SEAL (Objective 52, TRD 52-04).
+// THE PASSKEY ENTRY IS INSIDE THE SEAL.
 // "Sign in with a passkey" is part of this widget, not something an app wires
 // up: it adds no constructor parameter, no callback and no authenticator
 // argument. The form asks the SDK's own resolver for the platform
@@ -51,7 +51,7 @@
 // advertised `webauthn_discoverable` at the `started` stage
 // (`controller.canUsePasskey`). Rendering it optimistically and hiding it on a
 // `false` would show, for a frame or more, a button that could be tapped and
-// could not work — which is exactly what locked decision 4 forbids. So on
+// could not work — and a button that cannot work is never shown. So on
 // web, Android, Windows, Linux, iOS < 16, macOS < 13, and on an app that did
 // not link the native half, it simply never appears.
 
@@ -123,7 +123,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   AoidPasskeyOutcome? _lastPasskey;
 
   /// The last passkey attempt THREW instead of answering an outcome: a breach
-  /// of the authenticator's never-throws contract (TRD 52-01). See
+  /// of the authenticator's never-throws contract. See
   /// [_signInWithPasskey].
   bool _passkeyThrew = false;
 
@@ -141,7 +141,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
     try {
       supported = await resolveAoidPasskeyAuthenticator().isSupported();
     } catch (_, stack) {
-      // isSupported never throws by contract (52-01). If it does, the button
+      // isSupported never throws by contract. If it does, the button
       // stays hidden — the safe answer — and the breach is reported with a
       // fixed message. See _reportAuthenticatorBreach.
       _reportAuthenticatorBreach(stack, 'while probing passkey support');
@@ -154,7 +154,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// [FlutterError.reportError], so the bug is visible in every build mode —
   /// in debug, and in a host's crash reporting in release.
   ///
-  /// D3: the report carries a FIXED message and the stack trace (code
+  /// The report carries a FIXED message and the stack trace (code
   /// locations only). The thrown object itself is never bound, so neither
   /// its message nor anything it holds can reach a sink.
   static void _reportAuthenticatorBreach(StackTrace stack, String during) {
@@ -223,9 +223,9 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// NO RETRY, for the same reason the password path has none: AOID's
   /// `MaxAttempts = 5` is durable across rotation.
   ///
-  /// # A THROWING AUTHENTICATOR (decided in TRD 52-04)
+  /// # A THROWING AUTHENTICATOR
   ///
-  /// The authenticator's contract (52-01) is to answer a closed attempt and
+  /// The authenticator's contract is to answer a closed attempt and
   /// never throw, and the platform implementation enforces it, so
   /// `signInWithPasskey` does not catch. A throw is therefore a programming
   /// error — but if one escaped this async tap handler, the user would see the

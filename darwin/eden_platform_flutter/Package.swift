@@ -1,7 +1,7 @@
 // swift-tools-version: 5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
-// eden_platform_flutter — the iOS + macOS native half (Objective 52, TRD 52-02),
+// eden_platform_flutter — the iOS + macOS native half,
 // for consumers with Swift Package Manager enabled. CocoaPods consumers use
 // ../eden_platform_flutter.podspec instead; keep the two in step.
 //
@@ -40,7 +40,7 @@ let package = Package(
                 .process("PrivacyInfo.xcprivacy")
             ],
             linkerSettings: [
-                // System framework only (NPK-06): no third-party package.
+                // System framework only: no third-party package.
                 .linkedFramework("AuthenticationServices")
             ]
         )

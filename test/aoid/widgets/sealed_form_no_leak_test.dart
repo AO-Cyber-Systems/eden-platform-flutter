@@ -102,7 +102,7 @@ const kLoggingSinks = <String, String>{
   r'\bSentry\b': 'D3: a Sentry breadcrumb or event leaves the device entirely.',
 };
 
-/// The passkey assertion and every way of handling it (TRD 52-04).
+/// The passkey assertion and every way of handling it.
 ///
 /// AoidLoginForm offers "Sign in with a passkey", but the ceremony — challenge,
 /// OS sheet, assertion, submit — runs inside `AoidNativeFlow.signInWithPasskey`
@@ -110,19 +110,19 @@ const kLoggingSinks = <String, String>{
 /// names any of these is holding, or submitting, the assertion itself.
 const kPasskeyAssertion = <String, String>{
   r'\bsubmitWebAuthn\b':
-      'D3: the widget is submitting a WebAuthn assertion itself. The flow '
+      'The widget is submitting a WebAuthn assertion itself. The flow '
       'owns that call; the form calls signInWithPasskey and nothing else.',
   r'webauthn_response':
-      'D3: the wire field that carries the assertion. Only the flow may '
+      'The wire field that carries the assertion. Only the flow may '
       'build that request body.',
   r'\bresponseJson\b':
-      'D3: the assertion JSON. It is a local inside the flow and must never '
+      'The assertion JSON. It is a local inside the flow and must never '
       'reach widget code, where a field or a log line is one edit away.',
   r'\bAoidPasskeyAsserted\b':
-      'D3: the authenticator\'s assertion type. Matching on it means the '
+      'The authenticator\'s assertion type. Matching on it means the '
       'widget received the assertion rather than an outcome.',
   r'\bgetAssertion\b':
-      'D3: calling the authenticator directly hands the widget the assertion. '
+      'Calling the authenticator directly hands the widget the assertion. '
       'Pass the authenticator to signInWithPasskey instead.',
 };
 
@@ -550,10 +550,10 @@ void f(String password) {
     });
 
     // -----------------------------------------------------------------------
-    // 8. The passkey assertion never passes through the widget (TRD 52-04).
+    // 8. The passkey assertion never passes through the widget.
     //
-    // The passkey entry is INSIDE the seal (Objective 52, locked decision 1),
-    // and so is the assertion: authenticator -> flow -> request body. The form
+    // The passkey entry is INSIDE the seal, and so is the assertion:
+    // authenticator -> flow -> request body. The form
     // hands `resolveAoidPasskeyAuthenticator()` to
     // `controller.signInWithPasskey` and renders from the outcome. A future
     // edit that routes the assertion through the widget fails here.
@@ -563,7 +563,7 @@ void f(String password) {
     // must not fire on the same words inside comments.
     // -----------------------------------------------------------------------
     test('8. AoidLoginForm never names or handles the passkey assertion', () {
-      // (a) The TRD's own planted line.
+      // (a) The canonical planted line.
       expect(
         forbiddenHitsIn('controller.submitWebAuthn(x);', kPasskeyAssertion),
         [r'\bsubmitWebAuthn\b'],

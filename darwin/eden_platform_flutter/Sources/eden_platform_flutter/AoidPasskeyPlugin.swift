@@ -1,6 +1,6 @@
-// The native half of the AOID passkey channel (Objective 52, TRD 52-02).
+// The native half of the AOID passkey channel.
 //
-// WHY AN IN-PACKAGE CHANNEL, NOT THE `passkeys` PUB PLUGIN (52-RESEARCH §3):
+// WHY AN IN-PACKAGE CHANNEL, NOT THE `passkeys` PUB PLUGIN:
 // eden_platform_flutter is consumed by ~18 apps on every platform. The
 // `passkeys` plugin's web half calls `window.close()` in any web app that has
 // not loaded a third-party CDN script, and its Android half adds Play Services
@@ -9,7 +9,7 @@
 // AuthenticationServices system framework only, no third-party dependency.
 //
 // THE CONTRACT IS FROZEN — the Dart half (lib/src/aoid/passkey/
-// aoid_platform_passkey_authenticator.dart, TRD 52-01) carries an identical
+// aoid_platform_passkey_authenticator.dart) carries an identical
 // copy. Methods `isSupported` -> Bool and `getAssertion` {rpId, challenge,
 // userVerification?, timeoutMs?} -> {credentialId, clientDataJSON,
 // authenticatorData, signature, userHandle}; error codes cancelled,
@@ -27,11 +27,11 @@
 // party" as the same `ASAuthorizationError.canceled`. Telling them apart needs
 // the prefer-immediately-available-credentials request option, which also
 // hides the cross-device (QR) sheet. Both readings are non-enumerating, so
-// both map to `cancelled` (52-RESEARCH §4, assumption A3).
+// both map to `cancelled`.
 //
 // WHY ONLY THE PLATFORM PROVIDER, MODALLY: the goal is the platform
-// authenticator (synced passkeys). Hardware security keys are out of scope
-// (assumption A4), so the security-key credential provider is not used. The
+// authenticator (synced passkeys). Hardware security keys are out of scope,
+// so the security-key credential provider is not used. The
 // sealed form starts sign-in from a button, so the request is modal
 // (`performRequests()`); the server's `mediation: "conditional"` is a browser
 // autofill hint and the autofill-assisted request is not used either.

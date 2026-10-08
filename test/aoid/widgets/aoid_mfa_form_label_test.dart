@@ -1,12 +1,12 @@
-// TRD 52-04 item 15 — the MFA picker's labels for the two WebAuthn factors.
+// The MFA picker's labels for the two WebAuthn factors.
 //
 // `webauthn_discoverable` is a PASSKEY (a discoverable platform credential);
 // `webauthn` is an email-pinned security key. They used to share the label
 // "Security key". No earlier test asserted either label, so this one pins both,
 // plus one unrelated label to prove the map is still read.
 //
-// Behaviour is otherwise unchanged (Objective 52 open question Q3): neither
-// WebAuthn factor is completed at this step in-app yet.
+// Behaviour is otherwise unchanged: neither WebAuthn factor is completed at
+// this step in-app yet.
 //
 // Every value is a hand-written literal.
 
@@ -77,7 +77,7 @@ void main() {
   });
 
   testWidgets('15b selecting the Passkey chip changes no behaviour: no code '
-      'field, no submit (Q3 is open)', (tester) async {
+      'field, no submit (the MFA-step ceremony is not built)', (tester) async {
     final flow = await _flowAtMfa(const ['totp', 'webauthn_discoverable']);
     await _pumpMfa(tester, flow);
     expect(find.byType(EdenInput), findsOneWidget, reason: 'totp first');

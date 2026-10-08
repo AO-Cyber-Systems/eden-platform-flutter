@@ -389,7 +389,7 @@ void main() {
       );
     });
 
-    // ---- The PASSKEY path (TRD 52-03) ----------------------------------
+    // ---- The PASSKEY path ---------------------------------------------
     //
     // signInWithPasskey hands the assertion from the authenticator to the
     // request body as a LOCAL. A field holding it — instance, static or
@@ -431,7 +431,7 @@ void main() {
         assertionFields(source),
         isEmpty,
         reason:
-            'D3: the assertion travels authenticator -> request body as a '
+            'The assertion travels authenticator -> request body as a '
             'local. The widgets layer seals AoidLoginForm on this guarantee.',
       );
     });

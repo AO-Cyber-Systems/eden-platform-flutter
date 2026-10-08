@@ -53,8 +53,8 @@ const _methodLabels = <String, String>{
 ///
 /// A security key or passkey at THIS step (`webauthn`,
 /// `webauthn_discoverable`) is not a typed code, and it is NOT completed
-/// in-app yet: nothing in the SDK runs the MFA-step WebAuthn ceremony
-/// (Objective 52 open question Q3). Selecting one therefore shows a line of
+/// in-app yet: nothing in the SDK runs the MFA-step WebAuthn ceremony, and
+/// that is still an open question. Selecting one therefore shows a line of
 /// text rather than a text box that cannot work — a dead end, honestly
 /// labelled, not a working path. The passwordless passkey sign-in that DOES
 /// exist is a different ceremony: AoidLoginForm's "Sign in with a passkey"

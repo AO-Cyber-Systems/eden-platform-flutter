@@ -1,8 +1,8 @@
-// TRD 52-01 test-list items 1-11 — the Dart half of the passkey channel.
+// Tests 1-11 — the Dart half of the passkey channel.
 //
-// The channel contract is FROZEN (52-01 / 52-02 carry identical copies): a
-// rename on either side is a silent runtime failure, so these tests mock the
-// channel by its literal name rather than by a shared constant.
+// The channel contract is FROZEN (the Dart and Swift halves carry identical
+// copies): a rename on either side is a silent runtime failure, so these tests
+// mock the channel by its literal name rather than by a shared constant.
 //
 // Every fixture below is hand-written (`no_llm_test_data`). The assertion
 // strings deliberately contain `-` and `_` — the two base64url characters that
@@ -42,8 +42,8 @@ const String _rpId = 'auth.aocyber.ai';
 const String _challengeUnpadded = 'c2lnbi1tZS1pbi1wbGVhc2U-_w';
 const String _challengePadded = 'c2lnbi1tZS1pbi1wbGVhc2U-_w==';
 
-/// The server's `webauthn_challenge.publicKey`, as 52-03 will hand it in:
-/// go-webauthn `BeginDiscoverableMediatedLogin` shape (52-01 embedded context).
+/// The server's `webauthn_challenge.publicKey`, as the flow hands it in:
+/// go-webauthn `BeginDiscoverableMediatedLogin` shape.
 Map<String, dynamic> _publicKey({String challenge = _challengeUnpadded}) =>
     <String, dynamic>{
       'challenge': challenge,

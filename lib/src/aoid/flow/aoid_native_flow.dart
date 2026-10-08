@@ -339,9 +339,10 @@ class AoidNativeFlow implements NativeCeremony {
   /// the handle is still valid and AOID is still at `started`: a restart
   /// would burn a ceremony the user can simply retry.
   ///
-  /// # D3
+  /// # The assertion stays a local
   ///
-  /// The assertion JSON is a local here — see the D3 note on this class.
+  /// The assertion JSON is a local here, never stored, logged or exposed — see
+  /// the credential-containment note on this class.
   Future<AoidPasskeyOutcome> signInWithPasskey(
     AoidPasskeyAuthenticator authenticator,
   ) async {

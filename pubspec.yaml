@@ -89,15 +89,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # AOID Objective 52 (TRD 52-02): native passkey sign-in. This package is a
-  # plugin for iOS and macOS ONLY — one Swift source shared through darwin/
-  # (AuthenticationServices' platform passkey assertion; channel
-  # `eden_platform_flutter/aoid_passkey`).
+  # AOID native passkey sign-in. This package is a plugin for iOS and macOS
+  # ONLY — one Swift source shared through darwin/ (AuthenticationServices'
+  # platform passkey assertion; channel `eden_platform_flutter/aoid_passkey`).
   #
-  # Why an in-package channel and not the `passkeys` pub plugin
-  # (52-RESEARCH §3.3): `passkeys_web` calls `window.close()` in any web app
-  # that has not loaded a third-party CDN script, and `passkeys_android` adds
-  # Play Services + minSdk 23 to every Android consumer of this shared library.
+  # Why an in-package channel and not the `passkeys` pub plugin: `passkeys_web`
+  # calls `window.close()` in any web app that has not loaded a third-party CDN
+  # script, and `passkeys_android` adds Play Services + minSdk 23 to every
+  # Android consumer of this shared library.
   #
   # Why ONLY ios + macos: Flutter registers a plugin only on the platforms it
   # declares, so web, Android, Windows and Linux consumers see no change at all.

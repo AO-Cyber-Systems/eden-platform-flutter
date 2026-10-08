@@ -1,4 +1,4 @@
-// TRD 52-03 — the discoverable-passkey ceremony in AoidNativeFlow.
+// The discoverable-passkey ceremony in AoidNativeFlow.
 //
 // The server path (AOID internal/nativelogin/stages.go):
 //
@@ -38,7 +38,8 @@
 //      counts
 //  16  AoidPasskeyOutcome is public; the authenticator interface is not
 //
-// (Item 15, the D3 source gate, lives in aoid_native_flow_test.dart group 8.)
+// (Item 15, the assertion source gate, lives in aoid_native_flow_test.dart
+// group 8.)
 
 import 'dart:io';
 
