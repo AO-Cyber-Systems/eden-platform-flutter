@@ -35,11 +35,32 @@
 // AoidNativeFlow itself folds every refusal into a state rather than throwing
 // (see its `_step`), so there is no exception for a retry policy to act on
 // even if one were introduced later.
+//
+// THE PASSKEY ENTRY IS INSIDE THE SEAL.
+// "Sign in with a passkey" is part of this widget, not something an app wires
+// up: it adds no constructor parameter, no callback and no authenticator
+// argument. The form asks the SDK's own resolver for the platform
+// authenticator and hands it to `AoidNativeFlow.signInWithPasskey`, which
+// runs the whole ceremony — challenge, OS sheet, assertion, submit — and
+// answers a closed `AoidPasskeyOutcome`. The assertion is produced and
+// consumed inside the flow; this widget never holds it, never names it, and
+// could not log it if it tried (sealed_form_no_leak_test.dart, test 8).
+//
+// WHY THE BUTTON STARTS HIDDEN. `isSupported()` is asynchronous, and the
+// button is rendered only once it has answered `true` AND the issuer
+// advertised `webauthn_discoverable` at the `started` stage
+// (`controller.canUsePasskey`). Rendering it optimistically and hiding it on a
+// `false` would show, for a frame or more, a button that could be tapped and
+// could not work — and a button that cannot work is never shown. So on
+// web, Android, Windows, Linux, iOS < 16, macOS < 13, and on an app that did
+// not link the native half, it simply never appears.
 
 import 'package:eden_ui_flutter/eden_ui.dart';
 import 'package:flutter/material.dart';
 
 import '../flow/aoid_native_flow.dart';
+import '../flow/aoid_passkey_outcome.dart';
+import '../passkey/aoid_passkey_resolver.dart';
 import 'aoid_login_theme.dart';
 
 /// Key on the AOCyber gold accent rule, so a test can sample the colour the
@@ -87,6 +108,69 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
 
   bool _submitting = false;
 
+  /// FALSE UNTIL PROVEN. Set only when the platform authenticator answered
+  /// `isSupported() == true`; see the file header for why it never starts
+  /// optimistic.
+  bool _passkeySupported = false;
+
+  /// A passkey attempt is in flight (challenge, OS sheet, assertion, and the
+  /// restart the flow performs after any attempt that did not complete).
+  bool _passkeyBusy = false;
+
+  /// The last passkey attempt's outcome. Drives the passkey notice; cleared by
+  /// any new submit. Only the closed outcome — never anything the
+  /// authenticator produced.
+  AoidPasskeyOutcome? _lastPasskey;
+
+  /// The last passkey attempt THREW instead of answering an outcome: a breach
+  /// of the authenticator's never-throws contract. See
+  /// [_signInWithPasskey].
+  bool _passkeyThrew = false;
+
+  /// Either path in flight locks the whole form: both fields and both buttons.
+  bool get _busy => _submitting || _passkeyBusy;
+
+  @override
+  void initState() {
+    super.initState();
+    _probePasskeySupport();
+  }
+
+  Future<void> _probePasskeySupport() async {
+    var supported = false;
+    try {
+      supported = await resolveAoidPasskeyAuthenticator().isSupported();
+    } catch (_, stack) {
+      // isSupported never throws by contract. If it does, the button
+      // stays hidden — the safe answer — and the breach is reported with a
+      // fixed message. See _reportAuthenticatorBreach.
+      _reportAuthenticatorBreach(stack, 'while probing passkey support');
+    }
+    // The answer may land after dispose.
+    if (mounted && supported) setState(() => _passkeySupported = true);
+  }
+
+  /// Reports a broken [AoidPasskeyAuthenticator] contract through
+  /// [FlutterError.reportError], so the bug is visible in every build mode —
+  /// in debug, and in a host's crash reporting in release.
+  ///
+  /// The report carries a FIXED message and the stack trace (code
+  /// locations only). The thrown object itself is never bound, so neither
+  /// its message nor anything it holds can reach a sink.
+  static void _reportAuthenticatorBreach(StackTrace stack, String during) {
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: FlutterError(
+          'AoidPasskeyAuthenticator threw. Its contract is to answer, never '
+          'to throw.',
+        ),
+        stack: stack,
+        library: 'eden_platform_flutter',
+        context: ErrorDescription(during),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     // BEST-EFFORT ONLY — this is not erasure and must not be documented as if
@@ -103,9 +187,14 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) return;
+    if (_busy) return;
     FocusScope.of(context).unfocus();
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      // A password attempt supersedes whatever the last passkey attempt said.
+      _lastPasskey = null;
+      _passkeyThrew = false;
+    });
     try {
       // THE CONTAINMENT BOUNDARY. The plaintext exists in the argument
       // expression below and in the request body, and nowhere else: it is never
@@ -125,6 +214,83 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
     }
   }
 
+  /// The passkey path. The widget hands the flow the SDK's own authenticator
+  /// and gets back ONLY a closed [AoidPasskeyOutcome]: the challenge, the OS
+  /// sheet, the assertion and its submission all happen inside
+  /// `AoidNativeFlow.signInWithPasskey`. Nothing here sees, stores or names
+  /// the assertion.
+  ///
+  /// NO RETRY, for the same reason the password path has none: AOID's
+  /// `MaxAttempts = 5` is durable across rotation.
+  ///
+  /// # A THROWING AUTHENTICATOR
+  ///
+  /// The authenticator's contract is to answer a closed attempt and
+  /// never throw, and the platform implementation enforces it, so
+  /// `signInWithPasskey` does not catch. A throw is therefore a programming
+  /// error — but if one escaped this async tap handler, the user would see the
+  /// button vanish (the challenge already moved AOID to `webauthn_pending`)
+  /// with no word of explanation. So the form defends:
+  ///
+  ///   * the form is unlocked and shows a fixed sentence from the existing
+  ///     vocabulary, `Sign-in could not be completed.` — NOT the `failed`
+  ///     sentence, whose "use your password instead" would be untrue: after a
+  ///     throw the flow has not restarted, and only the flow can;
+  ///   * nothing about the thrown object is shown, logged or kept (it is not
+  ///     even bound to a name), so no OS or authenticator text can surface;
+  ///   * the breach is NOT masked: it is reported with a fixed message and
+  ///     the stack trace (see [_reportAuthenticatorBreach]).
+  Future<void> _signInWithPasskey() async {
+    if (_busy) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _passkeyBusy = true;
+      _lastPasskey = null;
+      _passkeyThrew = false;
+    });
+    AoidPasskeyOutcome? outcome;
+    try {
+      outcome = await widget.controller.signInWithPasskey(
+        resolveAoidPasskeyAuthenticator(),
+      );
+    } catch (_, stack) {
+      // Contract breach: see the doc comment. `outcome` stays null.
+      _reportAuthenticatorBreach(stack, 'while signing in with a passkey');
+    }
+    if (!mounted) return;
+    setState(() {
+      _passkeyBusy = false;
+      _lastPasskey = outcome;
+      _passkeyThrew = outcome == null;
+    });
+  }
+
+  /// The passkey path's own copy — a closed vocabulary, built from nothing the
+  /// authenticator or the issuer said.
+  ///
+  /// Only `rejected`, `unavailable` and `failed` speak. `cancelled` is SILENT:
+  /// Apple reports "dismissed the sheet" and "has no passkey here" as the same
+  /// error, and a different word for either would be wrong half the time and
+  /// would hint whether an account holds a passkey. `rejected` is the SAME
+  /// sentence as a rejected password, on purpose — it is exactly as opaque.
+  /// `completed` and `interrupted` defer to the state-derived copy below.
+  String? _passkeyNotice() {
+    if (_passkeyThrew) return 'Sign-in could not be completed.';
+    return switch (_lastPasskey) {
+      AoidPasskeyOutcome.rejected =>
+        'That did not work. Check your details and try again.',
+      AoidPasskeyOutcome.unavailable =>
+        'Passkey sign-in is not available on this device right now. '
+            'Use your password instead.',
+      AoidPasskeyOutcome.failed =>
+        'Passkey sign-in could not be completed. Use your password instead.',
+      AoidPasskeyOutcome.completed ||
+      AoidPasskeyOutcome.cancelled ||
+      AoidPasskeyOutcome.interrupted ||
+      null => null,
+    };
+  }
+
   /// Fixed, outcome-independent copy.
   ///
   /// Every message here comes from a closed vocabulary, and nothing in it is
@@ -134,6 +300,10 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
   /// deliberately lossy). Manufacturing a richer reason in UI copy would reconstruct the
   /// account-existence oracle the issuer spent real effort removing.
   String? _notice() {
+    // A speaking passkey outcome takes precedence; it is cleared by the next
+    // submit of either kind.
+    final passkey = _passkeyNotice();
+    if (passkey != null) return passkey;
     final state = widget.controller.state;
     if (state is AoidFlowAwaitingFactor && state.lastAttemptRejected) {
       return 'That did not work. Check your details and try again.';
@@ -161,6 +331,12 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
     final colors = theme.colorScheme;
     final copy = widget.theme;
     final notice = _notice();
+    final busy = _busy;
+    // Proven support AND an advertised, still-open `started` stage — or this
+    // very button's attempt in flight, so an incidental rebuild while AOID
+    // sits at `webauthn_pending` does not make it vanish under the OS sheet.
+    final offerPasskey =
+        _passkeySupported && (_passkeyBusy || widget.controller.canUsePasskey);
 
     return AutofillGroup(
       child: Column(
@@ -201,7 +377,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
             label: copy.emailLabel,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.username],
-            enabled: !_submitting,
+            enabled: !busy,
             // No change callback. The app is not told what is typed here
             // either: the identifier is not a secret, but a form that reported
             // one field and not the other would invite the "just one more"
@@ -216,7 +392,7 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
             // The OS password manager is a SINK, not a leak to app Dart —
             // dropping this makes the form worse, not safer.
             autofillHints: const [AutofillHints.password],
-            enabled: !_submitting,
+            enabled: !busy,
             // The value is DISCARDED here on purpose: this only reports that
             // the user pressed return. `(v) => _submit(v)` would be a leak one
             // character away, which is why the gate distinguishes this callback
@@ -233,10 +409,23 @@ class _AoidLoginFormState extends State<AoidLoginForm> {
           const SizedBox(height: 24),
           EdenButton(
             label: copy.submitLabel,
-            onPressed: _submitting ? null : _submit,
+            onPressed: busy ? null : _submit,
             loading: _submitting,
             fullWidth: true,
           ),
+          if (offerPasskey) ...[
+            const SizedBox(height: 12),
+            // Below the password submit, in eden-ui's `secondary` variant: an
+            // alternative, not the primary call to action. Colours come from
+            // eden-ui's own tokens; nothing is hardcoded here.
+            EdenButton(
+              label: copy.passkeyLabel,
+              variant: EdenButtonVariant.secondary,
+              onPressed: busy ? null : _signInWithPasskey,
+              loading: _passkeyBusy,
+              fullWidth: true,
+            ),
+          ],
         ],
       ),
     );

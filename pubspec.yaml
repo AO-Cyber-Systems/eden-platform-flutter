@@ -1,6 +1,6 @@
 name: eden_platform_flutter
 description: "Shared auth, navigation, and platform shell for all Eden apps."
-version: 0.1.0
+version: 0.2.0
 homepage:
 publish_to: none
 
@@ -89,3 +89,24 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # AOID native passkey sign-in. This package is a plugin for iOS and macOS
+  # ONLY — one Swift source shared through darwin/ (AuthenticationServices'
+  # platform passkey assertion; channel `eden_platform_flutter/aoid_passkey`).
+  #
+  # Why an in-package channel and not the `passkeys` pub plugin: `passkeys_web`
+  # calls `window.close()` in any web app that has not loaded a third-party CDN
+  # script, and `passkeys_android` adds Play Services + minSdk 23 to every
+  # Android consumer of this shared library.
+  #
+  # Why ONLY ios + macos: Flutter registers a plugin only on the platforms it
+  # declares, so web, Android, Windows and Linux consumers see no change at all.
+  # Do NOT add android/web/windows/linux here; the Dart side answers
+  # isSupported() == false on those platforms without touching the channel.
+  plugin:
+    platforms:
+      ios:
+        pluginClass: AoidPasskeyPlugin
+        sharedDarwinSource: true
+      macos:
+        pluginClass: AoidPasskeyPlugin
+        sharedDarwinSource: true

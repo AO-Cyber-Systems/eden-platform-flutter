@@ -15,5 +15,9 @@
 library;
 
 export '../flow/aoid_native_flow.dart';
+// The passkey OUTCOME only. lib/src/aoid/passkey/ (the authenticator that
+// produces the assertion) is deliberately NOT exported — see
+// test/aoid/passkey/aoid_passkey_resolver_test.dart group 15.
+export '../flow/aoid_passkey_outcome.dart';
 export '../transport/aoid_error.dart';
 export '../transport/aoid_native_client.dart';

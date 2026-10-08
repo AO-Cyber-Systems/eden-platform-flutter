@@ -91,6 +91,126 @@ which exposes step / next / availableMethods / outcome and never the credential.
 > containment guarantee entirely. `test/aoid/widgets/sealed_form_no_leak_test.dart` is a *source-level*
 > gate, because the property is the absence of a member and no runtime assertion can observe one.
 
+## Passkey sign-in (iOS and macOS)
+
+On iOS 16+ and macOS 13+, `AoidLoginForm` shows a second button under the password submit, "Sign in
+with a passkey" (reword it with `AoidLoginTheme.passkeyLabel`), when the AOID server's start reply
+advertises `webauthn_discoverable`. A tap runs the discoverable ceremony: the form asks AOID for a
+challenge, the operating system shows its passkey sheet, and the signed assertion goes straight back to
+AOID. **The assertion never enters app code.** No callback, parameter or exported type carries it,
+and `sealed_form_no_leak_test.dart` fails if the form ever names it. Your app writes no Dart for this:
+the constructor is still `{key, controller, theme}`.
+
+`AoidNativeFlow.canUsePasskey` is true while the server has offered a passkey and the ceremony is still
+at its first step. It says nothing about the device. The form asks the device separately and shows the
+button only when both answers are yes.
+
+Passkey sign-in needs `v0.2.0` or later of this package:
+
+```yaml
+eden_platform_flutter:
+  git:
+    url: https://git.aocyber.ai/eden-platform-flutter.git
+    ref: v0.2.0
+```
+
+### What your app must provide
+
+1. **The Associated Domains entitlement, on iOS AND macOS.** Add
+   `com.apple.developer.associated-domains` with the value `webcredentials:<your AOID host>` (for AO
+   Cyber's issuer, `webcredentials:auth.aocyber.ai`) to `ios/Runner/Runner.entitlements` and to both
+   `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`. The host is the
+   relying party that AOID names in its challenge. A passkey is bound to that domain, and the OS hands
+   it only to an app the domain vouches for.
+2. **An AASA file on the AOID host.** The AOID host must serve
+   `https://<your AOID host>/.well-known/apple-app-site-association` listing your app as
+   `<TeamID>.<bundle id>` under `webcredentials.apps`:
+
+   ```json
+   { "webcredentials": { "apps": ["ABCDE12345.com.example.yourapp"] } }
+   ```
+
+   That file belongs to the AOID server, not to your app, so ask its operator to add your app id. Each
+   bundle id needs its own entry, so an iOS app and a macOS app with different bundle ids need one each.
+   Devices fetch the file through Apple's CDN, so a change can take a while to reach them.
+3. **A provisioning profile on macOS.** On macOS the Associated Domains entitlement must be backed by
+   a provisioning profile that includes it, so the build has to be signed with your team rather than
+   ad hoc. App Sandbox does not block the passkey API.
+4. **iOS 16 or macOS 13 at runtime.** Your deployment targets do not have to move. The native half
+   builds down to iOS 13 and macOS 10.15 and checks the OS version when it runs, so older systems get
+   no button.
+5. **`pod install` after upgrading.** `v0.2.0` made this package a Flutter plugin for iOS and macOS.
+   After bumping the ref, run `flutter pub get` and then `pod install` in `ios/` and `macos/`. If your
+   app uses Swift Package Manager integration, let it resolve the package on the next build instead.
+   Your app's generated plugin registrant then registers `AoidPasskeyPlugin`. Web, Android, Windows and
+   Linux builds are unchanged: the plugin is declared for iOS and macOS only, so no other platform
+   registers anything.
+
+### What happens when something is missing
+
+The rule is that a button which cannot work is never shown, and a failure never strands the form.
+
+| Missing | What the user sees |
+| --- | --- |
+| The entitlement, or the AASA does not list the app | The button appears, because the app cannot know in advance. A tap ends with "Passkey sign-in is not available on this device right now. Use your password instead." The form stays on the password. |
+| iOS 16 / macOS 13 | No button. |
+| The native half (no `pod install` after the bump) | No button. The SDK reads a missing handler as "not supported" rather than as an error. |
+| `webauthn_discoverable` in the server's start reply | No button. |
+
+The form renders from the closed `AoidPasskeyOutcome` the attempt returns. The wording belongs to the
+form and is not configurable:
+
+| `AoidPasskeyOutcome` | What the form shows |
+| --- | --- |
+| `completed` | Nothing. The flow is complete. |
+| `cancelled` | Nothing. |
+| `rejected` | "That did not work. Check your details and try again." This is the same sentence as a wrong password, on purpose: AOID gives no reason, and inventing one would reveal whether the account exists. |
+| `unavailable` | "Passkey sign-in is not available on this device right now. Use your password instead." |
+| `failed` | "Passkey sign-in could not be completed. Use your password instead." |
+| `interrupted` | The flow state's own sentence, for example the temporary-unavailability message after a 503. |
+
+AOID has no way back from its passkey step to its password step. So after every outcome except
+`completed` and `interrupted`, the flow quietly starts a fresh ceremony, and the password field works
+again without your app doing anything.
+
+### Cancel and "no passkey" look the same, by design
+
+Apple's modal passkey API reports "the user closed the sheet" and "this person has no passkey for
+this server" as the same cancellation, and does not say which happened. The form treats both as a
+cancel and says nothing, so the user is simply back on the password field. A distinct message for
+either would be wrong half the time, and would tell an onlooker whether an account holds a passkey.
+
+### Not provided
+
+The button is omitted on each of these rather than shown and left to fail.
+
+- **Web.** On web, sign in through the AOID server's hosted sign-in page, where the browser runs its
+  own passkey prompt.
+- **Android.** There is no Credential Manager integration.
+- **Hardware security keys.** Only the platform authenticator is used: passkeys the operating system
+  manages, including the system sheet's cross-device (QR code) option.
+- **Security keys at the second-factor step.** `AoidMfaForm` lists the `webauthn` ("Security key")
+  and `webauthn_discoverable` ("Passkey") factors by name but cannot complete either. Choosing one shows
+  "Use your security key to continue." and nothing more.
+
+### Why there is no third-party passkey plugin
+
+This package is a shared library, so every web, Android, Windows and Linux app that depends on it
+inherits whatever its plugins register. The general-purpose `passkeys` plugin's web half closes the
+window in any web app that has not loaded its CDN script, and its Android half adds Google Play
+Services and a higher minimum SDK to every Android app. A small in-package channel declared for iOS and
+macOS only changes no other platform's build and adds no package to anyone's dependency graph. Its
+native half links only Apple's `AuthenticationServices` framework.
+
+### Debugging the channel
+
+The Dart half (`lib/src/aoid/passkey/aoid_platform_passkey_authenticator.dart`) and the native half
+(`darwin/eden_platform_flutter/Sources/eden_platform_flutter/AoidPasskeyPlugin.swift`) talk over the
+method channel `eden_platform_flutter/aoid_passkey`. A `MissingPluginException` on that channel means
+the native half is not linked into the app: check that the generated plugin registrant mentions
+`AoidPasskeyPlugin`, and re-run `pod install` or let Swift Package Manager resolve. The SDK reads that
+exception as "not supported", so the symptom in the UI is a missing button, never an error message.
+
 ## `EdenFeatureGate` is UI hinting ONLY
 
 `lib/src/entitlements/feature_gate.dart` decides whether to **draw** something. It is never an
@@ -295,6 +415,8 @@ fix it exist (`AoidTransportError`, `AoidBffExchangeError`); the three-way outco
 | Native password/MFA ceremony | `lib/src/aoid/transport/`, `lib/src/aoid/flow/` |
 | Browser hop (redirect) | `lib/src/aoid/flow/aoid_redirect_*.dart` |
 | Sealed credential widgets | `lib/src/aoid/widgets/` |
+| Passkey channel, Dart half | `lib/src/aoid/passkey/` |
+| Passkey channel, native half (iOS and macOS) | `darwin/` |
 | Tenant switching | `lib/src/aoid/tenant/` |
 | A minimal Mode A integration | `example/aoid_quickstart/main.dart` |
 

@@ -184,7 +184,313 @@ final List<ReadmeClaim> kClaims = <ReadmeClaim>[
         'read the registered values without reverse-engineering '
         'config/oauth-clients.yaml.',
   ),
+
+  // ── items 10-14: the "Passkey sign-in (iOS and macOS)" section ──────────
+  //
+  // Numbered after item 9 (the positive-control group) so the existing items
+  // keep their numbers. Item 9's machinery runs over the whole list, so each
+  // of these is also checked against the real README (non-vacuity), against
+  // an empty document, and against the README with its anchors deleted.
+  (
+    name:
+        'item 10 — passkey prerequisites: Associated Domains on iOS AND '
+        'macOS, an AASA on the AOID host, a macOS provisioning profile, the '
+        'runtime OS floor, and pod install after the bump',
+    holds: (src) =>
+        _hasExact(src, 'com.apple.developer.associated-domains') &&
+        _hasExact(src, 'webcredentials:') &&
+        // BOTH platforms' entitlement files, by path: an iOS-only instruction
+        // leaves the macOS app silently unassociated.
+        _hasExact(src, 'ios/Runner/Runner.entitlements') &&
+        _hasExact(src, 'macos/Runner/Release.entitlements') &&
+        _hasExact(src, '.well-known/apple-app-site-association') &&
+        _hasExact(src, '<TeamID>.<bundle id>') &&
+        _has(src, 'provisioning profile') &&
+        _has(src, 'iOS 16') &&
+        _has(src, 'macOS 13') &&
+        _has(src, 'pod install'),
+    breaks:
+        'Without these, a consumer bumps the ref, sees the button, taps '
+        'it, and gets "not available on this device right now" with no idea '
+        'why. Every one of these is configured OUTSIDE Dart (an entitlement, '
+        'a file on the AOID host, a signing profile, a CocoaPods/SwiftPM '
+        'resolve), so nothing in the SDK can detect or report which one is '
+        'missing. This list is the only place a consumer learns them without '
+        'reading Swift.',
+  ),
+  (
+    name:
+        'item 11 — what a missing prerequisite looks like: the unavailable '
+        'sentence, the form stays on the password, no button where it cannot '
+        'work',
+    holds: (src) =>
+        _hasExact(
+          src,
+          'Passkey sign-in is not available on this device right now. '
+          'Use your password instead.',
+        ) &&
+        _has(src, 'stays on the password') &&
+        _has(src, 'no button') &&
+        _has(src, 'never shown'),
+    breaks:
+        'Without this, a consumer who sees the unavailable sentence '
+        'debugs their Dart instead of their entitlement, and one who sees NO '
+        'button on an old OS or an unlinked app files it as a bug. The two '
+        'symptoms are deliberately different (a configuration the OS can only '
+        'refuse at tap time vs a capability the SDK can probe up front), and '
+        'the table is what maps each symptom back to its cause.',
+  ),
+  (
+    name:
+        'item 12 — cancel and "no passkey" are indistinguishable by design, '
+        'and cancel is silent',
+    holds: (src) =>
+        _has(src, 'no passkey') &&
+        _has(src, 'same cancellation') &&
+        _has(src, 'treats both as a cancel'),
+    breaks:
+        'Without this, someone "improves" the form with a "you have no '
+        'passkey" message. Apple\'s modal API cannot tell that case from a '
+        'dismissed sheet, so the message would be wrong half the time, and '
+        'when right it tells an onlooker whether the account holds a passkey.',
+  ),
+  (
+    name:
+        'item 13 — what is NOT provided: web (hosted page), Android, '
+        'hardware security keys, second-factor security keys; the button is '
+        'omitted there',
+    holds: (src) =>
+        _has(src, 'not provided') &&
+        _has(src, 'hosted sign-in page') &&
+        _has(src, 'Credential Manager') &&
+        _has(src, 'hardware security keys') &&
+        _has(src, 'second-factor step') &&
+        _has(src, 'omitted'),
+    breaks:
+        'Without this, a web or Android consumer waits for a button that '
+        'will never appear, or a team plans a security-key rollout on a '
+        'ceremony the SDK does not run. Saying what is absent is what lets a '
+        'consumer route those users to the hosted page instead.',
+  ),
+  (
+    name:
+        'item 14 — the channel name and the plugin class, for anyone '
+        'debugging a MissingPluginException',
+    holds: (src) =>
+        _hasExact(src, 'eden_platform_flutter/aoid_passkey') &&
+        _hasExact(src, 'MissingPluginException') &&
+        _hasExact(src, 'AoidPasskeyPlugin'),
+    breaks:
+        'Without this, the only symptom of an unlinked native half (a '
+        'missing button) has no searchable name attached. The channel string '
+        'and the registrant entry are what a consumer greps for in their '
+        'build to see whether the plugin is linked at all.',
+  ),
 ];
+
+// ── The passkey section's SOURCE bindings, as predicates ──────────────────
+//
+// Items 10-14 prove the README SAYS the right things. These prove the code
+// still DOES them, and they take their inputs as strings so item 16 can feed
+// each one a mutilated source and watch it fail. A binding that reads files
+// itself cannot be given a broken input, and so can never be shown to bind.
+
+/// The method channel both halves must declare, byte for byte.
+const String kPasskeyChannel = 'eden_platform_flutter/aoid_passkey';
+
+/// Drops `//` line comments (and so `///` doc comments) from Dart or Swift.
+///
+/// The bindings below look for DECLARATIONS. The Dart half quotes the channel
+/// in its header comment too, so without this a renamed declaration would
+/// still "match" through the comment. Naive about `//` inside a string, which
+/// can only hide a match, never invent one.
+String _stripLineComments(String src) => src
+    .split('\n')
+    .map((line) {
+      final at = line.indexOf('//');
+      return at < 0 ? line : line.substring(0, at);
+    })
+    .join('\n');
+
+/// Joins Dart's adjacent string literals split across lines (`'a '\n  'b'`),
+/// so a sentence the form wraps over two literals is matched as one.
+String _joinAdjacentLiterals(String dart) =>
+    dart.replaceAll(RegExp(r"'\s*\n\s*'"), '');
+
+/// The README names the channel, and BOTH halves still declare that exact
+/// name in code (not in a comment).
+bool passkeyChannelBound({
+  required String readme,
+  required String dartHalf,
+  required List<String> darwinSources,
+}) =>
+    _hasExact(readme, kPasskeyChannel) &&
+    RegExp("=\\s*MethodChannel\\(\\s*'${RegExp.escape(kPasskeyChannel)}'")
+        .hasMatch(_stripLineComments(dartHalf)) &&
+    darwinSources
+        .map(_stripLineComments)
+        .any(
+          (s) => RegExp(
+            'FlutterMethodChannel\\(\\s*name:\\s*"'
+            '${RegExp.escape(kPasskeyChannel)}"',
+          ).hasMatch(s),
+        );
+
+/// The platforms `flutter.plugin.platforms` declares in a pubspec's text.
+///
+/// Reads indentation rather than parsing YAML (the package has no YAML
+/// dependency to import, and must not gain one for a test). Empty when there
+/// is no plugin block at all.
+Set<String> declaredPluginPlatforms(String pubspec) {
+  final plugin = RegExp(r'^  plugin:\s*$', multiLine: true).firstMatch(pubspec);
+  if (plugin == null) return const <String>{};
+  final rest = pubspec.substring(plugin.end);
+  final platforms = RegExp(
+    r'^    platforms:\s*$',
+    multiLine: true,
+  ).firstMatch(rest);
+  if (platforms == null) return const <String>{};
+  final names = <String>{};
+  for (final line in rest.substring(platforms.end).split('\n')) {
+    final trimmed = line.trimLeft();
+    if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+    final indent = line.length - trimmed.length;
+    if (indent <= 4) break; // left the platforms block
+    final key = RegExp(r'^([a-z]+):').firstMatch(trimmed);
+    if (indent == 6 && key != null) names.add(key.group(1)!);
+  }
+  return names;
+}
+
+/// "Web, Android, Windows and Linux builds are unchanged" and "Not provided:
+/// Android": the plugin is declared for iOS and macOS and NOTHING else, and
+/// the class it registers is the one the README tells consumers to look for.
+bool passkeyPlatformsBound({required String readme, required String pubspec}) =>
+    _hasExact(readme, 'AoidPasskeyPlugin') &&
+    _has(readme, 'declared for iOS and macOS only') &&
+    declaredPluginPlatforms(pubspec).length == 2 &&
+    declaredPluginPlatforms(pubspec).containsAll(const {'ios', 'macos'}) &&
+    RegExp(r'pluginClass:\s*AoidPasskeyPlugin\b').hasMatch(pubspec);
+
+/// "iOS 16 or macOS 13 at runtime": the native half gates on exactly that.
+bool passkeyOsFloorBound({
+  required String readme,
+  required List<String> darwinSources,
+}) =>
+    _has(readme, 'iOS 16') &&
+    _has(readme, 'macOS 13') &&
+    darwinSources
+        .map(_stripLineComments)
+        .any((s) => s.contains('#available(iOS 16.0, macOS 13.0, *)'));
+
+/// "Your deployment targets do not have to move ... builds down to iOS 13 and
+/// macOS 10.15": the podspec AND the SwiftPM manifest both say so.
+bool passkeyDeploymentFloorBound({
+  required String readme,
+  required String podspec,
+  required String packageSwift,
+}) =>
+    _has(readme, 'iOS 13') &&
+    _has(readme, 'macOS 10.15') &&
+    RegExp(
+      r"^\s*s\.ios\.deployment_target\s*=\s*'13\.0'",
+      multiLine: true,
+    ).hasMatch(podspec) &&
+    RegExp(
+      r"^\s*s\.osx\.deployment_target\s*=\s*'10\.15'",
+      multiLine: true,
+    ).hasMatch(podspec) &&
+    _stripLineComments(packageSwift).contains('.iOS("13.0")') &&
+    _stripLineComments(packageSwift).contains('.macOS("10.15")');
+
+/// "Not provided: hardware security keys": the native half uses the platform
+/// provider and never the security-key one.
+bool passkeyNoSecurityKeyBound({
+  required String readme,
+  required List<String> darwinSources,
+}) {
+  final code = darwinSources.map(_stripLineComments).toList();
+  return _has(readme, 'hardware security keys') &&
+      // Anchor: the platform provider IS used, so an empty or unrelated
+      // source list cannot pass the absence check below vacuously.
+      code.any(
+        (s) => s.contains('ASAuthorizationPlatformPublicKeyCredentialProvider'),
+      ) &&
+      code.every((s) => !s.contains('SecurityKeyPublicKeyCredentialProvider'));
+}
+
+/// The sentences the README quotes as the form's copy, verbatim in the README
+/// AND as a Dart string literal in [source].
+bool passkeyCopyBound({
+  required String readme,
+  required String source,
+  required List<String> sentences,
+}) {
+  final code = _joinAdjacentLiterals(_stripLineComments(source));
+  return sentences.isNotEmpty &&
+      sentences.every((s) => _hasExact(readme, s) && code.contains("'$s'"));
+}
+
+/// The copy the README's outcome table quotes from `AoidLoginForm`.
+const List<String> kPasskeyFormCopy = <String>[
+  'That did not work. Check your details and try again.',
+  'Passkey sign-in is not available on this device right now. '
+      'Use your password instead.',
+  'Passkey sign-in could not be completed. Use your password instead.',
+];
+
+/// The MFA form's dead-end line the "Not provided" list quotes.
+const List<String> kMfaWebAuthnCopy = <String>[
+  'Use your security key to continue.',
+];
+
+/// Every value of the outcome enum has a row in the README's outcome table.
+bool passkeyOutcomeTableBound({
+  required String readme,
+  required Iterable<String> outcomeNames,
+}) =>
+    outcomeNames.isNotEmpty &&
+    outcomeNames.every((name) => _hasExact(readme, '| `$name` |'));
+
+/// Every `.swift` file under `darwin/`.
+List<String> _darwinSwiftSources() {
+  final dir = Directory('darwin');
+  expect(
+    dir.existsSync(),
+    isTrue,
+    reason:
+        'MISSING darwin/. The README documents a native half for iOS and '
+        'macOS; without the directory every darwin binding below would read '
+        'an empty list.',
+  );
+  return dir
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.swift'))
+      .map((f) => f.readAsStringSync())
+      .toList();
+}
+
+/// Reads a file the passkey bindings inspect, failing loudly if it moved.
+String _passkeySource(String path) {
+  final f = File(path);
+  expect(
+    f.existsSync(),
+    isTrue,
+    reason:
+        'MISSING $path. A passkey binding inspects its TEXT; an absent file '
+        'would read as empty.',
+  );
+  return f.readAsStringSync();
+}
+
+const String kPasskeyDartHalf =
+    'lib/src/aoid/passkey/aoid_platform_passkey_authenticator.dart';
+const String kPasskeyLoginForm = 'lib/src/aoid/widgets/aoid_login_form.dart';
+const String kPasskeyMfaForm = 'lib/src/aoid/widgets/aoid_mfa_form.dart';
+const String kPasskeyPodspec = 'darwin/eden_platform_flutter.podspec';
+const String kPasskeyPackageSwift =
+    'darwin/eden_platform_flutter/Package.swift';
 
 void main() {
   // ── item 1 ────────────────────────────────────────────────────────────────
@@ -336,6 +642,13 @@ void main() {
         'aoidTenantSwitchRetry': aoidTenantSwitchRetry,
         // The sealed widgets.
         'AoidLoginForm': AoidLoginForm,
+        // The passkey section's public names. Members are keyed by their OWN
+        // name, so the README check below demands the member, not just the
+        // class it hangs on. The outcome enum is bound by VALUE, like the
+        // deployment modes, so a renamed constant is caught too.
+        'AoidPasskeyOutcome': AoidPasskeyOutcome.cancelled,
+        'canUsePasskey': (AoidNativeFlow flow) => flow.canUsePasskey,
+        'passkeyLabel': const AoidLoginTheme().passkeyLabel,
       };
 
       documented.forEach((name, symbol) {
@@ -379,6 +692,13 @@ void main() {
         'doc/riverpod-3-migration.md',
         // The quickstart the README advertises.
         'example/aoid_quickstart/main.dart',
+        // The passkey section: the gate it says keeps the assertion out of
+        // the form, and the channel's two halves named under "Debugging the
+        // channel".
+        'test/aoid/widgets/sealed_form_no_leak_test.dart',
+        'lib/src/aoid/passkey/aoid_platform_passkey_authenticator.dart',
+        'darwin/eden_platform_flutter/Sources/eden_platform_flutter/'
+            'AoidPasskeyPlugin.swift',
       ];
 
       for (final path in cited) {
@@ -639,6 +959,33 @@ void main() {
       'item 6': ['AoidActiveTenantSlug', 'AoidHomeTenantId'],
       'item 7': ['owns authZ'],
       'item 8': ['aodex://auth-callback', 'edenbiz://auth'],
+      'item 10': [
+        'webcredentials:',
+        'apple-app-site-association',
+        'Release.entitlements',
+        'provisioning profile',
+        'iOS 16',
+        'pod install',
+      ],
+      'item 11': [
+        'not available on this device right now',
+        'stays on the password',
+        'no button',
+      ],
+      // Mutilation tokens are deleted from the RAW text, so each must sit on
+      // one README line; 'treats both' is the unwrapped head of the phrase.
+      'item 12': ['same cancellation', 'treats both'],
+      'item 13': [
+        'hosted sign-in page',
+        'Credential Manager',
+        'hardware security keys',
+        'second-factor step',
+        'omitted',
+      ],
+      'item 14': [
+        'eden_platform_flutter/aoid_passkey',
+        'MissingPluginException',
+      ],
     };
 
     mutilations.forEach((itemKey, tokens) {
@@ -685,6 +1032,462 @@ void main() {
               'certify a deleted README.',
         );
       }
+    });
+  });
+
+  // ── item 15 — the passkey section binds to the SOURCE ────────────────────
+  //
+  // Items 10-14 fail when the README drifts. These fail when the CODE drifts
+  // with the README untouched: a renamed channel, a new platform in the
+  // pubspec, a raised OS gate, a security-key provider, a reworded sentence,
+  // a new outcome value.
+  group('item 15 — the passkey section\'s claims bind to the source', () {
+    late String readme;
+    setUpAll(() => readme = File(kReadmePath).readAsStringSync());
+
+    test('the channel `$kPasskeyChannel` is declared in code by BOTH halves '
+        '(darwin/ and the Dart half), and the README names it', () {
+      expect(
+        passkeyChannelBound(
+          readme: readme,
+          dartHalf: _passkeySource(kPasskeyDartHalf),
+          darwinSources: _darwinSwiftSources(),
+        ),
+        isTrue,
+        reason:
+            'The channel name no longer matches across the README, '
+            '$kPasskeyDartHalf and darwin/. A rename on one side compiles on '
+            'both and fails only at runtime: the Dart half gets a '
+            'MissingPluginException, reads it as "not supported", and the '
+            'button silently disappears on every iOS and macOS app. The README '
+            'names the channel so that symptom can be traced; a wrong name '
+            'there sends the reader after a channel that does not exist.',
+      );
+    });
+
+    test('the plugin is declared for iOS and macOS ONLY, registering '
+        'AoidPasskeyPlugin', () {
+      final pubspec = _passkeySource('pubspec.yaml');
+      expect(
+        passkeyPlatformsBound(readme: readme, pubspec: pubspec),
+        isTrue,
+        reason:
+            'pubspec.yaml now declares plugin platforms '
+            '${declaredPluginPlatforms(pubspec)}. The README promises web, '
+            'Android, Windows and Linux builds are unchanged and that Android '
+            'is not provided. A platform added here registers a plugin in '
+            'every consumer of this shared library on that platform.',
+      );
+    });
+
+    test('the native half gates on iOS 16 / macOS 13 at runtime', () {
+      expect(
+        passkeyOsFloorBound(
+          readme: readme,
+          darwinSources: _darwinSwiftSources(),
+        ),
+        isTrue,
+        reason:
+            'The README tells consumers the button appears on iOS 16+ and '
+            'macOS 13+, and darwin/ no longer gates on '
+            '`#available(iOS 16.0, macOS 13.0, *)`. Either the gate moved and '
+            'the README misstates who gets the button, or it was dropped and '
+            'an older OS reaches an API it does not have.',
+      );
+    });
+
+    test('the deployment floors the README promises (iOS 13 / macOS 10.15) '
+        'are what the podspec and Package.swift declare', () {
+      expect(
+        passkeyDeploymentFloorBound(
+          readme: readme,
+          podspec: _passkeySource(kPasskeyPodspec),
+          packageSwift: _passkeySource(kPasskeyPackageSwift),
+        ),
+        isTrue,
+        reason:
+            'The README says consumers do not have to raise their deployment '
+            'targets because the native half builds down to iOS 13 and macOS '
+            '10.15. If the podspec or Package.swift raised a floor, every app '
+            'below it fails `pod install` / SwiftPM resolution after the bump, '
+            'and the README told them it would not.',
+      );
+    });
+
+    test('hardware security keys are NOT used: platform provider only', () {
+      expect(
+        passkeyNoSecurityKeyBound(
+          readme: readme,
+          darwinSources: _darwinSwiftSources(),
+        ),
+        isTrue,
+        reason:
+            'darwin/ now references the security-key credential provider (or '
+            'no longer references the platform one). The README lists '
+            'hardware security keys as NOT provided; update it together with '
+            'the code, or remove the provider.',
+      );
+    });
+
+    test('the sentences the README quotes are the form\'s own copy, byte for '
+        'byte', () {
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: _passkeySource(kPasskeyLoginForm),
+          sentences: kPasskeyFormCopy,
+        ),
+        isTrue,
+        reason:
+            'A sentence the README quotes from AoidLoginForm is no longer the '
+            'form\'s copy (or no longer in the README). A consumer matching a '
+            'user\'s report against the README\'s table would then find no '
+            'row for what the user actually saw.',
+      );
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: _passkeySource(kPasskeyMfaForm),
+          sentences: kMfaWebAuthnCopy,
+        ),
+        isTrue,
+        reason:
+            'The "Not provided" list quotes AoidMfaForm\'s dead-end line for '
+            'the WebAuthn factors, and the form no longer says it.',
+      );
+    });
+
+    test('every AoidPasskeyOutcome value has a row in the README\'s outcome '
+        'table', () {
+      expect(
+        passkeyOutcomeTableBound(
+          readme: readme,
+          outcomeNames: AoidPasskeyOutcome.values.map((v) => v.name),
+        ),
+        isTrue,
+        reason:
+            'AoidPasskeyOutcome has a value with no `| `name` |` row in the '
+            'README. The table is the only description of what each outcome '
+            'shows; a new value without a row is behaviour nobody documented.',
+      );
+    });
+  });
+
+  // ── item 16 — the passkey bindings can fail ──────────────────────────────
+  //
+  // Item 9 for item 15. Each binding is fed the REAL inputs with one thing
+  // broken, built from the real files rather than hand-written, and must
+  // reject it. Every mutation is first checked to have changed something, so
+  // a no-op cannot pass as a rejection.
+  group('item 16 — the passkey bindings can fail', () {
+    late String readme;
+    late String dartHalf;
+    late List<String> darwin;
+    late String pubspec;
+    late String podspec;
+    late String packageSwift;
+    late String loginForm;
+    late String mfaForm;
+
+    setUpAll(() {
+      readme = File(kReadmePath).readAsStringSync();
+      dartHalf = File(kPasskeyDartHalf).readAsStringSync();
+      darwin = _darwinSwiftSources();
+      pubspec = File('pubspec.yaml').readAsStringSync();
+      podspec = File(kPasskeyPodspec).readAsStringSync();
+      packageSwift = File(kPasskeyPackageSwift).readAsStringSync();
+      loginForm = File(kPasskeyLoginForm).readAsStringSync();
+      mfaForm = File(kPasskeyMfaForm).readAsStringSync();
+    });
+
+    /// Applies [mutate] and fails if it changed nothing.
+    String mutated(String original, String Function(String) mutate) {
+      final out = mutate(original);
+      expect(
+        out == original,
+        isFalse,
+        reason:
+            'The mutation was a NO-OP, so the rejection below would exercise '
+            'nothing. The source it targets has changed shape; rebuild the '
+            'mutation against the current file.',
+      );
+      return out;
+    }
+
+    test('non-vacuity floor: every binding accepts the real inputs', () {
+      expect(
+        passkeyChannelBound(
+          readme: readme,
+          dartHalf: dartHalf,
+          darwinSources: darwin,
+        ),
+        isTrue,
+      );
+      expect(passkeyPlatformsBound(readme: readme, pubspec: pubspec), isTrue);
+      expect(
+        passkeyOsFloorBound(readme: readme, darwinSources: darwin),
+        isTrue,
+      );
+      expect(
+        passkeyDeploymentFloorBound(
+          readme: readme,
+          podspec: podspec,
+          packageSwift: packageSwift,
+        ),
+        isTrue,
+      );
+      expect(
+        passkeyNoSecurityKeyBound(readme: readme, darwinSources: darwin),
+        isTrue,
+      );
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: loginForm,
+          sentences: kPasskeyFormCopy,
+        ),
+        isTrue,
+      );
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: mfaForm,
+          sentences: kMfaWebAuthnCopy,
+        ),
+        isTrue,
+      );
+      expect(
+        passkeyOutcomeTableBound(
+          readme: readme,
+          outcomeNames: AoidPasskeyOutcome.values.map((v) => v.name),
+        ),
+        isTrue,
+      );
+    });
+
+    group('channel', () {
+      test('renamed in the Dart DECLARATION (header comment left intact) is '
+          'rejected', () {
+        final broken = mutated(
+          dartHalf,
+          (s) => s.replaceAll(
+            RegExp(
+              "=\\s*MethodChannel\\(\\s*'${RegExp.escape(kPasskeyChannel)}'",
+            ),
+            "= MethodChannel('eden_platform_flutter/renamed'",
+          ),
+        );
+        // The comment still quotes the old name: the binding must not be
+        // satisfied by it.
+        expect(broken.contains("'$kPasskeyChannel'"), isTrue);
+        expect(
+          passkeyChannelBound(
+            readme: readme,
+            dartHalf: broken,
+            darwinSources: darwin,
+          ),
+          isFalse,
+        );
+      });
+
+      test('renamed in Swift (old name left in a comment) is rejected', () {
+        final broken = darwin
+            .map(
+              (s) => s.replaceAll(
+                '"$kPasskeyChannel"',
+                '"eden_platform_flutter/renamed" // was "$kPasskeyChannel"',
+              ),
+            )
+            .toList();
+        expect(
+          broken.join() == darwin.join(),
+          isFalse,
+          reason: 'no Swift file declared "$kPasskeyChannel"; no-op mutation',
+        );
+        expect(
+          passkeyChannelBound(
+            readme: readme,
+            dartHalf: dartHalf,
+            darwinSources: broken,
+          ),
+          isFalse,
+        );
+      });
+
+      test('dropped from the README is rejected', () {
+        expect(
+          passkeyChannelBound(
+            readme: mutated(
+              readme,
+              (s) => s.replaceAll(kPasskeyChannel, 'REDACTED'),
+            ),
+            dartHalf: dartHalf,
+            darwinSources: darwin,
+          ),
+          isFalse,
+        );
+      });
+    });
+
+    group('platforms', () {
+      for (final extra in const ['android', 'web', 'linux', 'windows']) {
+        test('an `$extra:` platform in the plugin block is rejected', () {
+          final broken = mutated(
+            pubspec,
+            (s) => s.replaceFirst(
+              RegExp(r'^    platforms:\s*\n', multiLine: true),
+              '    platforms:\n'
+              '      $extra:\n'
+              '        pluginClass: AoidPasskeyPlugin\n',
+            ),
+          );
+          expect(declaredPluginPlatforms(broken), contains(extra));
+          expect(
+            passkeyPlatformsBound(readme: readme, pubspec: broken),
+            isFalse,
+          );
+        });
+      }
+
+      test('a pubspec with no plugin block is rejected', () {
+        final broken = mutated(
+          pubspec,
+          (s) => s.replaceFirst(
+            RegExp(r'^  plugin:\s*$', multiLine: true),
+            '  not_a_plugin:',
+          ),
+        );
+        expect(declaredPluginPlatforms(broken), isEmpty);
+        expect(passkeyPlatformsBound(readme: readme, pubspec: broken), isFalse);
+      });
+
+      test('a README that drops "declared for iOS and macOS only" is '
+          'rejected', () {
+        expect(
+          passkeyPlatformsBound(
+            readme: mutated(
+              readme,
+              (s) => s.replaceAll(
+                RegExp(r'declared\s+for\s+iOS\s+and\s+macOS\s+only'),
+                'REDACTED',
+              ),
+            ),
+            pubspec: pubspec,
+          ),
+          isFalse,
+        );
+      });
+    });
+
+    test('a raised OS gate in Swift is rejected', () {
+      final broken = darwin
+          .map(
+            (s) => s.replaceAll(
+              '#available(iOS 16.0, macOS 13.0, *)',
+              '#available(iOS 17.0, macOS 14.0, *)',
+            ),
+          )
+          .toList();
+      expect(broken.join() == darwin.join(), isFalse);
+      expect(
+        passkeyOsFloorBound(readme: readme, darwinSources: broken),
+        isFalse,
+      );
+    });
+
+    test('a raised podspec floor, and a raised SwiftPM floor, are each '
+        'rejected', () {
+      expect(
+        passkeyDeploymentFloorBound(
+          readme: readme,
+          podspec: mutated(podspec, (s) => s.replaceAll("'13.0'", "'15.0'")),
+          packageSwift: packageSwift,
+        ),
+        isFalse,
+      );
+      expect(
+        passkeyDeploymentFloorBound(
+          readme: readme,
+          podspec: podspec,
+          packageSwift: mutated(
+            packageSwift,
+            (s) => s.replaceAll('.macOS("10.15")', '.macOS("12.0")'),
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('a security-key provider in Swift is rejected, and so is a source '
+        'set with no platform provider at all', () {
+      expect(
+        passkeyNoSecurityKeyBound(
+          readme: readme,
+          darwinSources: [
+            ...darwin,
+            'let p = ASAuthorizationSecurityKeyPublicKeyCredentialProvider('
+                'relyingPartyIdentifier: "example.com")',
+          ],
+        ),
+        isFalse,
+      );
+      expect(
+        passkeyNoSecurityKeyBound(readme: readme, darwinSources: const []),
+        isFalse,
+      );
+    });
+
+    test('a reworded form sentence is rejected, and so is an empty sentence '
+        'list', () {
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: mutated(
+            loginForm,
+            (s) => s.replaceAll(
+              'could not be completed. Use your password instead.',
+              'failed. Use your password instead.',
+            ),
+          ),
+          sentences: kPasskeyFormCopy,
+        ),
+        isFalse,
+      );
+      // The sentence surviving only in a comment does not count.
+      expect(
+        passkeyCopyBound(
+          readme: readme,
+          source: '// \'${kMfaWebAuthnCopy.single}\'',
+          sentences: kMfaWebAuthnCopy,
+        ),
+        isFalse,
+      );
+      expect(
+        passkeyCopyBound(readme: readme, source: loginForm, sentences: []),
+        isFalse,
+      );
+    });
+
+    test('a new outcome value with no README row is rejected, and so is a '
+        'README missing an existing row', () {
+      final names = AoidPasskeyOutcome.values.map((v) => v.name).toList();
+      expect(
+        passkeyOutcomeTableBound(
+          readme: readme,
+          outcomeNames: [...names, 'deferred'],
+        ),
+        isFalse,
+      );
+      expect(
+        passkeyOutcomeTableBound(
+          readme: mutated(
+            readme,
+            (s) => s.replaceAll('| `interrupted` |', '| interrupted |'),
+          ),
+          outcomeNames: names,
+        ),
+        isFalse,
+      );
     });
   });
 }
