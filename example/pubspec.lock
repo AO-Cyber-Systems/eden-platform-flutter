@@ -180,9 +180,11 @@ packages:
   eden_platform_api_dart:
     dependency: "direct overridden"
     description:
-      path: "../../eden-platform-api-dart"
-      relative: true
-    source: path
+      path: "."
+      ref: "v0.1.0"
+      resolved-ref: "2caea54f2eb28a7dce2cdd9bdfea2c051959b943"
+      url: "https://git.aocyber.ai/eden-platform-api-dart.git"
+    source: git
     version: "0.1.0"
   eden_platform_flutter:
     dependency: "direct main"
@@ -190,14 +192,16 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   eden_ui_flutter:
     dependency: "direct main"
     description:
-      path: "../../eden-ui-flutter"
-      relative: true
-    source: path
-    version: "2.0.0"
+      path: "."
+      ref: "v2.3.0"
+      resolved-ref: be73ba3223561954179776863bd07900695855c6
+      url: "https://git.aocyber.ai/eden-ui-flutter.git"
+    source: git
+    version: "2.2.1"
   fake_async:
     dependency: transitive
     description:

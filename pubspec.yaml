@@ -43,17 +43,17 @@ dependencies:
   # cadence stabilizes — `main` is fine for now but trades reproducibility.
   eden_platform_api_dart:
     git:
-      url: https://github.com/AO-Cyber-Systems/eden-platform-api-dart.git
+      url: https://git.aocyber.ai/eden-platform-api-dart.git
       # SHA-pinned, NOT `main`: a moving ref makes every consumer non-reproducible,
       # and pub caches its resolution — TRD 50-16 hit a cached `main` that predated
       # initiateSocialLogin and could not compile eden_platform.dart. 624eacfb is
       # standalone main at the time of pinning.
-      ref: 624eacfb10de61a12cef20bf33c626ca2d3f8f3d
+      ref: vanity-pin-624eacf
   go_router: ^14.0.0
   eden_ui_flutter:
     git:
-      url: https://github.com/AO-Cyber-Systems/eden-ui-flutter.git
-      ref: 0539e6daaff74afc45ea6023de51cc379bf57cf5
+      url: https://git.aocyber.ai/eden-ui-flutter.git
+      ref: vanity-pin-0539e6d
   # JWT exp-claim decoding for ProactiveRefresh (upstream from eden-biz).
   dart_jsonwebtoken: ^2.0.0
   # Networking — gold-standard dio_client donated from AODex.

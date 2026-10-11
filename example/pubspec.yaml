@@ -22,7 +22,9 @@ dependencies:
   eden_platform_flutter:
     path: ..
   eden_ui_flutter:
-    path: ../../eden-ui-flutter
+    git:
+      url: https://git.aocyber.ai/eden-ui-flutter.git
+      ref: v2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -33,9 +35,13 @@ dev_dependencies:
 # redirect transitive deps to local paths.
 dependency_overrides:
   eden_ui_flutter:
-    path: ../../eden-ui-flutter
+    git:
+      url: https://git.aocyber.ai/eden-ui-flutter.git
+      ref: v2.3.0
   eden_platform_api_dart:
-    path: ../../eden-platform-api-dart
+    git:
+      url: https://git.aocyber.ai/eden-platform-api-dart.git
+      ref: v0.1.0
 
 flutter:
   uses-material-design: true
