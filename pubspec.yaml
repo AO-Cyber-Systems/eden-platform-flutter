@@ -25,14 +25,14 @@ dependencies:
   # can redirect this to the local path during dev.
   eden_platform_api_dart:
     git:
-      url: https://github.com/AO-Cyber-Systems/eden-libs.git
+      url: https://git.aocyber.ai/eden-libs.git
       path: eden-platform-api-dart
-      ref: main
+      ref: v0.1.0
   go_router: ^14.0.0
   eden_ui_flutter:
     git:
-      url: https://github.com/AO-Cyber-Systems/eden-ui-flutter.git
-      ref: e081038
+      url: https://git.aocyber.ai/eden-ui-flutter.git
+      ref: vanity-pin-e081038
   # Networking — gold-standard dio_client donated from AODex.
   # See lib/src/networking/README.md.
   dio: ^5.9.0
