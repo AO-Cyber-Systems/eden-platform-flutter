@@ -51,6 +51,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: ci-read
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CI_READ_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CI_READ_APP_KEY }}
+          owner: ${{ vars.CI_READ_APP_OWNER }}
+      - name: Git credential helper for module and package reads
+        env:
+          CI_READ_TOKEN: ${{ steps.ci-read.outputs.token }}
+          CI_READ_OWNER: ${{ vars.CI_READ_APP_OWNER }}
+        run: |
+          echo "::add-mask::${CI_READ_TOKEN}"
+          helper="$RUNNER_TEMP/ci-read-git-credential.sh"
+          cat > "$helper" <<'EOF'
+          #!/bin/sh
+          [ "$1" = get ] || exit 0
+          while IFS='=' read -r k v; do
+            [ -z "$k" ] && break
+            case "$k" in host) h=$v ;; path) p=$v ;; protocol) pr=$v ;; esac
+          done
+          [ "$pr" = https ] && [ "$h" = github.com ] || exit 0
+          o=${p%%/*}
+          [ "$(printf '%s' "$o" | tr 'A-Z' 'a-z')" = "$(printf '%s' "$CI_READ_OWNER" | tr 'A-Z' 'a-z')" ] || exit 0
+          echo username=x-access-token
+          echo "password=$CI_READ_TOKEN"
+          EOF
+          chmod 700 "$helper"
+          git config --global credential."https://github.com".useHttpPath true
+          git config --global credential."https://github.com".helper "$helper"
+          {
+            echo "CI_READ_TOKEN=${CI_READ_TOKEN}"
+            echo "CI_READ_OWNER=${CI_READ_OWNER}"
+            echo "GOPRIVATE=go.aocyber.ai"
+          } >> "$GITHUB_ENV"
 
       - uses: subosito/flutter-action@v2
         with:
